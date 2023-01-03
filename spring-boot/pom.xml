@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>io.vanillabp</groupId>
+    <artifactId>camunda7-adapter</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+  </parent>
+  <artifactId>camunda7-spring-boot-adapter</artifactId>
+  <name>VanillaBP SPI adapter for Camunda 7.x for Spring Boot</name>
+
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <vanillabp-spring-boot-support.version>0.0.1-SNAPSHOT</vanillabp-spring-boot-support.version>
+  </properties>
+
+  <dependencies>
+    <dependency>
+      <groupId>io.vanillabp</groupId>
+      <artifactId>spring-boot-support</artifactId>
+      <version>${vanillabp-spring-boot-support.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.camunda.bpm.springboot</groupId>
+      <artifactId>camunda-bpm-spring-boot-starter</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.camunda.bpm.springboot</groupId>
+      <artifactId>camunda-bpm-spring-boot-starter-webapp${camunda.edition-suffix}</artifactId>
+      <exclusions>
+        <exclusion>
+          <groupId>org.springframework.boot</groupId>
+          <artifactId>spring-boot-starter-tomcat</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>jakarta.servlet</groupId>
+      <artifactId>jakarta.servlet-api</artifactId>
+      <scope>provided</scope>
+      <version>4.0.4</version>
+    </dependency>
+  </dependencies>
+</project>

@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>io.vanillabp</groupId>
+  <artifactId>camunda7-adapter</artifactId>
+  <name>VanillaBP SPI adapter for Camunda 7.x</name>
+  <version>0.0.1-SNAPSHOT</version>
+  <packaging>pom</packaging>
+
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <vanillabp-spring-boot-support.version>0.0.1-SNAPSHOT</vanillabp-spring-boot-support.version>
+    <camunda.version>7.17</camunda.version>
+    <camunda.version-minor>6</camunda.version-minor>
+  </properties>
+
+  <build>
+    <pluginManagement>
+      <plugins>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-compiler-plugin</artifactId>
+          <configuration>
+            <source>11</source>
+            <target>11</target>
+          </configuration>
+        </plugin>
+      </plugins>
+    </pluginManagement>
+  </build>
+
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>org.camunda.bpm</groupId>
+        <artifactId>camunda-bom</artifactId>
+        <version>${camunda.version}.${camunda.version-minor}${camunda.edition-suffix}</version>
+        <scope>import</scope>
+        <type>pom</type>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+
+  <modules>
+    <module>spring-boot</module>
+  </modules>
+
+  <profiles>
+    <profile>
+      <id>camunda-ee</id>
+      <activation>
+        <activeByDefault>false</activeByDefault>
+      </activation>
+      <properties>
+        <camunda.edition-suffix>-ee</camunda.edition-suffix>
+      </properties>
+    </profile>
+    <profile>
+      <id>camunda-ce</id>
+      <activation>
+        <activeByDefault>true</activeByDefault>
+      </activation>
+      <properties>
+        <camunda.edition-suffix></camunda.edition-suffix>
+        <camunda.version-minor>0</camunda.version-minor>
+      </properties>
+    </profile>
+  </profiles>
+</project>

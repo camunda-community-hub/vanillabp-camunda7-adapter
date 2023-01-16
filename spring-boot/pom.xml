@@ -12,7 +12,6 @@
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <vanillabp-spring-boot-support.version>0.0.1-SNAPSHOT</vanillabp-spring-boot-support.version>
   </properties>
 
   <dependencies>

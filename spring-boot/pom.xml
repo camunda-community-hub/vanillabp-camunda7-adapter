@@ -3,10 +3,11 @@
   <modelVersion>4.0.0</modelVersion>
 
   <parent>
-    <groupId>io.vanillabp</groupId>
+    <groupId>org.camunda.community.vanillabp</groupId>
     <artifactId>camunda7-adapter</artifactId>
     <version>0.0.1-SNAPSHOT</version>
   </parent>
+
   <artifactId>camunda7-spring-boot-adapter</artifactId>
   <name>VanillaBP SPI adapter for Camunda 7.x for Spring Boot</name>
 
@@ -26,7 +27,7 @@
     </dependency>
     <dependency>
       <groupId>org.camunda.bpm.springboot</groupId>
-      <artifactId>camunda-bpm-spring-boot-starter-webapp${camunda.edition-suffix}</artifactId>
+      <artifactId>camunda-bpm-spring-boot-starter-webapp</artifactId>
       <exclusions>
         <exclusion>
           <groupId>org.springframework.boot</groupId>
@@ -41,4 +42,21 @@
       <version>4.0.4</version>
     </dependency>
   </dependencies>
+
+  <licenses>
+    <license>
+      <name>Apache License, Version 2.0</name>
+      <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+      <distribution>repo</distribution>
+    </license>
+  </licenses>
+
+  <developers>
+    <developer>
+      <id>VanillaBP</id>
+      <organization>Phactum Softwareentwicklung GmbH</organization>
+      <organizationUrl>https://www.phactum.at</organizationUrl>
+    </developer>
+  </developers>
+
 </project>

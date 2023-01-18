@@ -5,11 +5,59 @@ Camunda 7 is a BPMN engine Java library which processes BPMN files deployed alon
 
 This adapter is aware of all the details needed to keep in mind on using Camunda 7 and implements a lot of best practices based on a long years experience.
 
+## Usage
+
+Just add this dependency to your project, no additional dependencies from Camunda needed:
+
+```xml
+<dependency>
+  <groupId>org.camunda.community.vanillabp</groupId>
+  <artifactId>camunda7-spring-boot-adapter</artifactId>
+  <version>1.0.0</version>
+</dependency>
+```
+
+If you want a certain version of Camunda (either community or enterprise edition) then you have to replace the transitive dependencies like this:
+
+```xml
+<dependency>
+  <groupId>org.camunda.bpm.springboot</groupId>
+  <artifactId>camunda-bpm-spring-boot-starter</artifactId>
+  <version>7.17.6-ee</version>
+</dependency>
+<dependency>
+  <groupId>org.camunda.bpm.springboot</groupId>
+  <artifactId>camunda-bpm-spring-boot-starter-webapp-ee</artifactId>
+  <version>7.17.6-ee</version>
+</dependency>
+<dependency>
+  <groupId>org.camunda.community.vanillabp</groupId>
+  <artifactId>camunda7-spring-boot-adapter</artifactId>
+  <version>1.0.0</version>
+  <exclusions>
+    <exclusion>
+      <groupId>org.camunda.bpm.springboot</groupId>
+      <artifactId>camunda-bpm-spring-boot-starter</artifactId>
+    </exclusion>
+    <exclusion>
+      <groupId>org.camunda.bpm.springboot</groupId>
+      <artifactId>camunda-bpm-spring-boot-starter-webapp</artifactId>
+    </exclusion>
+  </exclusions>
+</dependency>
+```
+
+*Hint:* This adapter is compatible with the configuration of the regular Camunda 7 Spring Boot auto-configuration. However, some additional configuration is described in the upcoming sections.
+
 ## Features
+
+### Worker ID
+
+When using asynchronious task processing one has to define a worker id. There is no default value to avoid bringing anything unwanted into production. On using [VanillaBP's SpringApplication](https://github.com/vanillabp/spring-boot-support#spring-boot-support) instead of `org.springframework.boot.SpringApplication` [additional support](https://github.com/vanillabp/spring-boot-support#worker-id) is available.
 
 ### Module aware deployment
 
-To avoid interdependencies between the implementation of different use-cases packed into a single microservice the concept of [workflow modules](https://github.com/vanillabp/spring-boot-support#workflow-modules) is introduced. This adapter builds a Camunda deployment for each workflow module found in the classpath.
+To avoid interdependencies between the implementation of different use-cases packed into a single microservice the concept of [workflow modules](https://github.com/vanillabp/spring-boot-support#workflow-modules) is introduced. This adapter builds a Camunda deployment for each workflow module found in the classpath. This requires to use [VanillaBP's SpringApplication](https://github.com/vanillabp/spring-boot-support#spring-boot-support).
 
 Since Camunda is not aware of workflow modules the Camunda tenant-id is used to store the relationship between BPMNs and DMNs and their workflow module. As a consequence Camunda's tenant-ids cannot be used to distinguish "real" tenants any more. To keep track easier, one might introduce user-groups for Camunda Cockpit which only shows resources of one workflow module.
 
@@ -68,19 +116,39 @@ If there is an exception in your business code and you have to roll back the tra
 public class TaxiRide {
 ```
 
+On introducing VanillaBP one might to keep some of the BPMNs unchanged. Therefore, automatic re-defining "Async before" and "Async after" can be disabled in general:
+
+```yaml
+camunda:
+   vanillabp:
+      use-bpmn-async-definitions: true
+```
+
+or just for particular process definitions:
+
+```yaml
+camunda:
+   vanillabp:
+      bpmn-async-definitions:
+        - workflow-module-id: ABC1
+          bpmn-process-id: XYZ1
+        - workflow-module-id: ABC2
+          bpmn-process-id: XYZ2
+```
+
 ### Job-Executor
 
 The Camunda job-executor is responsible for processing asynchronous continuation of BPMN tasks. It has a delay due to polling the database for jobs (see [Backoff Strategy](https://docs.camunda.org/manual/7.18/user-guide/process-engine/the-job-executor/#backoff-strategy)). If there is manual interaction to the process-engine (e.g. process started, message correlated or user-task completed) you want asynchronous tasks to be completed as soon as possible. For example, you want to give feedback in the UI of a "validation" task following a user-task. Therefore this adapter wakes up the Job-Exceutor to check for new jobs after a manual interaction's transaction is completed.
 
 In cloud environments one typically wants to free resources in idle times to not waste money (at protect the environment :deciduous_tree:) since resources are charged by time of usage. Camunda's Job-Executor using a polling strategy to find new jobs which either  keeps the database in use or introduces huge delays of execution if max-delays are set to big values. This Camunda 7 VanillaBP adapter alters this behavior by keeping the Job-Executor sleep until the next timed job's due-date (e.g. timer-event). In conjunction with waking up the job-executor in case of manual interaction this helps to minimize database usage.
 
-This feature is enabled by default and if not wanted needs to be disabled by this Spring property:
+This feature is *experimental and disabled by default* and if wanted one needs to enable it by using this Spring property:
 
 ```yaml
 camunda:
   bpm:
     job-execution:
-      wakeup: false
+      wakeup: true
 ```
 
 However, if enabled you have to [set a DB index](https://docs.camunda.org/manual/7.6/user-guide/process-engine/the-job-executor/#the-job-order-of-job-acquisition) as hinted on starting your Spring Boot application with this feature enabled:

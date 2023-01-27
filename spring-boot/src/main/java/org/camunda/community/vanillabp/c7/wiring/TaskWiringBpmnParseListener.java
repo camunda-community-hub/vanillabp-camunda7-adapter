@@ -1,5 +1,6 @@
 package org.camunda.community.vanillabp.c7.wiring;
 
+import org.camunda.bpm.engine.impl.bpmn.behavior.DmnBusinessRuleTaskActivityBehavior;
 import org.camunda.bpm.engine.impl.bpmn.behavior.UserTaskActivityBehavior;
 import org.camunda.bpm.engine.impl.bpmn.listener.DelegateExpressionExecutionListener;
 import org.camunda.bpm.engine.impl.bpmn.listener.ExpressionExecutionListener;
@@ -155,6 +156,10 @@ public class TaskWiringBpmnParseListener implements BpmnParseListener {
             final ScopeImpl scope,
             final ActivityImpl activity) {
         
+        if (activity.getActivityBehavior() instanceof DmnBusinessRuleTaskActivityBehavior) {
+            return;
+        }
+                
         connectTask(businessRuleTaskElement, scope, activity);        
     }
     

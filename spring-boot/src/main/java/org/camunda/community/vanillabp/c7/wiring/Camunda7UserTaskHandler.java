@@ -84,7 +84,7 @@ public class Camunda7UserTaskHandler extends TaskHandlerBase implements TaskList
                 .filter(parameter -> parameter instanceof TaskEventMethodParameter)
                 .map(parameter -> ((TaskEventMethodParameter) parameter).getEvents())
                 .findFirst()
-                .orElse(Set.of())
+                .orElse(Set.of(TaskEvent.Event.CREATED))
                 .contains(event);
         
     }

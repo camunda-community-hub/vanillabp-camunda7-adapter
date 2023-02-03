@@ -1,4 +1,4 @@
 org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
-  org.camunda.community.vanillabp.c7.deployment.Camunda7DisableAutoDeploymentConfiguration,\
-  org.camunda.community.vanillabp.c7.jobexecutor.WakeupJobExecutorConfiguration,\
-  org.camunda.community.vanillabp.c7.Camunda7AdapterConfiguration
+  io.vanillabp.camunda7.deployment.Camunda7DisableAutoDeploymentConfiguration,\
+  io.vanillabp.camunda7.jobexecutor.WakeupJobExecutorConfiguration,\
+  io.vanillabp.camunda7.Camunda7AdapterConfiguration

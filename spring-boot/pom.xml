@@ -19,7 +19,7 @@
     <dependency>
       <groupId>io.vanillabp</groupId>
       <artifactId>spring-boot-support</artifactId>
-      <version>${vanillabp-spring-boot-support.version}</version>
+      <version>1.0.1</version>
     </dependency>
     <dependency>
       <groupId>org.camunda.bpm.springboot</groupId>

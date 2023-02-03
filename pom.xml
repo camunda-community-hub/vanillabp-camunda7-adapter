@@ -17,7 +17,6 @@
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <vanillabp-spring-boot-support.version>1.0.0</vanillabp-spring-boot-support.version>
     <camunda.version>7.17.0</camunda.version>
     <version.java>11</version.java>
   </properties>

@@ -5,6 +5,18 @@ Camunda 7 is a BPMN engine Java library which processes BPMN files deployed alon
 
 This adapter is aware of all the details needed to keep in mind on using Camunda 7 and implements a lot of best practices based on a long years experience.
 
+## Content
+
+1. [Usage](#usage)
+1. [Features](#features)
+    1. [Worker ID](#worker-id)
+    1. [Module aware deployment](#module-aware-deployment)
+    1. [SPI Binding validation](#spi-binding-validation)
+1. [Multi-instance](#multi-instance)
+1. [Message correlation IDs](#message-correlation-ids)
+1. [Transaction behavior](#transaction-behavior)
+1. [Job-Executor](#job-executor)
+
 ## Usage
 
 Just add this dependency to your project, no additional dependencies from Camunda needed:
@@ -81,15 +93,13 @@ On starting the application BPMNs of all workflow modules will be wired to the S
    
 This ensures that correct wiring of all process definitions according to the SPI is done.
 
-### BPMN
-
-#### Multi-instance
+## Multi-instance
 
 For Camunda 7 all the handling of multi-instance is done under the hood.
 
 *Hint:* If you want to be prepared to upgrade to Camunda 8 then use collection-based multi-instance since Camunda 8 does not support cardinality-based multi-instance. To avoid troubles on deserializing complex elements in your collection we strongly recommend to only use collections which consist of primitive values (e.g. in the taxi ride sample the list of driver ids).
 
-#### Message correlation IDs
+## Message correlation IDs
 
 On using receive tasks one can correlate an incoming message by it's name. This means that a particular workflow is allowed to have only one receive task active for this particular message name. Typically, this is not a problem. In case your model has more than one receive task active you have to define unique correlation IDs for each receive task of that message name to enable the BPMS to find the right receive task to correlate to. This might be necessary for multi-instance receive tasks or receive tasks within a multi-instance embedded sub-process.
 
@@ -99,7 +109,7 @@ For the taxi ride sample we have the BPMN process ID `TaxiRide` and e.g. the mes
 
 *Hint:* If you want to be prepared to upgrade to Camunda 8 then always set this correlation ID as a local variable since this is mandatory on using Camunda 8.
 
-### Transaction behavior
+## Transaction behavior
 
 Defining the right Camunda 7 transactional behavior can be difficult. We have seen a lot of developers struggling with all the possibilities Camunda 7 provides regarding transactions. The implementation uses one particular best-practice approach and applies this to every BPMN automatically: Every BPMN task/element is a separate transaction.
 
@@ -136,7 +146,7 @@ camunda:
           bpmn-process-id: XYZ2
 ```
 
-### Job-Executor
+## Job-Executor
 
 The Camunda job-executor is responsible for processing asynchronous continuation of BPMN tasks. It has a delay due to polling the database for jobs (see [Backoff Strategy](https://docs.camunda.org/manual/7.18/user-guide/process-engine/the-job-executor/#backoff-strategy)). If there is manual interaction to the process-engine (e.g. process started, message correlated or user-task completed) you want asynchronous tasks to be completed as soon as possible. For example, you want to give feedback in the UI of a "validation" task following a user-task. Therefore this adapter wakes up the Job-Exceutor to check for new jobs after a manual interaction's transaction is completed.
 

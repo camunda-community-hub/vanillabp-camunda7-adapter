@@ -1,7 +1,9 @@
 package io.vanillabp.camunda7.deployment;
 
+import io.vanillabp.camunda7.Camunda7AdapterConfiguration;
 import io.vanillabp.camunda7.wiring.Camunda7TaskWiring;
 import io.vanillabp.springboot.adapter.ModuleAwareBpmnDeployment;
+import io.vanillabp.springboot.adapter.VanillaBpProperties;
 import org.camunda.bpm.engine.ProcessEngine;
 import org.camunda.bpm.engine.repository.ResumePreviousBy;
 import org.camunda.bpm.engine.spring.application.SpringProcessApplication;
@@ -16,7 +18,7 @@ import javax.annotation.PostConstruct;
 public class Camunda7DeploymentAdapter extends ModuleAwareBpmnDeployment {
 
 	private static final Logger logger = LoggerFactory.getLogger(Camunda7DeploymentAdapter.class);
-	
+
     private final ProcessEngine processEngine;
     
     private final SpringProcessApplication processApplication;
@@ -24,11 +26,12 @@ public class Camunda7DeploymentAdapter extends ModuleAwareBpmnDeployment {
     private final Camunda7TaskWiring taskWiring;
 
     public Camunda7DeploymentAdapter(
+            final VanillaBpProperties properties,
             final SpringProcessApplication processApplication,
             final Camunda7TaskWiring taskWiring,
             final ProcessEngine processEngine) {
         
-        super();
+        super(properties);
         this.processEngine = processEngine;
         this.processApplication = processApplication;
         this.taskWiring = taskWiring;
@@ -40,6 +43,13 @@ public class Camunda7DeploymentAdapter extends ModuleAwareBpmnDeployment {
     	
     	return logger;
     	
+    }
+    
+    @Override
+    protected String getAdapterId() {
+        
+        return Camunda7AdapterConfiguration.ADAPTER_ID;
+        
     }
     
     @Override
@@ -55,6 +65,7 @@ public class Camunda7DeploymentAdapter extends ModuleAwareBpmnDeployment {
     @Override
     protected void doDeployment(
     		final String workflowModuleId,
+            final String workflowModuleName,
             final Resource[] bpmns,
             final Resource[] dmns,
             final Resource[] cmms)
@@ -67,8 +78,8 @@ public class Camunda7DeploymentAdapter extends ModuleAwareBpmnDeployment {
                 .resumePreviousVersionsBy(ResumePreviousBy.RESUME_BY_DEPLOYMENT_NAME)
                 .enableDuplicateFiltering(true)
                 .source(applicationName)
-                .tenantId(workflowModuleId)
-                .name(workflowModuleId);
+                .tenantId(workflowModuleName)
+                .name(workflowModuleName);
 
         boolean hasDeployables = false;
         
@@ -102,7 +113,7 @@ public class Camunda7DeploymentAdapter extends ModuleAwareBpmnDeployment {
         processEngine
                 .getRepositoryService()
                 .createProcessDefinitionQuery()
-                .tenantIdIn(workflowModuleId)
+                .tenantIdIn(workflowModuleName)
                 .list()
                 .forEach(definition -> {
                     // process models parsed during deployment are cached and therefore

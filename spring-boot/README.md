@@ -77,9 +77,9 @@ Additionally, in a clustered environment during rolling deployment, to not start
 
 ```yaml
 camunda:
-   bpm:
-      job-execution:
-         deployment-aware: true
+  bpm:
+    job-execution:
+      deployment-aware: true
 ```
 
 ### SPI Binding validation
@@ -129,16 +129,18 @@ public class TaxiRide {
 On introducing VanillaBP one might to keep some of the BPMNs unchanged. Therefore, automatic re-defining "Async before" and "Async after" can be disabled in general:
 
 ```yaml
-camunda:
-   vanillabp:
+vanillabp:
+  adapters:
+    camunda7:
       use-bpmn-async-definitions: true
 ```
 
 or just for particular process definitions:
 
 ```yaml
-camunda:
-   vanillabp:
+vanillabp:
+  adapters:
+    camunda7:
       bpmn-async-definitions:
         - workflow-module-id: ABC1
           bpmn-process-id: XYZ1

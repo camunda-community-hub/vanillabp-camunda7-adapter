@@ -1,6 +1,6 @@
 package io.vanillabp.camunda7.wiring;
 
-import io.vanillabp.camunda7.wiring.Camunda7AdapterProperties.BpmnAsyncDefinition;
+import io.vanillabp.springboot.utils.WorkflowAndModule;
 import org.camunda.bpm.engine.impl.bpmn.behavior.DmnBusinessRuleTaskActivityBehavior;
 import org.camunda.bpm.engine.impl.bpmn.behavior.UserTaskActivityBehavior;
 import org.camunda.bpm.engine.impl.bpmn.listener.DelegateExpressionExecutionListener;
@@ -35,7 +35,7 @@ public class TaskWiringBpmnParseListener implements BpmnParseListener {
     
     private final boolean useBpmnAsyncDefinitions;
     
-    private final List<BpmnAsyncDefinition> bpmnAsyncDefinitions;
+    private final List<WorkflowAndModule> bpmnAsyncDefinitions;
     
     private List<Camunda7Connectable> connectables = new LinkedList<>();
 
@@ -52,7 +52,7 @@ public class TaskWiringBpmnParseListener implements BpmnParseListener {
             final Camunda7TaskWiring taskWiring,
             final Camunda7UserTaskEventHandler userTaskEventHandler,
             final boolean useBpmnAsyncDefinitions,
-            final List<BpmnAsyncDefinition> bpmnAsyncDefinitions) {
+            final List<WorkflowAndModule> bpmnAsyncDefinitions) {
 
         super();
         this.taskWiring = taskWiring;

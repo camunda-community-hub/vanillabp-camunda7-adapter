@@ -1,5 +1,7 @@
 package io.vanillabp.camunda7.service;
 
+import io.vanillabp.camunda7.Camunda7AdapterConfiguration;
+import io.vanillabp.springboot.adapter.AdapterAwareProcessService;
 import io.vanillabp.springboot.adapter.ProcessServiceImplementation;
 import org.camunda.bpm.engine.ProcessEngine;
 import org.slf4j.Logger;
@@ -26,6 +28,8 @@ public class Camunda7ProcessService<DE>
     
     private final Function<DE, String> getWorkflowAggregateId;
 
+    private AdapterAwareProcessService<DE> parent;
+
     private String workflowModuleId;
 
     private String bpmnProcessId;
@@ -45,6 +49,14 @@ public class Camunda7ProcessService<DE>
         this.getWorkflowAggregateId = getWorkflowAggregateId;
 
     }
+    
+    @Override
+    public void setParent(
+            final AdapterAwareProcessService<DE> parent) {
+        
+        this.parent = parent;
+        
+    }
 
     public void wire(
             final String workflowModuleId,
@@ -52,6 +64,13 @@ public class Camunda7ProcessService<DE>
         
         this.workflowModuleId = workflowModuleId;
         this.bpmnProcessId = bpmnProcessId;
+        
+        if (parent != null) {
+            parent.wire(
+                    Camunda7AdapterConfiguration.ADAPTER_ID,
+                    workflowModuleId,
+                    bpmnProcessId);
+        }
         
     }
     

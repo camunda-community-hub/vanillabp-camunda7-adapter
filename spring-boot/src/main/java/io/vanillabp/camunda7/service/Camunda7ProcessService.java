@@ -3,6 +3,7 @@ package io.vanillabp.camunda7.service;
 import io.vanillabp.camunda7.Camunda7AdapterConfiguration;
 import io.vanillabp.springboot.adapter.AdapterAwareProcessService;
 import io.vanillabp.springboot.adapter.ProcessServiceImplementation;
+import org.camunda.bpm.engine.MismatchingMessageCorrelationException;
 import org.camunda.bpm.engine.ProcessEngine;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -220,29 +221,43 @@ public class Camunda7ProcessService<DE>
 
         wakeupJobExecutorOnActivity();
 
-        if (isNewEntity) {
+        try {
             
-            final var result = correlation.correlateStartMessage();
-            logger.trace("Started process '{}#{}' by message-correlation '{}' (tenant: {})",
-                    bpmnProcessId,
-                    result.getProcessInstanceId(),
+            if (isNewEntity) {
+                
+                final var result = correlation.correlateStartMessage();
+                logger.trace("Started process '{}#{}' by message-correlation '{}' (tenant: {})",
+                        bpmnProcessId,
+                        result.getProcessInstanceId(),
+                        messageName,
+                        result.getTenantId());
+                
+            } else {
+            
+                final var result = correlation
+                        .correlateWithResult()
+                        .getExecution();
+                
+                logger.trace("Correlated message '{}' using correlation-id '{}' for process '{}#{}' and execution '{}' (tenant: {})",
+                        messageName,
+                        correlationId,
+                        bpmnProcessId,
+                        result.getProcessInstanceId(),
+                        result.getId(),
+                        result.getTenantId());
+    
+            }
+            
+        } catch (MismatchingMessageCorrelationException e) {
+            
+            logger.warn("Message '{}' of process having bpmn-process-id '{}' could not be correlated using correlation-id '{}' for workflow aggregate '{}'! "
+                    + "This will not block execution of code because this event is not compatible to Camunda 8!",
                     messageName,
-                    result.getTenantId());
-            
-        } else {
-        
-            final var result = correlation
-                    .correlateWithResult()
-                    .getExecution();
-            
-            logger.trace("Correlated message '{}' using correlation-id '{}' for process '{}#{}' and execution '{}' (tenant: {})",
-                    messageName,
+                    getBpmnProcessId(),
                     correlationId,
-                    bpmnProcessId,
-                    result.getProcessInstanceId(),
-                    result.getId(),
-                    result.getTenantId());
-
+                    id,
+                    e);
+            
         }
         
         return attachedAggregate;

@@ -72,7 +72,8 @@ public class Camunda7TaskWiring extends TaskWiringBase<Camunda7Connectable, Camu
     protected <DE> Camunda7ProcessService<?> connectToBpms(
             final String workflowModuleId,
             final Class<DE> workflowAggregateClass,
-            final String bpmnProcessId) {
+            final String bpmnProcessId,
+            final boolean isPrimary) {
         
         final var processService = connectableServices
                 .stream()
@@ -85,7 +86,10 @@ public class Camunda7TaskWiring extends TaskWiringBase<Camunda7Connectable, Camu
                         + workflowAggregateClass.getName()
                         + ">' in your code to be able to start workflows!"));
 
-        processService.wire(workflowModuleId, bpmnProcessId);
+        processService.wire(
+                workflowModuleId,
+                bpmnProcessId,
+                isPrimary);
 
         return processService;
         

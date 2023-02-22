@@ -3,14 +3,13 @@ package io.vanillabp.camunda7.service;
 import io.vanillabp.camunda7.Camunda7AdapterConfiguration;
 import io.vanillabp.springboot.adapter.AdapterAwareProcessService;
 import io.vanillabp.springboot.adapter.ProcessServiceImplementation;
-import org.camunda.bpm.engine.MismatchingMessageCorrelationException;
 import org.camunda.bpm.engine.ProcessEngine;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.repository.CrudRepository;
-import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Collection;
 import java.util.Objects;
 import java.util.function.Function;
 
@@ -30,10 +29,6 @@ public class Camunda7ProcessService<DE>
     private final Function<DE, String> getWorkflowAggregateId;
 
     private AdapterAwareProcessService<DE> parent;
-
-    private String workflowModuleId;
-
-    private String bpmnProcessId;
 
     public Camunda7ProcessService(
             final ApplicationEventPublisher applicationEventPublisher,
@@ -58,26 +53,36 @@ public class Camunda7ProcessService<DE>
         this.parent = parent;
         
     }
+    
+    public Collection<String> getBpmnProcessIds() {
+        
+        return parent.getBpmnProcessIds();
+                
+    }
 
     public void wire(
             final String workflowModuleId,
-            final String bpmnProcessId) {
-        
-        this.workflowModuleId = workflowModuleId;
-        this.bpmnProcessId = bpmnProcessId;
-        
-        if (parent != null) {
-            parent.wire(
-                    Camunda7AdapterConfiguration.ADAPTER_ID,
-                    workflowModuleId,
-                    bpmnProcessId);
+            final String bpmnProcessId,
+            final boolean isPrimary) {
+
+        if (parent == null) {
+            throw new RuntimeException("Not yet wired! If this occurs Spring Boot dependency of either "
+                    + "VanillaBP Spring Boot support or Camunda7 adapter was changed introducing this "
+                    + "lack of wiring. Please report a Github issue!");
+            
         }
+
+        parent.wire(
+                Camunda7AdapterConfiguration.ADAPTER_ID,
+                workflowModuleId,
+                bpmnProcessId,
+                isPrimary);
         
     }
     
     public boolean testForNotYetWired() {
         
-        if (bpmnProcessId == null) {
+        if (parent.getPrimaryBpmnProcessId() == null) {
             logger.error(
                     "The bean ProcessService<{}> was not wired to a BPMN process! "
                             + "It is likely that the BPMN is not part of the classpath.",
@@ -86,13 +91,6 @@ public class Camunda7ProcessService<DE>
         }
         
         return false;
-
-    }
-
-    @Override
-    public String getBpmnProcessId() {
-
-        return bpmnProcessId;
 
     }
 
@@ -125,9 +123,9 @@ public class Camunda7ProcessService<DE>
         
         processEngine
                 .getRuntimeService()
-                .createProcessInstanceByKey(bpmnProcessId)
+                .createProcessInstanceByKey(parent.getPrimaryBpmnProcessId())
                 .businessKey(id)
-                .processDefinitionTenantId(workflowModuleId)
+                .processDefinitionTenantId(parent.getWorkflowModuleId())
                 .execute();
         
         return workflowAggregateRepository
@@ -136,7 +134,6 @@ public class Camunda7ProcessService<DE>
     }
 
     @Override
-    @Transactional
     public DE correlateMessage(
             final DE workflowAggregate,
             final String messageName) {
@@ -167,7 +164,7 @@ public class Camunda7ProcessService<DE>
             final String correlationId) {
         
         final var correlationIdLocalVariableName =
-                bpmnProcessId
+                parent.getPrimaryBpmnProcessId()
                 + "-"
                 + messageName;
 
@@ -221,19 +218,35 @@ public class Camunda7ProcessService<DE>
 
         wakeupJobExecutorOnActivity();
 
-        try {
+        if (isNewEntity) {
             
-            if (isNewEntity) {
+            final var result = correlation.correlateStartMessage();
+            logger.trace("Started process '{}#{}' by message-correlation '{}' (tenant: {})",
+                    parent.getPrimaryBpmnProcessId(),
+                    result.getProcessInstanceId(),
+                    messageName,
+                    result.getTenantId());
+            
+        } else {
+            
+            final var hasMessageCorrelation = processEngine
+                    .getRuntimeService()
+                    .createExecutionQuery()
+                    .messageEventSubscriptionName(messageName)
+                    .processInstanceBusinessKey(id)
+                    .list()
+                    .size() == 1;
+            if (!hasMessageCorrelation) {
                 
-                final var result = correlation.correlateStartMessage();
-                logger.trace("Started process '{}#{}' by message-correlation '{}' (tenant: {})",
-                        bpmnProcessId,
-                        result.getProcessInstanceId(),
+                logger.warn("Message '{}' of process having bpmn-process-id '{}' could not be correlated using correlation-id '{}' for workflow aggregate '{}'! "
+                        + "This will not block execution of code because this event is not compatible to Camunda 8!",
                         messageName,
-                        result.getTenantId());
-                
-            } else {
+                        parent.getPrimaryBpmnProcessId(),
+                        correlationId,
+                        id);
             
+            } else {
+                
                 final var result = correlation
                         .correlateWithResult()
                         .getExecution();
@@ -241,22 +254,12 @@ public class Camunda7ProcessService<DE>
                 logger.trace("Correlated message '{}' using correlation-id '{}' for process '{}#{}' and execution '{}' (tenant: {})",
                         messageName,
                         correlationId,
-                        bpmnProcessId,
+                        parent.getPrimaryBpmnProcessId(),
                         result.getProcessInstanceId(),
                         result.getId(),
                         result.getTenantId());
-    
+
             }
-            
-        } catch (MismatchingMessageCorrelationException e) {
-            
-            logger.warn("Message '{}' of process having bpmn-process-id '{}' could not be correlated using correlation-id '{}' for workflow aggregate '{}'! "
-                    + "This will not block execution of code because this event is not compatible to Camunda 8!",
-                    messageName,
-                    getBpmnProcessId(),
-                    correlationId,
-                    id,
-                    e);
             
         }
         

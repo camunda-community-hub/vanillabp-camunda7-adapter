@@ -34,7 +34,11 @@ public class ProcessEntityELResolver extends ELResolver {
         super();
         processServices = connectableServices
                 .stream()
-                .collect(Collectors.toMap(Camunda7ProcessService::getBpmnProcessId, s -> s));
+                .flatMap(service -> service
+                        .getBpmnProcessIds()
+                        .stream()
+                        .map(bpmnProcessId -> Map.entry(bpmnProcessId, service)))
+                .collect(Collectors.toMap(entry -> entry.getKey(), entry -> entry.getValue()));
 
     }
 

@@ -63,7 +63,9 @@ public class Camunda7ProcessService<DE>
     public void wire(
             final String workflowModuleId,
             final String bpmnProcessId,
-            final boolean isPrimary) {
+            final boolean isPrimary,
+            final Collection<String> messageBasedStartEventsMessageNames,
+            final Collection<String> signalBasedStartEventsSignalNames) {
 
         if (parent == null) {
             throw new RuntimeException("Not yet wired! If this occurs Spring Boot dependency of either "
@@ -76,7 +78,9 @@ public class Camunda7ProcessService<DE>
                 Camunda7AdapterConfiguration.ADAPTER_ID,
                 workflowModuleId,
                 bpmnProcessId,
-                isPrimary);
+                isPrimary,
+                messageBasedStartEventsMessageNames,
+                signalBasedStartEventsSignalNames);
         
     }
     
@@ -137,7 +141,7 @@ public class Camunda7ProcessService<DE>
     public DE correlateMessage(
             final DE workflowAggregate,
             final String messageName) {
-
+        
         return correlateMessage(
                 workflowAggregate,
                 messageName,
@@ -209,7 +213,6 @@ public class Camunda7ProcessService<DE>
                 .getRuntimeService()
                 .createMessageCorrelation(messageName)
                 .processInstanceBusinessKey(id);
-
         if (correlationIdLocalVariableName != null) {
             correlation.localVariableEquals(
                     correlationIdLocalVariableName,
@@ -227,42 +230,49 @@ public class Camunda7ProcessService<DE>
                     messageName,
                     result.getTenantId());
             
-        } else {
-            
-            final var hasMessageCorrelation = processEngine
-                    .getRuntimeService()
-                    .createExecutionQuery()
-                    .messageEventSubscriptionName(messageName)
-                    .processInstanceBusinessKey(id)
-                    .list()
-                    .size() == 1;
-            if (!hasMessageCorrelation) {
-                
-                logger.warn("Message '{}' of process having bpmn-process-id '{}' could not be correlated using correlation-id '{}' for workflow aggregate '{}'! "
-                        + "This will not block execution of code because this event is not compatible to Camunda 8!",
-                        messageName,
-                        parent.getPrimaryBpmnProcessId(),
-                        correlationId,
-                        id);
-            
-            } else {
-                
-                final var result = correlation
-                        .correlateWithResult()
-                        .getExecution();
-                
-                logger.trace("Correlated message '{}' using correlation-id '{}' for process '{}#{}' and execution '{}' (tenant: {})",
-                        messageName,
-                        correlationId,
-                        parent.getPrimaryBpmnProcessId(),
-                        result.getProcessInstanceId(),
-                        result.getId(),
-                        result.getTenantId());
-
-            }
+            return attachedAggregate;
             
         }
+            
+        final var correlationExecutions = processEngine
+                .getRuntimeService()
+                .createExecutionQuery()
+                .messageEventSubscriptionName(messageName)
+                .processInstanceBusinessKey(id)
+                .active();
+        if (correlationIdLocalVariableName != null) {
+            correlationExecutions.variableValueEquals(
+                    correlationIdLocalVariableName,
+                    correlationId);
+        }
+        final var hasMessageCorrelation = correlationExecutions.count() == 1;
         
+        if (!hasMessageCorrelation) {
+            
+            logger.trace("Message '{}' of process having bpmn-process-id '{}' could "
+                    + "not be correlated using correlation-id '{}' for workflow aggregate '{}'!",
+                    messageName,
+                    parent.getPrimaryBpmnProcessId(),
+                    correlationId,
+                    id);
+
+            return attachedAggregate;
+            
+        }
+            
+        final var result = correlation
+                .correlateWithResult()
+                .getExecution();
+        
+        logger.trace("Correlated message '{}' using correlation-id '{}' for process '{}#{}' "
+                + "and execution '{}' (tenant: {})",
+                messageName,
+                correlationId,
+                parent.getPrimaryBpmnProcessId(),
+                result.getProcessInstanceId(),
+                result.getId(),
+                result.getTenantId());
+
         return attachedAggregate;
 
     }

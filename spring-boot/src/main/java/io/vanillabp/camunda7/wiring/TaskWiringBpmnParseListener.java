@@ -17,10 +17,8 @@ import org.camunda.bpm.engine.impl.util.xml.Element;
 import org.camunda.bpm.engine.impl.variable.VariableDeclaration;
 import org.springframework.util.StringUtils;
 
-import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -38,8 +36,18 @@ public class TaskWiringBpmnParseListener implements BpmnParseListener {
     private final List<WorkflowAndModule> bpmnAsyncDefinitions;
     
     private List<Camunda7Connectable> connectables = new LinkedList<>();
-
-    private Map<String, Camunda7Connectable> serviceTaskLikeElements = new HashMap<>();
+    
+    private List<ToBeWired> toBeWired = new LinkedList<>();
+    
+    private static ThreadLocal<Boolean> oldVersionBpmn = ThreadLocal.withInitial(() -> Boolean.FALSE);
+    
+    static class ToBeWired {
+        String workflowModuleId;
+        String bpmnProcessId;
+        List<String> messageBasedStartEventsMessages;
+        List<String> signalBasedStartEventsSignals;
+        List<Camunda7Connectable> connectables;
+    };
     
     static enum Async {
         DONT_SET,
@@ -62,6 +70,13 @@ public class TaskWiringBpmnParseListener implements BpmnParseListener {
         
     }
     
+    public static void setOldVersionBpmn(
+            final boolean oldVersionBpmn) {
+        
+        TaskWiringBpmnParseListener.oldVersionBpmn.set(oldVersionBpmn);
+        
+    }
+    
     @Override
     public void parseProcess(
             final Element processElement,
@@ -70,12 +85,30 @@ public class TaskWiringBpmnParseListener implements BpmnParseListener {
         final var workflowModuleId = Camunda7WorkflowModuleAwareBpmnParse.getWorkflowModuleId();
         final var bpmnProcessId = processDefinition.getKey();
 
-        final var processService = taskWiring.wireService(workflowModuleId, bpmnProcessId);
+        final var startEvents = processElement
+                .elements("startEvent");
+        final var messageBasedStartEventsMessageRefs = startEvents
+                .stream()
+                .map(event -> event.element(BpmnParse.MESSAGE_EVENT_DEFINITION))
+                .filter(eventDefinition -> eventDefinition != null)
+                .map(eventDefinition -> eventDefinition.attribute("messageRef"))
+                .collect(Collectors.toList());
+        final var signalBasedStartEventsSignalRefs = startEvents
+                .stream()
+                .map(event -> event.element(BpmnParse.SIGNAL_EVENT_DEFINITION))
+                .filter(eventDefinition -> eventDefinition != null)
+                .map(eventDefinition -> eventDefinition.attribute("signalRef"))
+                .collect(Collectors.toList());
+        
+        final var process = new ToBeWired();
+        process.bpmnProcessId = bpmnProcessId;
+        process.workflowModuleId = workflowModuleId;
+        process.messageBasedStartEventsMessages = messageBasedStartEventsMessageRefs;
+        process.signalBasedStartEventsSignals = signalBasedStartEventsSignalRefs;
+        process.connectables = connectables;
+        toBeWired.add(process);
 
-        connectables.forEach(connectable -> taskWiring.wireTask(processService, connectable));
-
-        connectables.clear();
-        serviceTaskLikeElements.clear();
+        connectables = new LinkedList<>();
 
     }
     
@@ -437,7 +470,7 @@ public class TaskWiringBpmnParseListener implements BpmnParseListener {
             final ActivityImpl activity) {
         
         resetAsyncBeforeAndAsyncAfter(element, activity, Async.SET_ASYNC_BEFORE_ONLY);
-
+        
     }
 
     @Override
@@ -581,6 +614,42 @@ public class TaskWiringBpmnParseListener implements BpmnParseListener {
     public void parseRootElement(
             final Element rootElement,
             final List<ProcessDefinitionEntity> processDefinitions) {
+        
+        toBeWired
+                .stream()
+                .peek(tbw -> {
+                    // translate messageRef into message names
+                    tbw.messageBasedStartEventsMessages = tbw
+                            .messageBasedStartEventsMessages
+                            .stream()
+                            .flatMap(ref -> rootElement
+                                    .elements("message")
+                                    .stream()
+                                    .filter(message -> message.attribute("id").equals(ref))
+                                    .map(message -> message.attribute("name")))
+                            .collect(Collectors.toList());
+                })
+                .peek(tbw -> {
+                    // translate signalRef into signal names
+                    tbw.signalBasedStartEventsSignals = tbw
+                            .signalBasedStartEventsSignals
+                            .stream()
+                            .flatMap(ref -> rootElement
+                                    .elements("signal")
+                                    .stream()
+                                    .filter(message -> message.attribute("id").equals(ref))
+                                    .map(message -> message.attribute("name")))
+                            .collect(Collectors.toList());
+                })
+                .forEach(tbw -> {
+                    final var processService = taskWiring.wireService(
+                            tbw.workflowModuleId,
+                            tbw.bpmnProcessId,
+                            oldVersionBpmn.get().booleanValue() ? List.of() : tbw.messageBasedStartEventsMessages,
+                            oldVersionBpmn.get().booleanValue() ? List.of() : tbw.signalBasedStartEventsSignals);
+                    tbw.connectables
+                            .forEach(connectable -> taskWiring.wireTask(processService, connectable));
+                });
         
     }
 

@@ -2,6 +2,7 @@ package io.vanillabp.camunda7.deployment;
 
 import io.vanillabp.camunda7.Camunda7AdapterConfiguration;
 import io.vanillabp.camunda7.wiring.Camunda7TaskWiring;
+import io.vanillabp.camunda7.wiring.TaskWiringBpmnParseListener;
 import io.vanillabp.springboot.adapter.ModuleAwareBpmnDeployment;
 import io.vanillabp.springboot.adapter.VanillaBpProperties;
 import org.camunda.bpm.engine.ProcessEngine;
@@ -109,7 +110,7 @@ public class Camunda7DeploymentAdapter extends ModuleAwareBpmnDeployment {
             deploymentBuilder.deploy();
         }
 
-        // BPMNs which were deployTed in the past need to be forced to be parsed for wiring 
+        // BPMNs which were deployed in the past need to be forced to be parsed for wiring 
         processEngine
                 .getRepositoryService()
                 .createProcessDefinitionQuery()
@@ -118,7 +119,12 @@ public class Camunda7DeploymentAdapter extends ModuleAwareBpmnDeployment {
                 .forEach(definition -> {
                     // process models parsed during deployment are cached and therefore
                     // not wired twice.
-                    processEngine.getRepositoryService().getProcessModel(definition.getId());
+                    try {
+                        TaskWiringBpmnParseListener.setOldVersionBpmn(true);
+                        processEngine.getRepositoryService().getProcessModel(definition.getId());
+                    } finally {
+                        TaskWiringBpmnParseListener.setOldVersionBpmn(false);
+                    }
                 });
 
     }

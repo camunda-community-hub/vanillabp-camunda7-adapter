@@ -73,7 +73,9 @@ public class Camunda7TaskWiring extends TaskWiringBase<Camunda7Connectable, Camu
             final String workflowModuleId,
             final Class<DE> workflowAggregateClass,
             final String bpmnProcessId,
-            final boolean isPrimary) {
+            final boolean isPrimary,
+            final Collection<String> messageBasedStartEventsMessageNames,
+            final Collection<String> signalBasedStartEventsSignalNames) {
         
         final var processService = connectableServices
                 .stream()
@@ -89,7 +91,9 @@ public class Camunda7TaskWiring extends TaskWiringBase<Camunda7Connectable, Camu
         processService.wire(
                 workflowModuleId,
                 bpmnProcessId,
-                isPrimary);
+                isPrimary,
+                messageBasedStartEventsMessageNames,
+                signalBasedStartEventsSignalNames);
 
         return processService;
         

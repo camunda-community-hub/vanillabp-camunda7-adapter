@@ -4,6 +4,7 @@ import io.vanillabp.camunda7.Camunda7AdapterConfiguration;
 import io.vanillabp.springboot.adapter.AdapterAwareProcessService;
 import io.vanillabp.springboot.adapter.ProcessServiceImplementation;
 import org.camunda.bpm.engine.ProcessEngine;
+import org.camunda.bpm.engine.exception.NullValueException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
@@ -285,8 +286,22 @@ public class Camunda7ProcessService<DE>
         final var attachedAggregate = workflowAggregateRepository
                 .save(workflowAggregate);
         
-        wakeupJobExecutorOnActivity();
+        final var id = getWorkflowAggregateId.apply(workflowAggregate);
+        final var task = processEngine
+                .getTaskService()
+                .createTaskQuery()
+                .processInstanceBusinessKey(id)
+                .taskId(taskId)
+                .singleResult();
         
+        if (task == null) {
+            throw new NullValueException("Task '"
+                    + taskId
+                    + "' not found!");
+        }
+        
+        wakeupJobExecutorOnActivity();
+
         processEngine
                 .getTaskService()
                 .complete(taskId);

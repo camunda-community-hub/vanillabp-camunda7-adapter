@@ -106,8 +106,13 @@ public class Camunda7DeploymentAdapter extends ModuleAwareBpmnDeployment {
         }
 
         // BPMNs which are new will be parsed and wired as part of the deployment
+        final String deploymentId;
         if (hasDeployables) {
-            deploymentBuilder.deploy();
+            deploymentId = deploymentBuilder
+                    .deployWithResult()
+                    .getId();
+        } else {
+            deploymentId = "";
         }
 
         // BPMNs which were deployed in the past need to be forced to be parsed for wiring 
@@ -116,11 +121,13 @@ public class Camunda7DeploymentAdapter extends ModuleAwareBpmnDeployment {
                 .createProcessDefinitionQuery()
                 .tenantIdIn(workflowModuleName)
                 .list()
+                .stream()
                 .forEach(definition -> {
                     // process models parsed during deployment are cached and therefore
                     // not wired twice.
                     try {
-                        TaskWiringBpmnParseListener.setOldVersionBpmn(true);
+                        TaskWiringBpmnParseListener.setOldVersionBpmn(
+                                !definition.getDeploymentId().equals(deploymentId));
                         processEngine.getRepositoryService().getProcessModel(definition.getId());
                     } finally {
                         TaskWiringBpmnParseListener.setOldVersionBpmn(false);

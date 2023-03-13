@@ -1,13 +1,16 @@
 package io.vanillabp.camunda7.service;
 
+import io.vanillabp.camunda7.Camunda7AdapterConfiguration;
+import io.vanillabp.springboot.adapter.AdapterAwareProcessService;
 import io.vanillabp.springboot.adapter.ProcessServiceImplementation;
 import org.camunda.bpm.engine.ProcessEngine;
+import org.camunda.bpm.engine.exception.NullValueException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.repository.CrudRepository;
-import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Collection;
 import java.util.Objects;
 import java.util.function.Function;
 
@@ -26,9 +29,7 @@ public class Camunda7ProcessService<DE>
     
     private final Function<DE, String> getWorkflowAggregateId;
 
-    private String workflowModuleId;
-
-    private String bpmnProcessId;
+    private AdapterAwareProcessService<DE> parent;
 
     public Camunda7ProcessService(
             final ApplicationEventPublisher applicationEventPublisher,
@@ -45,19 +46,48 @@ public class Camunda7ProcessService<DE>
         this.getWorkflowAggregateId = getWorkflowAggregateId;
 
     }
+    
+    @Override
+    public void setParent(
+            final AdapterAwareProcessService<DE> parent) {
+        
+        this.parent = parent;
+        
+    }
+    
+    public Collection<String> getBpmnProcessIds() {
+        
+        return parent.getBpmnProcessIds();
+                
+    }
 
     public void wire(
             final String workflowModuleId,
-            final String bpmnProcessId) {
-        
-        this.workflowModuleId = workflowModuleId;
-        this.bpmnProcessId = bpmnProcessId;
+            final String bpmnProcessId,
+            final boolean isPrimary,
+            final Collection<String> messageBasedStartEventsMessageNames,
+            final Collection<String> signalBasedStartEventsSignalNames) {
+
+        if (parent == null) {
+            throw new RuntimeException("Not yet wired! If this occurs Spring Boot dependency of either "
+                    + "VanillaBP Spring Boot support or Camunda7 adapter was changed introducing this "
+                    + "lack of wiring. Please report a Github issue!");
+            
+        }
+
+        parent.wire(
+                Camunda7AdapterConfiguration.ADAPTER_ID,
+                workflowModuleId,
+                bpmnProcessId,
+                isPrimary,
+                messageBasedStartEventsMessageNames,
+                signalBasedStartEventsSignalNames);
         
     }
     
     public boolean testForNotYetWired() {
         
-        if (bpmnProcessId == null) {
+        if (parent.getPrimaryBpmnProcessId() == null) {
             logger.error(
                     "The bean ProcessService<{}> was not wired to a BPMN process! "
                             + "It is likely that the BPMN is not part of the classpath.",
@@ -66,13 +96,6 @@ public class Camunda7ProcessService<DE>
         }
         
         return false;
-
-    }
-
-    @Override
-    public String getBpmnProcessId() {
-
-        return bpmnProcessId;
 
     }
 
@@ -105,9 +128,9 @@ public class Camunda7ProcessService<DE>
         
         processEngine
                 .getRuntimeService()
-                .createProcessInstanceByKey(bpmnProcessId)
+                .createProcessInstanceByKey(parent.getPrimaryBpmnProcessId())
                 .businessKey(id)
-                .processDefinitionTenantId(workflowModuleId)
+                .processDefinitionTenantId(parent.getWorkflowModuleId())
                 .execute();
         
         return workflowAggregateRepository
@@ -116,11 +139,10 @@ public class Camunda7ProcessService<DE>
     }
 
     @Override
-    @Transactional
     public DE correlateMessage(
             final DE workflowAggregate,
             final String messageName) {
-
+        
         return correlateMessage(
                 workflowAggregate,
                 messageName,
@@ -147,7 +169,7 @@ public class Camunda7ProcessService<DE>
             final String correlationId) {
         
         final var correlationIdLocalVariableName =
-                bpmnProcessId
+                parent.getPrimaryBpmnProcessId()
                 + "-"
                 + messageName;
 
@@ -192,7 +214,6 @@ public class Camunda7ProcessService<DE>
                 .getRuntimeService()
                 .createMessageCorrelation(messageName)
                 .processInstanceBusinessKey(id);
-
         if (correlationIdLocalVariableName != null) {
             correlation.localVariableEquals(
                     correlationIdLocalVariableName,
@@ -205,27 +226,54 @@ public class Camunda7ProcessService<DE>
             
             final var result = correlation.correlateStartMessage();
             logger.trace("Started process '{}#{}' by message-correlation '{}' (tenant: {})",
-                    bpmnProcessId,
+                    parent.getPrimaryBpmnProcessId(),
                     result.getProcessInstanceId(),
                     messageName,
                     result.getTenantId());
             
-        } else {
-        
-            final var result = correlation
-                    .correlateWithResult()
-                    .getExecution();
+            return attachedAggregate;
             
-            logger.trace("Correlated message '{}' using correlation-id '{}' for process '{}#{}' and execution '{}' (tenant: {})",
-                    messageName,
-                    correlationId,
-                    bpmnProcessId,
-                    result.getProcessInstanceId(),
-                    result.getId(),
-                    result.getTenantId());
-
         }
+            
+        final var correlationExecutions = processEngine
+                .getRuntimeService()
+                .createExecutionQuery()
+                .messageEventSubscriptionName(messageName)
+                .processInstanceBusinessKey(id)
+                .active();
+        if (correlationIdLocalVariableName != null) {
+            correlationExecutions.variableValueEquals(
+                    correlationIdLocalVariableName,
+                    correlationId);
+        }
+        final var hasMessageCorrelation = correlationExecutions.count() == 1;
         
+        if (!hasMessageCorrelation) {
+            
+            logger.trace("Message '{}' of process having bpmn-process-id '{}' could "
+                    + "not be correlated using correlation-id '{}' for workflow aggregate '{}'!",
+                    messageName,
+                    parent.getPrimaryBpmnProcessId(),
+                    correlationId,
+                    id);
+
+            return attachedAggregate;
+            
+        }
+            
+        final var result = correlation
+                .correlateWithResult()
+                .getExecution();
+        
+        logger.trace("Correlated message '{}' using correlation-id '{}' for process '{}#{}' "
+                + "and execution '{}' (tenant: {})",
+                messageName,
+                correlationId,
+                parent.getPrimaryBpmnProcessId(),
+                result.getProcessInstanceId(),
+                result.getId(),
+                result.getTenantId());
+
         return attachedAggregate;
 
     }
@@ -238,8 +286,22 @@ public class Camunda7ProcessService<DE>
         final var attachedAggregate = workflowAggregateRepository
                 .save(workflowAggregate);
         
-        wakeupJobExecutorOnActivity();
+        final var id = getWorkflowAggregateId.apply(workflowAggregate);
+        final var task = processEngine
+                .getTaskService()
+                .createTaskQuery()
+                .processInstanceBusinessKey(id)
+                .taskId(taskId)
+                .singleResult();
         
+        if (task == null) {
+            throw new NullValueException("Task '"
+                    + taskId
+                    + "' not found!");
+        }
+        
+        wakeupJobExecutorOnActivity();
+
         processEngine
                 .getTaskService()
                 .complete(taskId);

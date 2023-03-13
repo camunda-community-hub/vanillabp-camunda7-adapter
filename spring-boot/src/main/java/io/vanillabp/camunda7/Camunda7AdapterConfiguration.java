@@ -10,31 +10,45 @@ import io.vanillabp.camunda7.wiring.ProcessEntityAwareExpressionManager;
 import io.vanillabp.camunda7.wiring.TaskWiringBpmnParseListener;
 import io.vanillabp.springboot.adapter.AdapterConfigurationBase;
 import io.vanillabp.springboot.adapter.SpringDataUtil;
+import io.vanillabp.springboot.adapter.VanillaBpProperties;
 import org.camunda.bpm.engine.ProcessEngine;
 import org.camunda.bpm.engine.spring.application.SpringProcessApplication;
 import org.camunda.bpm.spring.boot.starter.annotation.EnableProcessApplication;
-import org.springframework.beans.factory.InjectionPoint;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.beans.factory.config.ConfigurableBeanFactory;
 import org.springframework.boot.autoconfigure.AutoConfigurationPackage;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Lazy;
-import org.springframework.context.annotation.Scope;
 import org.springframework.data.repository.CrudRepository;
 
 @AutoConfigurationPackage(basePackageClasses = Camunda7AdapterConfiguration.class)
 @EnableProcessApplication("org.camunda.bpm.spring.boot.starter.SpringBootProcessApplication")
 public class Camunda7AdapterConfiguration extends AdapterConfigurationBase<Camunda7ProcessService<?>> {
 
+    public static final String ADAPTER_ID = "camunda7";
+    
     @Value("${workerId}")
     private String workerId;
     
     @Autowired
     private ApplicationContext applicationContext;
 
+    @Lazy
+    @Autowired
+    private ProcessEngine processEngine; // lazy to avoid circular dependency on bean creation
+
+    @Autowired
+    private ApplicationEventPublisher applicationEventPublisher;
+
+    @Override
+    public String getAdapterId() {
+        
+        return ADAPTER_ID;
+        
+    }
+    
     @Bean
     public Camunda7AdapterProperties camunda7AdapterProperties() {
         
@@ -44,11 +58,13 @@ public class Camunda7AdapterConfiguration extends AdapterConfigurationBase<Camun
     
     @Bean
     public Camunda7DeploymentAdapter camunda7DeploymentAdapter(
+            final VanillaBpProperties properties,
             final SpringProcessApplication processApplication,
             final ProcessEngine processEngine,
             final Camunda7TaskWiring taskWiring) {
 
         return new Camunda7DeploymentAdapter(
+                properties,
                 processApplication,
                 taskWiring,
                 processEngine);
@@ -109,27 +125,23 @@ public class Camunda7AdapterConfiguration extends AdapterConfigurationBase<Camun
         
     }
     
-    @SuppressWarnings("unchecked")
-    @Bean
-    @Scope(ConfigurableBeanFactory.SCOPE_PROTOTYPE)
-    public <DE> Camunda7ProcessService<?> camundaProcessService(
-            final ApplicationEventPublisher applicationEventPublisher,
-            @Lazy final ProcessEngine processEngine, // lazy to avoid circular dependency on bean creation
+    @Override
+    public <DE> Camunda7ProcessService<?> newProcessServiceImplementation(
             final SpringDataUtil springDataUtil,
-            final InjectionPoint injectionPoint) throws Exception {
-
-        return registerProcessService(
-                springDataUtil,
-                injectionPoint,
-                (workflowAggregateRepository, workflowAggregateClass) ->
-                new Camunda7ProcessService<DE>(
-                        applicationEventPublisher,
-                        processEngine,
-                        workflowAggregate -> springDataUtil.getId(workflowAggregate),
-                        (CrudRepository<DE, String>) workflowAggregateRepository,
-                        (Class<DE>) workflowAggregateClass)
-            );
-
+            final Class<DE> workflowAggregateClass,
+            final CrudRepository<DE, String> workflowAggregateRepository) {
+        
+        final var result = new Camunda7ProcessService<DE>(
+                applicationEventPublisher,
+                processEngine,
+                workflowAggregate -> springDataUtil.getId(workflowAggregate),
+                workflowAggregateRepository,
+                workflowAggregateClass);
+        
+        putConnectableService(workflowAggregateClass, result);
+        
+        return result;
+        
     }
    
 }

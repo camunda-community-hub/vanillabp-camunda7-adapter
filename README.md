@@ -30,7 +30,8 @@ To learn about details of the adapter checkout the [module's README](./spring-bo
 
 This is a section of a taxi ride workflow and should give you an idea of how the VanillaBP SPI is used in your business code. To learn more about VanillaBP checkout the [SPI documentation](https://github.com/vanillabp/spi-for-java).
 
-![Section of a taxi ride workflow](./readme/example.png) *Screenshot of [Camunda Modeler](https://camunda.com/en/download/modeler/)*
+![Section of a taxi ride workflow](./readme/example.png)  
+*Screenshot of [Camunda Modeler](https://camunda.com/en/download/modeler/)*
 
 ```java
 @Service

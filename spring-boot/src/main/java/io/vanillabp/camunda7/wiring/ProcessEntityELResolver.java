@@ -109,6 +109,9 @@ public class ProcessEntityELResolver extends ELResolver {
                     if (processService == null) {
                         return null;
                     }
+                    if (execution.getBusinessKey() == null) {
+                        return null;
+                    }
 
                     final var workflowAggregateFound = processService
                             .getWorkflowAggregateRepository()

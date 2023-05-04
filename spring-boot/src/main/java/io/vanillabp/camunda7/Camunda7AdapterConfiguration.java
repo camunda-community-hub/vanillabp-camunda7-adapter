@@ -13,24 +13,37 @@ import io.vanillabp.springboot.adapter.SpringDataUtil;
 import io.vanillabp.springboot.adapter.VanillaBpProperties;
 import org.camunda.bpm.engine.ProcessEngine;
 import org.camunda.bpm.engine.spring.application.SpringProcessApplication;
+import org.camunda.bpm.spring.boot.starter.CamundaBpmAutoConfiguration;
 import org.camunda.bpm.spring.boot.starter.annotation.EnableProcessApplication;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.aop.framework.AopProxyUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.AutoConfigurationPackage;
+import org.springframework.boot.autoconfigure.AutoConfigureBefore;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.data.repository.CrudRepository;
 
+import javax.annotation.PostConstruct;
+
 @AutoConfigurationPackage(basePackageClasses = Camunda7AdapterConfiguration.class)
+@AutoConfigureBefore(CamundaBpmAutoConfiguration.class)
 @EnableProcessApplication("org.camunda.bpm.spring.boot.starter.SpringBootProcessApplication")
 public class Camunda7AdapterConfiguration extends AdapterConfigurationBase<Camunda7ProcessService<?>> {
 
+    private static final Logger logger = LoggerFactory.getLogger(Camunda7AdapterConfiguration.class);
+    
     public static final String ADAPTER_ID = "camunda7";
     
     @Value("${workerId}")
     private String workerId;
+    
+    @Autowired
+    private SpringDataUtil springDataUtil; // ensure persistence is up and running
     
     @Autowired
     private ApplicationContext applicationContext;
@@ -42,6 +55,14 @@ public class Camunda7AdapterConfiguration extends AdapterConfigurationBase<Camun
     @Autowired
     private ApplicationEventPublisher applicationEventPublisher;
 
+    @PostConstruct
+    public void init() {
+        
+        logger.debug("Will use SpringDataUtil class '{}'",
+                AopProxyUtils.ultimateTargetClass(springDataUtil.getClass()));
+        
+    }
+    
     @Override
     public String getAdapterId() {
         
@@ -134,7 +155,10 @@ public class Camunda7AdapterConfiguration extends AdapterConfigurationBase<Camun
         final var result = new Camunda7ProcessService<DE>(
                 applicationEventPublisher,
                 processEngine,
-                workflowAggregate -> springDataUtil.getId(workflowAggregate),
+                workflowAggregate ->
+                        !springDataUtil.isPersistedEntity(workflowAggregateClass, workflowAggregate),
+                workflowAggregate ->
+                        springDataUtil.getId(workflowAggregate),
                 workflowAggregateRepository,
                 workflowAggregateClass);
         

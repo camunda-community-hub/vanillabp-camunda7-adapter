@@ -11,7 +11,6 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.repository.CrudRepository;
 
 import java.util.Collection;
-import java.util.Objects;
 import java.util.function.Function;
 
 public class Camunda7ProcessService<DE>
@@ -28,12 +27,15 @@ public class Camunda7ProcessService<DE>
     private final Class<DE> workflowAggregateClass;
     
     private final Function<DE, String> getWorkflowAggregateId;
+    
+    private final Function<DE, Boolean> isNewEntity;
 
     private AdapterAwareProcessService<DE> parent;
 
     public Camunda7ProcessService(
             final ApplicationEventPublisher applicationEventPublisher,
             final ProcessEngine processEngine,
+            final Function<DE, Boolean> isNewEntity,
             final Function<DE, String> getWorkflowAggregateId,
             final CrudRepository<DE, String> workflowAggregateRepository,
             final Class<DE> workflowAggregateClass) {
@@ -43,6 +45,7 @@ public class Camunda7ProcessService<DE>
         this.processEngine = processEngine;
         this.workflowAggregateRepository = workflowAggregateRepository;
         this.workflowAggregateClass = workflowAggregateClass;
+        this.isNewEntity = isNewEntity;
         this.getWorkflowAggregateId = getWorkflowAggregateId;
 
     }
@@ -200,15 +203,17 @@ public class Camunda7ProcessService<DE>
             final String correlationIdLocalVariableName,
             final String correlationId) {
 
-        final var originalId = getWorkflowAggregateId.apply(workflowAggregate);
-        final var isNewEntity = Objects.isNull(originalId);
-
+        final var isNewEntity = this.isNewEntity
+                .apply(workflowAggregate);
+        
+        // persist to get ID in case of @Id @GeneratedValue
+        // and force optimistic locking exceptions before running
+        // the workflow if aggregate was already persisted before
         final var attachedAggregate = workflowAggregateRepository
                 .save(workflowAggregate);
         
-        final var id = (isNewEntity ? getWorkflowAggregateId
-                .apply(attachedAggregate) : originalId)
-                .toString();
+        final var id = getWorkflowAggregateId
+                .apply(attachedAggregate);
         
         final var correlation = processEngine
                 .getRuntimeService()

@@ -146,9 +146,9 @@ public class TaskWiringBpmnParseListener implements BpmnParseListener {
         taskDefinition.addBuiltInTaskListener(
                 org.camunda.bpm.engine.delegate.TaskListener.EVENTNAME_CREATE,
                 userTaskEventHandler);
-//        taskDefinition.addBuiltInTaskListener(
-//                org.camunda.bpm.engine.delegate.TaskListener.EVENTNAME_DELETE,
-//                null);
+        taskDefinition.addBuiltInTaskListener(
+                org.camunda.bpm.engine.delegate.TaskListener.EVENTNAME_DELETE,
+                userTaskEventHandler);
 
         final var bpmnProcessId = ((ProcessDefinitionEntity) activity.getProcessDefinition()).getKey();
 

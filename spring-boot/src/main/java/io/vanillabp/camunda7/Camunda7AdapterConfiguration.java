@@ -28,6 +28,9 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.data.repository.CrudRepository;
 
+import java.math.BigInteger;
+import java.util.function.Function;
+
 import javax.annotation.PostConstruct;
 
 @AutoConfigurationPackage(basePackageClasses = Camunda7AdapterConfiguration.class)
@@ -59,7 +62,7 @@ public class Camunda7AdapterConfiguration extends AdapterConfigurationBase<Camun
     public void init() {
         
         logger.debug("Will use SpringDataUtil class '{}'",
-                AopProxyUtils.ultimateTargetClass(springDataUtil.getClass()));
+                AopProxyUtils.ultimateTargetClass(springDataUtil));
         
     }
     
@@ -150,7 +153,43 @@ public class Camunda7AdapterConfiguration extends AdapterConfigurationBase<Camun
     public <DE> Camunda7ProcessService<?> newProcessServiceImplementation(
             final SpringDataUtil springDataUtil,
             final Class<DE> workflowAggregateClass,
-            final CrudRepository<DE, String> workflowAggregateRepository) {
+            final Class<?> workflowAggregateIdClass,
+            final CrudRepository<DE, Object> workflowAggregateRepository) {
+        
+        final Function<String, Object> parseWorkflowAggregateIdFromBusinessKey;
+        if (String.class.isAssignableFrom(workflowAggregateIdClass)) {
+            parseWorkflowAggregateIdFromBusinessKey = businessKey -> businessKey;
+        } else if (int.class.isAssignableFrom(workflowAggregateIdClass)) {
+            parseWorkflowAggregateIdFromBusinessKey = businessKey -> Integer.valueOf(businessKey);
+        } else if (long.class.isAssignableFrom(workflowAggregateIdClass)) {
+            parseWorkflowAggregateIdFromBusinessKey = businessKey -> Long.valueOf(businessKey);
+        } else if (float.class.isAssignableFrom(workflowAggregateIdClass)) {
+            parseWorkflowAggregateIdFromBusinessKey = businessKey -> Float.valueOf(businessKey);
+        } else if (double.class.isAssignableFrom(workflowAggregateIdClass)) {
+            parseWorkflowAggregateIdFromBusinessKey = businessKey -> Double.valueOf(businessKey);
+        } else if (byte.class.isAssignableFrom(workflowAggregateIdClass)) {
+            parseWorkflowAggregateIdFromBusinessKey = businessKey -> Byte.valueOf(businessKey);
+        } else if (BigInteger.class.isAssignableFrom(workflowAggregateIdClass)) {
+            parseWorkflowAggregateIdFromBusinessKey = businessKey -> new BigInteger(businessKey);
+        } else {
+            try {
+                final var valueOfMethod = workflowAggregateIdClass.getMethod("valueOf", String.class);
+                parseWorkflowAggregateIdFromBusinessKey = businessKey -> {
+                        try {
+                            return valueOfMethod.invoke(null, businessKey);
+                        } catch (Exception e) {
+                            throw new RuntimeException("Could not determine the workflow's aggregate id!", e);
+                        }
+                    };
+            } catch (Exception e) {
+                throw new RuntimeException(
+                        String.format(
+                                "The id's class '%s' of the workflow-aggregate '%s' does not implement a method 'public static %s valueOf(String businessKey)'! Please add this method required by VanillaBP 'camunda7' adapter.",
+                                workflowAggregateIdClass.getName(),
+                                workflowAggregateClass.getName(),
+                                workflowAggregateIdClass.getSimpleName()));
+            }
+        }
         
         final var result = new Camunda7ProcessService<DE>(
                 applicationEventPublisher,
@@ -160,7 +199,8 @@ public class Camunda7AdapterConfiguration extends AdapterConfigurationBase<Camun
                 workflowAggregate ->
                         springDataUtil.getId(workflowAggregate),
                 workflowAggregateRepository,
-                workflowAggregateClass);
+                workflowAggregateClass,
+                parseWorkflowAggregateIdFromBusinessKey);
         
         putConnectableService(workflowAggregateClass, result);
         

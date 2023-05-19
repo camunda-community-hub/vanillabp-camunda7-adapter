@@ -1,5 +1,6 @@
 package io.vanillabp.camunda7.wiring;
 
+import io.vanillabp.camunda7.service.Camunda7ProcessService;
 import io.vanillabp.spi.service.MultiInstanceElementResolver;
 import io.vanillabp.spi.service.TaskEvent.Event;
 import io.vanillabp.spi.service.TaskException;
@@ -33,15 +34,19 @@ public class Camunda7TaskHandler extends TaskHandlerBase implements JavaDelegate
 
     private Object result;
 
+    private final Camunda7ProcessService<?> processService;
+
     public Camunda7TaskHandler(
             final String bpmnProcessId,
-            final CrudRepository<Object, String> workflowAggregateRepository,
+            final CrudRepository<Object, Object> workflowAggregateRepository,
             final Object bean,
             final Method method,
-            final List<MethodParameter> parameters) {
+            final List<MethodParameter> parameters,
+            final Camunda7ProcessService<?> processService) {
         
         super(workflowAggregateRepository, bean, method, parameters);
         this.bpmnProcessId = bpmnProcessId;
+        this.processService = processService;
         
     }
 
@@ -74,7 +79,8 @@ public class Camunda7TaskHandler extends TaskHandlerBase implements JavaDelegate
                     execution.getId());
             
             super.execute(
-                    execution.getBusinessKey(),
+                    processService.getWorkflowAggregateIdFromBusinessKey(
+                            execution.getBusinessKey()),
                     multiInstanceActivity -> {
                         if (multiInstanceCache[0] == null) {
                             multiInstanceCache[0] = Camunda7TaskHandler.getMultiInstanceContext(execution);

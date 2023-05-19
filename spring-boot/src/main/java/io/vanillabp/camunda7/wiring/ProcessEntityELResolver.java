@@ -113,9 +113,11 @@ public class ProcessEntityELResolver extends ELResolver {
                         return null;
                     }
 
+                    final var id = processService
+                            .getWorkflowAggregateIdFromBusinessKey(execution.getBusinessKey());
                     final var workflowAggregateFound = processService
                             .getWorkflowAggregateRepository()
-                            .findById(execution.getBusinessKey());
+                            .findById(id);
                     if (workflowAggregateFound.isEmpty()) {
                         return null;
                     }

@@ -22,13 +22,15 @@ public class Camunda7ProcessService<DE>
     
     private final ProcessEngine processEngine;
     
-    private final CrudRepository<DE, String> workflowAggregateRepository;
+    private final CrudRepository<DE, Object> workflowAggregateRepository;
     
     private final Class<DE> workflowAggregateClass;
     
-    private final Function<DE, String> getWorkflowAggregateId;
+    private final Function<DE, ?> getWorkflowAggregateId;
     
     private final Function<DE, Boolean> isNewEntity;
+    
+    private final Function<String, Object> parseWorkflowAggregateIdFromBusinessKey;
 
     private AdapterAwareProcessService<DE> parent;
 
@@ -36,9 +38,10 @@ public class Camunda7ProcessService<DE>
             final ApplicationEventPublisher applicationEventPublisher,
             final ProcessEngine processEngine,
             final Function<DE, Boolean> isNewEntity,
-            final Function<DE, String> getWorkflowAggregateId,
-            final CrudRepository<DE, String> workflowAggregateRepository,
-            final Class<DE> workflowAggregateClass) {
+            final Function<DE, ?> getWorkflowAggregateId,
+            final CrudRepository<DE, Object> workflowAggregateRepository,
+            final Class<DE> workflowAggregateClass,
+            final Function<String, Object> parseWorkflowAggregateIdFromBusinessKey) {
 
         super();
         this.applicationEventPublisher = applicationEventPublisher;
@@ -47,7 +50,8 @@ public class Camunda7ProcessService<DE>
         this.workflowAggregateClass = workflowAggregateClass;
         this.isNewEntity = isNewEntity;
         this.getWorkflowAggregateId = getWorkflowAggregateId;
-
+        this.parseWorkflowAggregateIdFromBusinessKey = parseWorkflowAggregateIdFromBusinessKey;
+        
     }
     
     @Override
@@ -110,12 +114,19 @@ public class Camunda7ProcessService<DE>
     }
 
     @Override
-    public CrudRepository<DE, String> getWorkflowAggregateRepository() {
+    public CrudRepository<DE, Object> getWorkflowAggregateRepository() {
 
         return workflowAggregateRepository;
 
     }
-
+    
+    public Object getWorkflowAggregateIdFromBusinessKey(
+            final String businessKey) {
+        
+        return parseWorkflowAggregateIdFromBusinessKey.apply(businessKey);
+        
+    }
+    
     @Override
     public DE startWorkflow(
             final DE workflowAggregate) throws Exception {
@@ -218,7 +229,7 @@ public class Camunda7ProcessService<DE>
         final var correlation = processEngine
                 .getRuntimeService()
                 .createMessageCorrelation(messageName)
-                .processInstanceBusinessKey(id);
+                .processInstanceBusinessKey(id.toString());
         if (correlationIdLocalVariableName != null) {
             correlation.localVariableEquals(
                     correlationIdLocalVariableName,
@@ -244,7 +255,7 @@ public class Camunda7ProcessService<DE>
                 .getRuntimeService()
                 .createExecutionQuery()
                 .messageEventSubscriptionName(messageName)
-                .processInstanceBusinessKey(id)
+                .processInstanceBusinessKey(id.toString())
                 .active();
         if (correlationIdLocalVariableName != null) {
             correlationExecutions.variableValueEquals(
@@ -295,7 +306,7 @@ public class Camunda7ProcessService<DE>
         final var task = processEngine
                 .getTaskService()
                 .createTaskQuery()
-                .processInstanceBusinessKey(id)
+                .processInstanceBusinessKey(id.toString())
                 .taskId(taskId)
                 .singleResult();
         

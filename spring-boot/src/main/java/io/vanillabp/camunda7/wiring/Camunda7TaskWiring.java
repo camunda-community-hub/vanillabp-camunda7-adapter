@@ -48,10 +48,11 @@ public class Camunda7TaskWiring extends TaskWiringBase<Camunda7Connectable, Camu
         if (connectable.getType() == Camunda7Connectable.Type.USERTASK) {
             
             final var taskHandler = new Camunda7UserTaskHandler(
-                    (CrudRepository<Object, String>) repository,
+                    (CrudRepository<Object, Object>) repository,
                     bean,
                     method,
-                    parameters);
+                    parameters,
+                    processService);
             userTaskEventHandler.addTaskHandler(connectable, taskHandler);
             return;
             
@@ -59,10 +60,11 @@ public class Camunda7TaskWiring extends TaskWiringBase<Camunda7Connectable, Camu
         
         final var taskHandler = new Camunda7TaskHandler(
                 connectable.getBpmnProcessId(),
-                (CrudRepository<Object, String>) repository,
+                (CrudRepository<Object, Object>) repository,
                 bean,
                 method,
-                parameters);
+                parameters,
+                processService);
 
         processEntityAwareExpressionManager.addTaskHandler(connectable, taskHandler);
 

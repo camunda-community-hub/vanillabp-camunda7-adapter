@@ -6,6 +6,7 @@ import io.vanillabp.spi.service.TaskEvent.Event;
 import io.vanillabp.spi.service.TaskException;
 import io.vanillabp.springboot.adapter.MultiInstance;
 import io.vanillabp.springboot.adapter.TaskHandlerBase;
+import io.vanillabp.springboot.adapter.wiring.WorkflowAggregateCache;
 import io.vanillabp.springboot.parameters.MethodParameter;
 import org.camunda.bpm.engine.delegate.BpmnError;
 import org.camunda.bpm.engine.delegate.DelegateExecution;
@@ -25,6 +26,7 @@ import java.lang.reflect.Method;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 
 public class Camunda7TaskHandler extends TaskHandlerBase implements JavaDelegate {
 
@@ -63,6 +65,7 @@ public class Camunda7TaskHandler extends TaskHandlerBase implements JavaDelegate
 
     }
 
+    @SuppressWarnings("unchecked")
     @Override
     @Transactional(noRollbackFor = BpmnError.class)
     public void execute(
@@ -78,18 +81,53 @@ public class Camunda7TaskHandler extends TaskHandlerBase implements JavaDelegate
                     bpmnProcessId,
                     execution.getId());
             
+            final Function<String, Object> multiInstanceSupplier = multiInstanceActivity -> {
+                if (multiInstanceCache[0] == null) {
+                    multiInstanceCache[0] = Camunda7TaskHandler.getMultiInstanceContext(execution);
+                }
+                return multiInstanceCache[0].get(multiInstanceActivity);
+            };
+            
+            final var workflowAggregateId = processService
+                    .getWorkflowAggregateIdFromBusinessKey(execution.getBusinessKey());
+            
+            final var workflowAggregateCache = new WorkflowAggregateCache();
+            
             super.execute(
-                    processService.getWorkflowAggregateIdFromBusinessKey(
-                            execution.getBusinessKey()),
-                    multiInstanceActivity -> {
-                        if (multiInstanceCache[0] == null) {
-                            multiInstanceCache[0] = Camunda7TaskHandler.getMultiInstanceContext(execution);
-                        }
-                        return multiInstanceCache[0].get(multiInstanceActivity);
-                    },
-                    taskParameter -> execution.getVariableLocal(taskParameter),
-                    null,
-                    () -> Event.CREATED);
+                    workflowAggregateCache,
+                    workflowAggregateId,
+                    true,
+                    (args, param) -> processTaskParameter(
+                            args,
+                            param,
+                            taskParameter -> execution.getVariableLocal(taskParameter)),
+                    (args, param) -> processTaskEventParameter(
+                            args,
+                            param,
+                            () -> Event.CREATED),
+                    (args, param) -> processMultiInstanceIndexParameter(
+                            args,
+                            param,
+                            multiInstanceSupplier),
+                    (args, param) -> processMultiInstanceTotalParameter(
+                            args,
+                            param,
+                            multiInstanceSupplier),
+                    (args, param) -> processMultiInstanceElementParameter(
+                            args,
+                            param,
+                            multiInstanceSupplier),
+                    (args, param) -> processMultiInstanceResolverParameter(
+                            args,
+                            param,
+                            () -> {
+                                if (workflowAggregateCache.workflowAggregate == null) {
+                                    workflowAggregateCache.workflowAggregate = workflowAggregateRepository
+                                            .findById(workflowAggregateId)
+                                            .orElseThrow();
+                                }
+                                return workflowAggregateCache.workflowAggregate;
+                            }, multiInstanceSupplier));
 
         } catch (TaskException e) {
 

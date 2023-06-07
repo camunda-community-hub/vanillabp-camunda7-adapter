@@ -13,9 +13,10 @@ import io.vanillabp.spi.process.ProcessService;
 import io.vanillabp.spi.service.WorkflowTask;
 import io.vanillabp.springboot.adapter.TaskWiringBase;
 import io.vanillabp.springboot.parameters.MethodParameter;
+import io.vanillabp.springboot.parameters.MethodParameterFactory;
 
 @Component
-public class Camunda7TaskWiring extends TaskWiringBase<Camunda7Connectable, Camunda7ProcessService<?>> {
+public class Camunda7TaskWiring extends TaskWiringBase<Camunda7Connectable, Camunda7ProcessService<?>, MethodParameterFactory> {
 
     private final ProcessEntityAwareExpressionManager processEntityAwareExpressionManager;
 
@@ -57,6 +58,7 @@ public class Camunda7TaskWiring extends TaskWiringBase<Camunda7Connectable, Camu
         if (connectable.getType() == Camunda7Connectable.Type.USERTASK) {
             
             final var taskHandler = new Camunda7UserTaskHandler(
+                    connectable.getBpmnProcessId(),
                     (CrudRepository<Object, Object>) repository,
                     bean,
                     method,

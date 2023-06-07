@@ -41,6 +41,8 @@ public class TaskWiringBpmnParseListener implements BpmnParseListener {
     
     private static ThreadLocal<Boolean> oldVersionBpmn = ThreadLocal.withInitial(() -> Boolean.FALSE);
     
+    static final ThreadLocal<String> workflowModuleId = new ThreadLocal<>();
+
     static class ToBeWired {
         String workflowModuleId;
         String bpmnProcessId;
@@ -82,7 +84,6 @@ public class TaskWiringBpmnParseListener implements BpmnParseListener {
             final Element processElement,
             final ProcessDefinitionEntity processDefinition) {
 
-        final var workflowModuleId = Camunda7WorkflowModuleAwareBpmnParse.getWorkflowModuleId();
         final var bpmnProcessId = processDefinition.getKey();
 
         final var startEvents = processElement
@@ -102,7 +103,7 @@ public class TaskWiringBpmnParseListener implements BpmnParseListener {
         
         final var process = new ToBeWired();
         process.bpmnProcessId = bpmnProcessId;
-        process.workflowModuleId = workflowModuleId;
+        process.workflowModuleId = workflowModuleId.get();
         process.messageBasedStartEventsMessages = messageBasedStartEventsMessageRefs;
         process.signalBasedStartEventsSignals = signalBasedStartEventsSignalRefs;
         process.connectables = connectables;
@@ -438,11 +439,10 @@ public class TaskWiringBpmnParseListener implements BpmnParseListener {
             return;
         }
         
-        final var workflowModuleId = Camunda7WorkflowModuleAwareBpmnParse.getWorkflowModuleId();
         final var bpmnProcessId = ((ProcessDefinitionEntity) activity.getProcessDefinition()).getKey();
         if (bpmnAsyncDefinitions
                 .stream()
-                .filter(d -> d.getWorkflowModuleId().equals(workflowModuleId))
+                .filter(d -> d.getWorkflowModuleId().equals(workflowModuleId.get()))
                 .filter(d -> d.getBpmnProcessId().equals(bpmnProcessId))
                 .findFirst()
                 .isPresent()) {

@@ -1,0 +1,22 @@
+name: Publish to GitHub Packages
+on: push
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-java@v3
+        with:
+          java-version: '11'
+          distribution: 'adopt'
+          cache: 'maven'
+      - name: Publish package
+        run: mvn -s $GITHUB_WORKSPACE/.github/workflows/github-packages-settings.xml --batch-mode deploy
+        env:
+          USER_NAME: ${{ secrets.VANILLABP_USER_NAME }}
+          USER_TOKEN: ${{ secrets.VANILLABP_USER_TOKEN }}
+          CAMUNDA_USER_TOKEN: ${{ secrets.CAMUNDA_USER_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

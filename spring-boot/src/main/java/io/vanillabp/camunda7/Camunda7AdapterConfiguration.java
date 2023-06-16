@@ -134,7 +134,7 @@ public class Camunda7AdapterConfiguration extends AdapterConfigurationBase<Camun
 
         return new ProcessEntityAwareExpressionManager(
                 applicationContext,
-                getConnectableServices());
+                this::getConnectableServices);
 
     }
 

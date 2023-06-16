@@ -1,7 +1,12 @@
 package io.vanillabp.camunda7.wiring;
 
-import io.vanillabp.camunda7.service.Camunda7ProcessService;
-import io.vanillabp.camunda7.utils.CaseUtils;
+import java.beans.FeatureDescriptor;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.function.Supplier;
+
 import org.camunda.bpm.engine.ProcessEngineException;
 import org.camunda.bpm.engine.impl.javax.el.ELContext;
 import org.camunda.bpm.engine.impl.javax.el.ELResolver;
@@ -9,12 +14,8 @@ import org.camunda.bpm.engine.impl.persistence.entity.ExecutionEntity;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.beans.FeatureDescriptor;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Map;
-import java.util.stream.Collectors;
+import io.vanillabp.camunda7.service.Camunda7ProcessService;
+import io.vanillabp.camunda7.utils.CaseUtils;
 
 /*
  * Custom expression language resolver to resolve process entities
@@ -26,19 +27,13 @@ public class ProcessEntityELResolver extends ELResolver {
     
     private final Map<Camunda7Connectable, Camunda7TaskHandler> taskHandlers = new HashMap<>();
 
-    private final Map<String, Camunda7ProcessService<?>> processServices;
+    private final Supplier<Collection<Camunda7ProcessService<?>>> connectableServices;
 
     public ProcessEntityELResolver(
-            final Collection<Camunda7ProcessService<?>> connectableServices) {
+            final Supplier<Collection<Camunda7ProcessService<?>>> connectableServices) {
 
         super();
-        processServices = connectableServices
-                .stream()
-                .flatMap(service -> service
-                        .getBpmnProcessIds()
-                        .stream()
-                        .map(bpmnProcessId -> Map.entry(bpmnProcessId, service)))
-                .collect(Collectors.toMap(entry -> entry.getKey(), entry -> entry.getValue()));
+        this.connectableServices = connectableServices;
 
     }
 
@@ -105,10 +100,15 @@ public class ProcessEntityELResolver extends ELResolver {
                 .map(handler -> executeHandler(execution, handler.getKey(), handler.getValue()))
                 // otherwise it will be a workflow-aggregate property reference
                 .orElseGet(() -> {
-                    final var processService = processServices.get(bpmnProcessId);
-                    if (processService == null) {
+                    final var processServiceFound = connectableServices
+                            .get()
+                            .stream()
+                            .filter(service -> service.getBpmnProcessIds().contains(bpmnProcessId))
+                            .findFirst();
+                    if (processServiceFound.isEmpty()) {
                         return null;
                     }
+                    final var processService = processServiceFound.get();
                     if (execution.getBusinessKey() == null) {
                         return null;
                     }

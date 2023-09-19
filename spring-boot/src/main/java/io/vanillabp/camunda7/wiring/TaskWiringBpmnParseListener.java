@@ -465,12 +465,20 @@ public class TaskWiringBpmnParseListener implements BpmnParseListener {
 
     @Override
     public void parseStartEvent(
-            final Element element,
+            final Element startElement,
             final ScopeImpl scope,
             final ActivityImpl activity) {
-        
-        resetAsyncBeforeAndAsyncAfter(element, activity, Async.SET_ASYNC_BEFORE_ONLY);
-        
+
+        final var isEventBasedStartEvent = startElement.element("messageEventDefinition") != null;
+        if (isEventBasedStartEvent) {
+            resetAsyncBeforeAndAsyncAfter(startElement, activity, Async.SET_ASYNC_BEFORE_ONLY);
+        } else  {
+            // plain start events need to be handled synchronously in cases of call-activities.
+            // in cases of starting an independent process the Camunda7ProcessService is
+            // responsible for running this asynchronously.
+            removeAsyncBeforeAndAsyncAfter(startElement, activity);
+        }
+
     }
 
     @Override

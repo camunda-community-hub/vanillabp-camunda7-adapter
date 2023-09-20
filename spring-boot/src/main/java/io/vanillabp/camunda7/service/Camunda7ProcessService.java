@@ -1,10 +1,12 @@
 package io.vanillabp.camunda7.service;
 
 import io.vanillabp.camunda7.Camunda7AdapterConfiguration;
+import io.vanillabp.camunda7.service.jobs.startprocess.StartProcessCommand;
 import io.vanillabp.springboot.adapter.AdapterAwareProcessService;
 import io.vanillabp.springboot.adapter.ProcessServiceImplementation;
 import org.camunda.bpm.engine.ProcessEngine;
 import org.camunda.bpm.engine.exception.NullValueException;
+import org.camunda.bpm.engine.impl.cfg.ProcessEngineConfigurationImpl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
@@ -51,7 +53,7 @@ public class Camunda7ProcessService<DE>
         this.isNewEntity = isNewEntity;
         this.getWorkflowAggregateId = getWorkflowAggregateId;
         this.parseWorkflowAggregateIdFromBusinessKey = parseWorkflowAggregateIdFromBusinessKey;
-        
+
     }
     
     @Override
@@ -139,16 +141,20 @@ public class Camunda7ProcessService<DE>
                 .toString();
         
         wakeupJobExecutorOnActivity();
-        
-        processEngine
-                .getRuntimeService()
-                .createProcessInstanceByKey(parent.getPrimaryBpmnProcessId())
-                .businessKey(id)
-                .processDefinitionTenantId(parent.getWorkflowModuleId())
-                .execute();
-        
-        return workflowAggregateRepository
-                .save(attachedAggregate);
+
+        // Start workflow asynchronously by Camunda's job-executor
+        // Hint: this is not done by setting "async-before" on the start-event
+        // since we don't know which process is used as a call-activity which
+        // has to be started synchronously.
+        ((ProcessEngineConfigurationImpl) processEngine
+                .getProcessEngineConfiguration())
+                .getCommandExecutorTxRequired()
+                .execute(new StartProcessCommand(
+                        parent.getWorkflowModuleId(),
+                        parent.getPrimaryBpmnProcessId(),
+                        id));
+
+        return attachedAggregate;
 
     }
 

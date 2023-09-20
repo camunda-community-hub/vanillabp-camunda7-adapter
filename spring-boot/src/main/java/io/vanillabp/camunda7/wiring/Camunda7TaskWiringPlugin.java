@@ -1,19 +1,18 @@
 package io.vanillabp.camunda7.wiring;
 
-import java.util.ArrayList;
+import java.util.LinkedList;
 
-import org.camunda.bpm.engine.impl.bpmn.parser.BpmnParse;
-import org.camunda.bpm.engine.impl.bpmn.parser.BpmnParser;
 import org.camunda.bpm.engine.impl.cfg.AbstractProcessEnginePlugin;
-import org.camunda.bpm.engine.impl.cfg.DefaultBpmnParseFactory;
 import org.camunda.bpm.engine.impl.cfg.ProcessEngineConfigurationImpl;
+import org.camunda.bpm.engine.impl.persistence.deploy.Deployer;
+import org.camunda.bpm.engine.impl.persistence.entity.DeploymentEntity;
 
 public class Camunda7TaskWiringPlugin extends AbstractProcessEnginePlugin {
 
     private final ProcessEntityAwareExpressionManager processEntityAwareExpressionManager;
 
     private final TaskWiringBpmnParseListener taskWiringBpmnParseListener;
-
+    
     public Camunda7TaskWiringPlugin(
             final ProcessEntityAwareExpressionManager processEntityAwareExpressionManager,
             final TaskWiringBpmnParseListener taskWiringBpmnParseListener) {
@@ -28,20 +27,25 @@ public class Camunda7TaskWiringPlugin extends AbstractProcessEnginePlugin {
 
         configuration.setExpressionManager(processEntityAwareExpressionManager);
 
-        var preParseListeners = configuration.getCustomPreBPMNParseListeners();
-        if (preParseListeners == null) {
-            preParseListeners = new ArrayList<>();
-            configuration.setCustomPreBPMNParseListeners(preParseListeners);
+        if (configuration.getCustomPreBPMNParseListeners() == null) {
+            configuration.setCustomPreBPMNParseListeners(
+                    new LinkedList<>());
         }
-        preParseListeners.add(taskWiringBpmnParseListener);
-
+        configuration
+                .getCustomPreBPMNParseListeners()
+                .add(taskWiringBpmnParseListener);
+        
         // needed to pass workflow module id to bpmn parse listener
-        configuration.setBpmnParseFactory(new DefaultBpmnParseFactory() {
-            @Override
-            public BpmnParse createBpmnParse(BpmnParser bpmnParser) {
-                return new Camunda7WorkflowModuleAwareBpmnParse(bpmnParser);
-            }
-        });
+        if (configuration.getCustomPreDeployers() == null) {
+            configuration.setCustomPreDeployers(new LinkedList<>());
+        }
+        configuration.getCustomPreDeployers().add(new Deployer() {
+                @Override
+                public void deploy(
+                        final DeploymentEntity deployment) {
+                    TaskWiringBpmnParseListener.workflowModuleId.set(deployment.getName());
+                }
+            });
 
     }
 

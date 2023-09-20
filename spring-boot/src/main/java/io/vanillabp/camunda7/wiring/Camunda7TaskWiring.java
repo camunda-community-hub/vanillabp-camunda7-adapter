@@ -1,19 +1,22 @@
 package io.vanillabp.camunda7.wiring;
 
-import io.vanillabp.camunda7.service.Camunda7ProcessService;
-import io.vanillabp.spi.process.ProcessService;
-import io.vanillabp.springboot.adapter.TaskWiringBase;
-import io.vanillabp.springboot.parameters.MethodParameter;
-import org.springframework.context.ApplicationContext;
-import org.springframework.data.repository.CrudRepository;
-import org.springframework.stereotype.Component;
-
 import java.lang.reflect.Method;
 import java.util.Collection;
 import java.util.List;
 
+import org.springframework.context.ApplicationContext;
+import org.springframework.data.repository.CrudRepository;
+import org.springframework.stereotype.Component;
+
+import io.vanillabp.camunda7.service.Camunda7ProcessService;
+import io.vanillabp.spi.process.ProcessService;
+import io.vanillabp.spi.service.WorkflowTask;
+import io.vanillabp.springboot.adapter.TaskWiringBase;
+import io.vanillabp.springboot.parameters.MethodParameter;
+import io.vanillabp.springboot.parameters.MethodParameterFactory;
+
 @Component
-public class Camunda7TaskWiring extends TaskWiringBase<Camunda7Connectable, Camunda7ProcessService<?>> {
+public class Camunda7TaskWiring extends TaskWiringBase<Camunda7Connectable, Camunda7ProcessService<?>, MethodParameterFactory> {
 
     private final ProcessEntityAwareExpressionManager processEntityAwareExpressionManager;
 
@@ -35,6 +38,13 @@ public class Camunda7TaskWiring extends TaskWiringBase<Camunda7Connectable, Camu
     }
     
     @Override
+    protected Class<WorkflowTask> getAnnotationType() {
+        
+        return WorkflowTask.class;
+        
+    }
+    
+    @Override
     @SuppressWarnings("unchecked")
     protected void connectToBpms(
             final Camunda7ProcessService<?> processService,
@@ -48,6 +58,7 @@ public class Camunda7TaskWiring extends TaskWiringBase<Camunda7Connectable, Camu
         if (connectable.getType() == Camunda7Connectable.Type.USERTASK) {
             
             final var taskHandler = new Camunda7UserTaskHandler(
+                    connectable.getBpmnProcessId(),
                     (CrudRepository<Object, Object>) repository,
                     bean,
                     method,
@@ -114,6 +125,20 @@ public class Camunda7TaskWiring extends TaskWiringBase<Camunda7Connectable, Camu
 
         }
         
+    }
+    
+    protected void wireTask(
+            final Camunda7ProcessService<?> processService,
+            final Camunda7Connectable connectable) {
+        
+        super.wireTask(
+                connectable,
+                false,
+                (method, annotation) -> methodMatchesTaskDefinition(connectable, method, annotation),
+                (method, annotation) -> methodMatchesElementId(connectable, method, annotation),
+                (method, annotation) -> validateParameters(processService, method),
+                (bean, method, parameters) -> connectToBpms(processService, bean, connectable, method, parameters));
+                
     }
 
 }

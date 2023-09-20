@@ -2,6 +2,7 @@ package io.vanillabp.camunda7;
 
 import io.vanillabp.camunda7.deployment.Camunda7DeploymentAdapter;
 import io.vanillabp.camunda7.service.Camunda7ProcessService;
+import io.vanillabp.camunda7.service.jobs.startprocess.StartProcessJobHandler;
 import io.vanillabp.camunda7.wiring.Camunda7AdapterProperties;
 import io.vanillabp.camunda7.wiring.Camunda7TaskWiring;
 import io.vanillabp.camunda7.wiring.Camunda7TaskWiringPlugin;
@@ -28,10 +29,9 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.data.repository.CrudRepository;
 
+import javax.annotation.PostConstruct;
 import java.math.BigInteger;
 import java.util.function.Function;
-
-import javax.annotation.PostConstruct;
 
 @AutoConfigurationPackage(basePackageClasses = Camunda7AdapterConfiguration.class)
 @AutoConfigureBefore(CamundaBpmAutoConfiguration.class)
@@ -134,7 +134,7 @@ public class Camunda7AdapterConfiguration extends AdapterConfigurationBase<Camun
 
         return new ProcessEntityAwareExpressionManager(
                 applicationContext,
-                getConnectableServices());
+                this::getConnectableServices);
 
     }
 
@@ -207,5 +207,11 @@ public class Camunda7AdapterConfiguration extends AdapterConfigurationBase<Camun
         return result;
         
     }
-   
+
+    @Bean
+    public StartProcessJobHandler startProcessJobHandler() {
+
+        return new StartProcessJobHandler();
+    }
+
 }

@@ -32,6 +32,13 @@
             <release>${version.java}</release>
           </configuration>
         </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-deploy-plugin</artifactId>
+          <configuration>
+            <skip>false</skip>
+          </configuration>
+        </plugin>
       </plugins>
     </pluginManagement>
   </build>
@@ -73,4 +80,12 @@
     <developerConnection>scm:git:https://github.com/camunda-community-hub/vanillabp-camunda7-adapter.git</developerConnection>
     <url>http://github.com/camunda-community-hub/vanillabp-camunda7-adapter/tree/main</url>
   </scm>
+
+  <distributionManagement>
+    <snapshotRepository>
+      <id>github</id>
+      <name>Github Packages</name>
+      <url>https://maven.pkg.github.com/camunda-community-hub/vanillabp-camunda7-adapter</url>
+    </snapshotRepository>
+  </distributionManagement>
 </project>

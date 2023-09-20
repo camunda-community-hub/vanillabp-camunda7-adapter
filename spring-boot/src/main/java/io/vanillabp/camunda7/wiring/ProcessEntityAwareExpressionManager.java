@@ -8,6 +8,7 @@ import org.springframework.context.ApplicationContext;
 
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.function.Supplier;
 
 /*
  * Custom expression manager to resolve process entities and @WorkflowTask annotated methods
@@ -18,11 +19,11 @@ public class ProcessEntityAwareExpressionManager extends SpringExpressionManager
     
     private final HashMap<Camunda7Connectable, Camunda7TaskHandler> toBeConnected = new HashMap<>();
     
-    private final Collection<Camunda7ProcessService<?>> connectableServices;
+    private final Supplier<Collection<Camunda7ProcessService<?>>> connectableServices;
     
     public ProcessEntityAwareExpressionManager(
             final ApplicationContext applicationContext,
-            final Collection<Camunda7ProcessService<?>> connectableServices) {
+            final Supplier<Collection<Camunda7ProcessService<?>>> connectableServices) {
 
         super(applicationContext, null);
         this.connectableServices = connectableServices;

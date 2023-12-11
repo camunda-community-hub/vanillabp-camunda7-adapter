@@ -797,7 +797,9 @@ public class TaskWiringBpmnParseListener implements BpmnParseListener {
 
     @Override
     public void parseIoMapping(final Element element, final ActivityImpl activity, final IoMapping ioMapping) {
-        // TODO document why this method is empty
+        // The BpmnParseListener interface requires the implementation
+        // of this method. However, since IO parsing is not required for
+        // this adapter, this method remains empty.
     }
 
 }

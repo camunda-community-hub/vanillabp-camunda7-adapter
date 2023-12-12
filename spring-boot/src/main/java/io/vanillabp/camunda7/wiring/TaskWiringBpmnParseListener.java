@@ -7,6 +7,7 @@ import org.camunda.bpm.engine.impl.bpmn.listener.DelegateExpressionExecutionList
 import org.camunda.bpm.engine.impl.bpmn.listener.ExpressionExecutionListener;
 import org.camunda.bpm.engine.impl.bpmn.parser.BpmnParse;
 import org.camunda.bpm.engine.impl.bpmn.parser.BpmnParseListener;
+import org.camunda.bpm.engine.impl.core.variable.mapping.IoMapping;
 import org.camunda.bpm.engine.impl.persistence.entity.ProcessDefinitionEntity;
 import org.camunda.bpm.engine.impl.pvm.process.ActivityImpl;
 import org.camunda.bpm.engine.impl.pvm.process.ScopeImpl;
@@ -793,5 +794,12 @@ public class TaskWiringBpmnParseListener implements BpmnParseListener {
         removeAsyncBeforeAndAsyncAfter(element, activity);
 
     }
-    
+
+    @Override
+    public void parseIoMapping(final Element element, final ActivityImpl activity, final IoMapping ioMapping) {
+        // The BpmnParseListener interface requires the implementation
+        // of this method. However, since IO parsing is not required for
+        // this adapter, this method remains empty.
+    }
+
 }

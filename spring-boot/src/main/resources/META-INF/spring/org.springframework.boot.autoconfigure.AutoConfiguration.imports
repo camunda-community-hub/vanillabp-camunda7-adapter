@@ -1,0 +1,3 @@
+io.vanillabp.camunda7.deployment.Camunda7DisableAutoDeploymentConfiguration
+io.vanillabp.camunda7.jobexecutor.WakeupJobExecutorConfiguration
+io.vanillabp.camunda7.Camunda7AdapterConfiguration

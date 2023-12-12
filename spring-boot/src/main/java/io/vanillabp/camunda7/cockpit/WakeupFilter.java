@@ -1,19 +1,18 @@
 package io.vanillabp.camunda7.cockpit;
 
+import java.io.IOException;
+import java.util.Date;
+
 import io.vanillabp.camunda7.service.WakupJobExecutorNotification;
+import jakarta.servlet.Filter;
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.ServletRequest;
+import jakarta.servlet.ServletResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.scheduling.TaskScheduler;
-
-import java.io.IOException;
-import java.util.Date;
-
-import javax.servlet.Filter;
-import javax.servlet.FilterChain;
-import javax.servlet.ServletException;
-import javax.servlet.ServletRequest;
-import javax.servlet.ServletResponse;
 
 public class WakeupFilter implements Filter {
 

@@ -1,9 +1,9 @@
 package io.vanillabp.camunda7.wiring;
 
 import io.vanillabp.camunda7.service.Camunda7ProcessService;
-import org.camunda.bpm.engine.impl.javax.el.CompositeELResolver;
-import org.camunda.bpm.engine.impl.javax.el.ELResolver;
 import org.camunda.bpm.engine.spring.SpringExpressionManager;
+import org.camunda.bpm.impl.juel.jakarta.el.CompositeELResolver;
+import org.camunda.bpm.impl.juel.jakarta.el.ELResolver;
 import org.springframework.context.ApplicationContext;
 
 import java.util.Collection;

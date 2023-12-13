@@ -35,12 +35,12 @@ If you want a certain version of Camunda (either community or enterprise edition
 <dependency>
   <groupId>org.camunda.bpm.springboot</groupId>
   <artifactId>camunda-bpm-spring-boot-starter</artifactId>
-  <version>7.17.6-ee</version>
+  <version>7.20.1-ee</version>
 </dependency>
 <dependency>
   <groupId>org.camunda.bpm.springboot</groupId>
   <artifactId>camunda-bpm-spring-boot-starter-webapp-ee</artifactId>
-  <version>7.17.6-ee</version>
+  <version>7.20.1-ee</version>
 </dependency>
 <dependency>
   <groupId>org.camunda.community.vanillabp</groupId>
@@ -150,7 +150,7 @@ vanillabp:
 
 ## Job-Executor
 
-The Camunda job-executor is responsible for processing asynchronous continuation of BPMN tasks. It has a delay due to polling the database for jobs (see [Backoff Strategy](https://docs.camunda.org/manual/7.18/user-guide/process-engine/the-job-executor/#backoff-strategy)). If there is manual interaction to the process-engine (e.g. process started, message correlated or user-task completed) you want asynchronous tasks to be completed as soon as possible. For example, you want to give feedback in the UI of a "validation" task following a user-task. Therefore, this adapter wakes up the job-executor to check for new jobs after a manual interaction's transaction is completed.
+The Camunda job-executor is responsible for processing asynchronous continuation of BPMN tasks. It has a delay due to polling the database for jobs (see [Backoff Strategy](https://docs.camunda.org/manual/7.20/user-guide/process-engine/the-job-executor/#backoff-strategy)). If there is manual interaction to the process-engine (e.g. process started, message correlated or user-task completed) you want asynchronous tasks to be completed as soon as possible. For example, you want to give feedback in the UI of a "validation" task following a user-task. Therefore, this adapter wakes up the job-executor to check for new jobs after a manual interaction's transaction is completed.
 
 In cloud environments one typically wants to free resources in idle times to not waste money (at protect the environment :deciduous_tree:) since resources are charged by time of usage. Camunda's job-executor using a polling strategy to find new jobs which either  keeps the database in use or introduces huge delays of execution if max-delays are set to big values. This Camunda 7 VanillaBP adapter alters this behavior by keeping the Job-Executor sleep until the next timed job's due-date (e.g. timer-event). In conjunction with waking up the job-executor in case of manual interaction this helps to minimize database usage.
 
@@ -167,6 +167,6 @@ However, if enabled you have to [set a DB index](https://docs.camunda.org/manual
 
 > VanillaBP's job-executor is using `jobExecutorPreferTimerJobs=true`
 > and `jobExecutorAcquireByDueDate=true`. Please add DB-index according
-> to https://docs.camunda.org/manual/7.6/user-guide/process-engine/the-job-executor/#the-job-order-of-job-acquisition
+> to https://docs.camunda.org/manual/7.20/user-guide/process-engine/the-job-executor/#the-job-order-of-job-acquisition
 
 *Hint:* This feature requires to enable Spring Boot's scheduled tasks [as described here](https://www.baeldung.com/spring-scheduled-tasks#enable-support-for-scheduling).

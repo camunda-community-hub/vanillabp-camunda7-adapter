@@ -6,17 +6,17 @@ public class StartProcessJobHandlerConfiguration implements JobHandlerConfigurat
 
     private final String businessKey;
 
-    private final String workflowModuleId;
+    private final String tenantId;
 
     private final String bpmnProcessId;
 
     public StartProcessJobHandlerConfiguration(
-            final String workflowModuleId,
+            final String tenantId,
             final String bpmnProcessId,
             final String businessKey) {
 
         this.businessKey = businessKey;
-        this.workflowModuleId = workflowModuleId;
+        this.tenantId = tenantId;
         this.bpmnProcessId = bpmnProcessId;
 
     }
@@ -24,12 +24,12 @@ public class StartProcessJobHandlerConfiguration implements JobHandlerConfigurat
     @Override
     public String toCanonicalString() {
 
-        return workflowModuleId + "\n" + bpmnProcessId + "\n" + businessKey;
+        return tenantId + "\n" + bpmnProcessId + "\n" + businessKey;
 
     }
 
-    public String getWorkflowModuleId() {
-        return workflowModuleId;
+    public String getTenantId() {
+        return tenantId;
     }
 
     public String getBpmnProcessId() {

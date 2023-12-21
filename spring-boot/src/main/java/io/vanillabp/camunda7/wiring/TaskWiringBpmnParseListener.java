@@ -657,7 +657,7 @@ public class TaskWiringBpmnParseListener implements BpmnParseListener {
                             oldVersionBpmn.get().booleanValue() ? null : tbw.messageBasedStartEventsMessages,
                             oldVersionBpmn.get().booleanValue() ? null : tbw.signalBasedStartEventsSignals);
                     tbw.connectables
-                            .forEach(connectable -> taskWiring.wireTask(processService, connectable));
+                            .forEach(connectable -> taskWiring.wireTask(workflowModuleId.get(), processService, connectable));
                 });
         
     }

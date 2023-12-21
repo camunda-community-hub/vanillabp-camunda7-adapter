@@ -12,6 +12,7 @@ import io.vanillabp.camunda7.wiring.TaskWiringBpmnParseListener;
 import io.vanillabp.springboot.adapter.AdapterConfigurationBase;
 import io.vanillabp.springboot.adapter.SpringDataUtil;
 import io.vanillabp.springboot.adapter.VanillaBpProperties;
+import jakarta.annotation.PostConstruct;
 import org.camunda.bpm.engine.ProcessEngine;
 import org.camunda.bpm.engine.spring.application.SpringProcessApplication;
 import org.camunda.bpm.spring.boot.starter.CamundaBpmAutoConfiguration;
@@ -29,7 +30,6 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.data.repository.CrudRepository;
 
-import jakarta.annotation.PostConstruct;
 import java.math.BigInteger;
 import java.util.function.Function;
 
@@ -44,7 +44,10 @@ public class Camunda7AdapterConfiguration extends AdapterConfigurationBase<Camun
     
     @Value("${workerId}")
     private String workerId;
-    
+
+    @Value("${spring.application.name:@null}")
+    private String applicationName;
+
     @Autowired
     private SpringDataUtil springDataUtil; // ensure persistence is up and running
     
@@ -90,6 +93,7 @@ public class Camunda7AdapterConfiguration extends AdapterConfigurationBase<Camun
         return new Camunda7DeploymentAdapter(
                 properties,
                 processApplication,
+                applicationName,
                 taskWiring,
                 processEngine);
 
@@ -193,6 +197,7 @@ public class Camunda7AdapterConfiguration extends AdapterConfigurationBase<Camun
         
         final var result = new Camunda7ProcessService<DE>(
                 applicationEventPublisher,
+                applicationName,
                 processEngine,
                 workflowAggregate ->
                         !springDataUtil.isPersistedEntity(workflowAggregateClass, workflowAggregate),

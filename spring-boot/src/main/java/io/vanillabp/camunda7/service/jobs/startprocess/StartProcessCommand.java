@@ -11,12 +11,12 @@ public class StartProcessCommand implements Command<String> {
     private final StartProcessJobHandlerConfiguration configuration;
 
     public StartProcessCommand(
-            final String workflowModuleId,
+            final String tenantId,
             final String bpmnProcessId,
             final String businessKey) {
 
         this.configuration = new StartProcessJobHandlerConfiguration(
-                workflowModuleId,
+                tenantId,
                 bpmnProcessId,
                 businessKey);
 

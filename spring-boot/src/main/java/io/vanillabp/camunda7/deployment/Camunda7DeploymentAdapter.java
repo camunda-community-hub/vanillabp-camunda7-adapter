@@ -27,9 +27,12 @@ public class Camunda7DeploymentAdapter extends ModuleAwareBpmnDeployment {
 
     private final Camunda7TaskWiring taskWiring;
 
+    private final String applicationName;
+
     public Camunda7DeploymentAdapter(
             final VanillaBpProperties properties,
             final SpringProcessApplication processApplication,
+            final String applicationName,
             final Camunda7TaskWiring taskWiring,
             final ProcessEngine processEngine) {
         
@@ -37,6 +40,7 @@ public class Camunda7DeploymentAdapter extends ModuleAwareBpmnDeployment {
         this.processEngine = processEngine;
         this.processApplication = processApplication;
         this.taskWiring = taskWiring;
+        this.applicationName = applicationName;
         
     }
 
@@ -67,11 +71,12 @@ public class Camunda7DeploymentAdapter extends ModuleAwareBpmnDeployment {
     @Override
     protected void doDeployment(
     		final String workflowModuleId,
-            final String workflowModuleName,
             final Resource[] bpmns,
             final Resource[] dmns,
             final Resource[] cmms)
             throws Exception {
+
+        final var tenantId = workflowModuleId == null ? applicationName : workflowModuleId;
 
         final var deploymentBuilder = processEngine
                 .getRepositoryService()
@@ -80,8 +85,8 @@ public class Camunda7DeploymentAdapter extends ModuleAwareBpmnDeployment {
                 .resumePreviousVersionsBy(ResumePreviousBy.RESUME_BY_DEPLOYMENT_NAME)
                 .enableDuplicateFiltering(true)
                 .source(applicationName)
-                .tenantId(workflowModuleName)
-                .name(workflowModuleName);
+                .tenantId(tenantId)
+                .name(workflowModuleId == null ? applicationName : workflowModuleId);
 
         boolean hasDeployables = false;
         
@@ -120,7 +125,7 @@ public class Camunda7DeploymentAdapter extends ModuleAwareBpmnDeployment {
         processEngine
                 .getRepositoryService()
                 .createProcessDefinitionQuery()
-                .tenantIdIn(workflowModuleName)
+                .tenantIdIn(tenantId)
                 .list()
                 .stream()
                 .forEach(definition -> {

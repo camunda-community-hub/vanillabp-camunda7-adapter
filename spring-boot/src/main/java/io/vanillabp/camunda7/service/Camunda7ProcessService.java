@@ -34,10 +34,13 @@ public class Camunda7ProcessService<DE>
     
     private final Function<String, Object> parseWorkflowAggregateIdFromBusinessKey;
 
+    private final String applicationName;
+
     private AdapterAwareProcessService<DE> parent;
 
     public Camunda7ProcessService(
             final ApplicationEventPublisher applicationEventPublisher,
+            final String applicationName,
             final ProcessEngine processEngine,
             final Function<DE, Boolean> isNewEntity,
             final Function<DE, ?> getWorkflowAggregateId,
@@ -47,6 +50,7 @@ public class Camunda7ProcessService<DE>
 
         super();
         this.applicationEventPublisher = applicationEventPublisher;
+        this.applicationName = applicationName;
         this.processEngine = processEngine;
         this.workflowAggregateRepository = workflowAggregateRepository;
         this.workflowAggregateClass = workflowAggregateClass;
@@ -146,11 +150,12 @@ public class Camunda7ProcessService<DE>
         // Hint: this is not done by setting "async-before" on the start-event
         // since we don't know which process is used as a call-activity which
         // has to be started synchronously.
+        final var tenantId = parent.getWorkflowModuleId() == null ? applicationName : parent.getWorkflowModuleId();
         ((ProcessEngineConfigurationImpl) processEngine
                 .getProcessEngineConfiguration())
                 .getCommandExecutorTxRequired()
                 .execute(new StartProcessCommand(
-                        parent.getWorkflowModuleId(),
+                        tenantId,
                         parent.getPrimaryBpmnProcessId(),
                         id));
 
@@ -231,10 +236,12 @@ public class Camunda7ProcessService<DE>
         
         final var id = getWorkflowAggregateId
                 .apply(attachedAggregate);
-        
+
+        final var tenantId = parent.getWorkflowModuleId() == null ? applicationName : parent.getWorkflowModuleId();
         final var correlation = processEngine
                 .getRuntimeService()
                 .createMessageCorrelation(messageName)
+                .tenantId(tenantId)
                 .processInstanceBusinessKey(id.toString());
         if (correlationIdLocalVariableName != null) {
             correlation.localVariableEquals(
@@ -260,6 +267,7 @@ public class Camunda7ProcessService<DE>
         final var correlationExecutions = processEngine
                 .getRuntimeService()
                 .createExecutionQuery()
+                .tenantIdIn(tenantId)
                 .messageEventSubscriptionName(messageName)
                 .processInstanceBusinessKey(id.toString())
                 .active();
@@ -307,11 +315,13 @@ public class Camunda7ProcessService<DE>
 
         final var attachedAggregate = workflowAggregateRepository
                 .save(workflowAggregate);
-        
+
+        final var tenantId = parent.getWorkflowModuleId() == null ? applicationName : parent.getWorkflowModuleId();
         final var id = getWorkflowAggregateId.apply(workflowAggregate);
         final var task = processEngine
                 .getTaskService()
                 .createTaskQuery()
+                .tenantIdIn(tenantId)
                 .processInstanceBusinessKey(id.toString())
                 .taskId(taskId)
                 .singleResult();

@@ -29,7 +29,7 @@ public class StartProcessJobHandler implements JobHandler<StartProcessJobHandler
                 .getRuntimeService()
                 .createProcessInstanceByKey(configuration.getBpmnProcessId())
                 .businessKey(configuration.getBusinessKey())
-                .processDefinitionTenantId(configuration.getWorkflowModuleId())
+                .processDefinitionTenantId(configuration.getTenantId())
                 .execute();
 
     }

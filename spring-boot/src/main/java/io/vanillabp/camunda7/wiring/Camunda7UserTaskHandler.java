@@ -1,17 +1,5 @@
 package io.vanillabp.camunda7.wiring;
 
-import java.lang.reflect.Method;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.function.Function;
-
-import org.camunda.bpm.engine.delegate.DelegateTask;
-import org.camunda.bpm.engine.delegate.TaskListener;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.data.repository.CrudRepository;
-
 import io.vanillabp.camunda7.service.Camunda7ProcessService;
 import io.vanillabp.spi.service.TaskEvent;
 import io.vanillabp.spi.service.TaskEvent.Event;
@@ -20,6 +8,17 @@ import io.vanillabp.springboot.adapter.TaskHandlerBase;
 import io.vanillabp.springboot.adapter.wiring.WorkflowAggregateCache;
 import io.vanillabp.springboot.parameters.MethodParameter;
 import io.vanillabp.springboot.parameters.TaskEventMethodParameter;
+import org.camunda.bpm.engine.delegate.DelegateTask;
+import org.camunda.bpm.engine.delegate.TaskListener;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.data.repository.CrudRepository;
+
+import java.lang.reflect.Method;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.function.Function;
 
 public class Camunda7UserTaskHandler extends TaskHandlerBase implements TaskListener {
 
@@ -93,7 +92,7 @@ public class Camunda7UserTaskHandler extends TaskHandlerBase implements TaskList
                     (args, param) -> processTaskEventParameter(
                             args,
                             param,
-                            () -> Event.CREATED),
+                            () -> TaskListener.EVENTNAME_DELETE.equals(delegateTask.getEventName()) ? Event.CANCELED : Event.CREATED),
                     (args, param) -> processMultiInstanceIndexParameter(
                             args,
                             param,

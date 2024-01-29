@@ -3,6 +3,7 @@ package io.vanillabp.camunda7.wiring;
 import io.vanillabp.camunda7.service.Camunda7ProcessService;
 import io.vanillabp.spi.process.ProcessService;
 import io.vanillabp.spi.service.WorkflowTask;
+import io.vanillabp.springboot.adapter.SpringBeanUtil;
 import io.vanillabp.springboot.adapter.TaskWiringBase;
 import io.vanillabp.springboot.parameters.MethodParameter;
 import io.vanillabp.springboot.parameters.MethodParameterFactory;
@@ -25,11 +26,12 @@ public class Camunda7TaskWiring extends TaskWiringBase<Camunda7Connectable, Camu
 
     public Camunda7TaskWiring(
             final ApplicationContext applicationContext,
+            final SpringBeanUtil springBeanUtil,
             final ProcessEntityAwareExpressionManager processEntityAwareExpressionManager,
             final Camunda7UserTaskEventHandler userTaskEventHandler,
             final Collection<Camunda7ProcessService<?>> connectableServices) {
         
-        super(applicationContext);
+        super(applicationContext, springBeanUtil);
         this.processEntityAwareExpressionManager = processEntityAwareExpressionManager;
         this.userTaskEventHandler = userTaskEventHandler;
         this.connectableServices = connectableServices;

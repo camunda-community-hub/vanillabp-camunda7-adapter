@@ -10,6 +10,7 @@ import io.vanillabp.camunda7.wiring.Camunda7UserTaskEventHandler;
 import io.vanillabp.camunda7.wiring.ProcessEntityAwareExpressionManager;
 import io.vanillabp.camunda7.wiring.TaskWiringBpmnParseListener;
 import io.vanillabp.springboot.adapter.AdapterConfigurationBase;
+import io.vanillabp.springboot.adapter.SpringBeanUtil;
 import io.vanillabp.springboot.adapter.SpringDataUtil;
 import io.vanillabp.springboot.adapter.VanillaBpProperties;
 import jakarta.annotation.PostConstruct;
@@ -24,6 +25,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.AutoConfigurationPackage;
 import org.springframework.boot.autoconfigure.AutoConfigureBefore;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Bean;
@@ -108,11 +110,13 @@ public class Camunda7AdapterConfiguration extends AdapterConfigurationBase<Camun
     
     @Bean
     public Camunda7TaskWiring taskWiring(
+            final SpringBeanUtil springBeanUtil,
             final ProcessEntityAwareExpressionManager processEntityAwareExpressionManager,
             final Camunda7UserTaskEventHandler userTaskEventHandler) {
         
         return new Camunda7TaskWiring(
                 applicationContext,
+                springBeanUtil,
                 processEntityAwareExpressionManager,
                 userTaskEventHandler,
                 getConnectableServices());
@@ -217,6 +221,15 @@ public class Camunda7AdapterConfiguration extends AdapterConfigurationBase<Camun
     public StartProcessJobHandler startProcessJobHandler() {
 
         return new StartProcessJobHandler();
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    public SpringBeanUtil vanillabpSpringBeanUtil(
+            final ApplicationContext applicationContext) {
+
+        return new SpringBeanUtil(applicationContext);
+
     }
 
 }

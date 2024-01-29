@@ -1,14 +1,14 @@
 package io.vanillabp.camunda7.wiring;
 
-import java.util.HashMap;
-import java.util.Map;
-
 import org.camunda.bpm.engine.delegate.DelegateTask;
 import org.camunda.bpm.engine.delegate.TaskListener;
 import org.camunda.bpm.engine.impl.persistence.entity.ExecutionEntity;
 import org.camunda.bpm.model.bpmn.instance.UserTask;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.HashMap;
+import java.util.Map;
 
 public class Camunda7UserTaskEventHandler implements TaskListener {
 
@@ -61,7 +61,7 @@ public class Camunda7UserTaskEventHandler implements TaskListener {
                 .filter(entry -> entry.getValue().eventApplies(delegateTask.getEventName()))
                 // found handler-reference
                 .findFirst()
-                .map(entry -> entry.getValue())
+                .map(Map.Entry::getValue)
                 .ifPresentOrElse(
                         handler -> handler.notify(delegateTask),
                         () -> logger.debug(

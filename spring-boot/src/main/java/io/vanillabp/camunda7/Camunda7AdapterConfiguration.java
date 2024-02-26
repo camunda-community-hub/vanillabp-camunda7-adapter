@@ -3,7 +3,6 @@ package io.vanillabp.camunda7;
 import io.vanillabp.camunda7.deployment.Camunda7DeploymentAdapter;
 import io.vanillabp.camunda7.service.Camunda7ProcessService;
 import io.vanillabp.camunda7.service.jobs.startprocess.StartProcessJobHandler;
-import io.vanillabp.camunda7.wiring.Camunda7AdapterProperties;
 import io.vanillabp.camunda7.wiring.Camunda7TaskWiring;
 import io.vanillabp.camunda7.wiring.Camunda7TaskWiringPlugin;
 import io.vanillabp.camunda7.wiring.Camunda7UserTaskEventHandler;
@@ -26,6 +25,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.AutoConfigurationPackage;
 import org.springframework.boot.autoconfigure.AutoConfigureBefore;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Bean;
@@ -38,6 +38,7 @@ import java.util.function.Function;
 @AutoConfigurationPackage(basePackageClasses = Camunda7AdapterConfiguration.class)
 @AutoConfigureBefore(CamundaBpmAutoConfiguration.class)
 @EnableProcessApplication("org.camunda.bpm.spring.boot.starter.SpringBootProcessApplication")
+@EnableConfigurationProperties(Camunda7VanillaBpProperties.class)
 public class Camunda7AdapterConfiguration extends AdapterConfigurationBase<Camunda7ProcessService<?>> {
 
     private static final Logger logger = LoggerFactory.getLogger(Camunda7AdapterConfiguration.class);
@@ -63,6 +64,12 @@ public class Camunda7AdapterConfiguration extends AdapterConfigurationBase<Camun
     @Autowired
     private ApplicationEventPublisher applicationEventPublisher;
 
+    @Autowired
+    private Camunda7VanillaBpProperties camunda7Properties;
+
+    @Autowired
+    private VanillaBpProperties properties;
+
     @PostConstruct
     public void init() {
         
@@ -79,21 +86,14 @@ public class Camunda7AdapterConfiguration extends AdapterConfigurationBase<Camun
     }
     
     @Bean
-    public Camunda7AdapterProperties camunda7AdapterProperties() {
-        
-        return new Camunda7AdapterProperties();
-        
-    }
-    
-    @Bean
     public Camunda7DeploymentAdapter camunda7DeploymentAdapter(
-            final VanillaBpProperties properties,
             final SpringProcessApplication processApplication,
             final ProcessEngine processEngine,
             final Camunda7TaskWiring taskWiring) {
 
         return new Camunda7DeploymentAdapter(
                 properties,
+                camunda7Properties,
                 processApplication,
                 applicationName,
                 taskWiring,
@@ -126,14 +126,12 @@ public class Camunda7AdapterConfiguration extends AdapterConfigurationBase<Camun
     @Bean
     public TaskWiringBpmnParseListener taskWiringBpmnParseListener(
             final Camunda7TaskWiring taskWiring,
-            final Camunda7UserTaskEventHandler userTaskEventHandler,
-            final Camunda7AdapterProperties properties) {
+            final Camunda7UserTaskEventHandler userTaskEventHandler) {
         
         return new TaskWiringBpmnParseListener(
                 taskWiring,
                 userTaskEventHandler,
-                properties.isUseBpmnAsyncDefinitions(),
-                properties.getBpmnAsyncDefinitions());
+                camunda7Properties);
         
     }
     
@@ -198,10 +196,10 @@ public class Camunda7AdapterConfiguration extends AdapterConfigurationBase<Camun
                                 workflowAggregateIdClass.getSimpleName()));
             }
         }
-        
+
         final var result = new Camunda7ProcessService<DE>(
                 applicationEventPublisher,
-                applicationName,
+                camunda7Properties,
                 processEngine,
                 workflowAggregate ->
                         !springDataUtil.isPersistedEntity(workflowAggregateClass, workflowAggregate),

@@ -2,6 +2,7 @@ package io.vanillabp.camunda7.deployment;
 
 
 import io.vanillabp.camunda7.Camunda7AdapterConfiguration;
+import io.vanillabp.camunda7.Camunda7VanillaBpProperties;
 import io.vanillabp.camunda7.wiring.Camunda7TaskWiring;
 import io.vanillabp.camunda7.wiring.TaskWiringBpmnParseListener;
 import io.vanillabp.springboot.adapter.ModuleAwareBpmnDeployment;
@@ -27,21 +28,25 @@ public class Camunda7DeploymentAdapter extends ModuleAwareBpmnDeployment {
 
     private final Camunda7TaskWiring taskWiring;
 
+    private final Camunda7VanillaBpProperties camunda7Properties;
+
     private final String applicationName;
 
     public Camunda7DeploymentAdapter(
             final VanillaBpProperties properties,
+            final Camunda7VanillaBpProperties camunda7Properties,
             final SpringProcessApplication processApplication,
             final String applicationName,
             final Camunda7TaskWiring taskWiring,
             final ProcessEngine processEngine) {
         
-        super(properties);
+        super(properties, applicationName);
         this.processEngine = processEngine;
         this.processApplication = processApplication;
         this.taskWiring = taskWiring;
         this.applicationName = applicationName;
-        
+        this.camunda7Properties = camunda7Properties;
+
     }
 
     @Override
@@ -76,8 +81,6 @@ public class Camunda7DeploymentAdapter extends ModuleAwareBpmnDeployment {
             final Resource[] cmms)
             throws Exception {
 
-        final var tenantId = workflowModuleId == null ? applicationName : workflowModuleId;
-
         final var deploymentBuilder = processEngine
                 .getRepositoryService()
                 .createDeployment(processApplication.getReference())
@@ -85,8 +88,12 @@ public class Camunda7DeploymentAdapter extends ModuleAwareBpmnDeployment {
                 .resumePreviousVersionsBy(ResumePreviousBy.RESUME_BY_DEPLOYMENT_NAME)
                 .enableDuplicateFiltering(true)
                 .source(applicationName)
-                .tenantId(tenantId)
-                .name(workflowModuleId == null ? applicationName : workflowModuleId);
+                .name(workflowModuleId);
+
+        final var tenantId = camunda7Properties.getTenantId(workflowModuleId);
+        if (tenantId != null) {
+            deploymentBuilder.tenantId(tenantId);
+        }
 
         boolean hasDeployables = false;
         
@@ -121,13 +128,16 @@ public class Camunda7DeploymentAdapter extends ModuleAwareBpmnDeployment {
             deploymentId = "";
         }
 
-        // BPMNs which were deployed in the past need to be forced to be parsed for wiring 
-        processEngine
-                .getRepositoryService()
-                .createProcessDefinitionQuery()
-                .tenantIdIn(tenantId)
+        // BPMNs which were deployed in the past need to be forced to be parsed for wiring
+        (tenantId == null
+                ? processEngine
+                        .getRepositoryService()
+                        .createProcessDefinitionQuery()
+                : processEngine
+                        .getRepositoryService()
+                        .createProcessDefinitionQuery()
+                        .tenantIdIn(workflowModuleId))
                 .list()
-                .stream()
                 .forEach(definition -> {
                     // process models parsed during deployment are cached and therefore
                     // not wired twice.

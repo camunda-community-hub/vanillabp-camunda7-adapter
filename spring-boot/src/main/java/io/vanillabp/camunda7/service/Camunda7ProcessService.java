@@ -1,6 +1,7 @@
 package io.vanillabp.camunda7.service;
 
 import io.vanillabp.camunda7.Camunda7AdapterConfiguration;
+import io.vanillabp.camunda7.Camunda7VanillaBpProperties;
 import io.vanillabp.camunda7.service.jobs.startprocess.StartProcessCommand;
 import io.vanillabp.springboot.adapter.AdapterAwareProcessService;
 import io.vanillabp.springboot.adapter.ProcessServiceImplementation;
@@ -34,13 +35,13 @@ public class Camunda7ProcessService<DE>
     
     private final Function<String, Object> parseWorkflowAggregateIdFromBusinessKey;
 
-    private final String applicationName;
+    private final Camunda7VanillaBpProperties camunda7Properties;
 
     private AdapterAwareProcessService<DE> parent;
 
     public Camunda7ProcessService(
             final ApplicationEventPublisher applicationEventPublisher,
-            final String applicationName,
+            final Camunda7VanillaBpProperties camunda7Properties,
             final ProcessEngine processEngine,
             final Function<DE, Boolean> isNewEntity,
             final Function<DE, ?> getWorkflowAggregateId,
@@ -50,7 +51,7 @@ public class Camunda7ProcessService<DE>
 
         super();
         this.applicationEventPublisher = applicationEventPublisher;
-        this.applicationName = applicationName;
+        this.camunda7Properties = camunda7Properties;
         this.processEngine = processEngine;
         this.workflowAggregateRepository = workflowAggregateRepository;
         this.workflowAggregateClass = workflowAggregateClass;
@@ -150,12 +151,11 @@ public class Camunda7ProcessService<DE>
         // Hint: this is not done by setting "async-before" on the start-event
         // since we don't know which process is used as a call-activity which
         // has to be started synchronously.
-        final var tenantId = parent.getWorkflowModuleId() == null ? applicationName : parent.getWorkflowModuleId();
         ((ProcessEngineConfigurationImpl) processEngine
                 .getProcessEngineConfiguration())
                 .getCommandExecutorTxRequired()
                 .execute(new StartProcessCommand(
-                        tenantId,
+                        camunda7Properties.getTenantId(parent.getWorkflowModuleId()),
                         parent.getPrimaryBpmnProcessId(),
                         id));
 
@@ -237,12 +237,21 @@ public class Camunda7ProcessService<DE>
         final var id = getWorkflowAggregateId
                 .apply(attachedAggregate);
 
-        final var tenantId = parent.getWorkflowModuleId() == null ? applicationName : parent.getWorkflowModuleId();
-        final var correlation = processEngine
-                .getRuntimeService()
-                .createMessageCorrelation(messageName)
+        final var tenantId = camunda7Properties.getTenantId(parent.getWorkflowModuleId());
+        final var correlation =
+                (tenantId == null
+                        ? processEngine
+                                .getRuntimeService()
+                                .createMessageCorrelation(messageName)
+                        : processEngine
+                                .getRuntimeService()
+                                .createMessageCorrelation(messageName)
+                                .tenantId(tenantId))
                 .tenantId(tenantId)
                 .processInstanceBusinessKey(id.toString());
+        if (tenantId != null) {
+            correlation.tenantId(tenantId);
+        }
         if (correlationIdLocalVariableName != null) {
             correlation.localVariableEquals(
                     correlationIdLocalVariableName,
@@ -264,10 +273,15 @@ public class Camunda7ProcessService<DE>
             
         }
             
-        final var correlationExecutions = processEngine
-                .getRuntimeService()
-                .createExecutionQuery()
-                .tenantIdIn(tenantId)
+        final var correlationExecutions =
+                (tenantId == null
+                        ? processEngine
+                                .getRuntimeService()
+                                .createExecutionQuery()
+                        : processEngine
+                                .getRuntimeService()
+                                .createExecutionQuery()
+                                .tenantIdIn(tenantId))
                 .messageEventSubscriptionName(messageName)
                 .processInstanceBusinessKey(id.toString())
                 .active();
@@ -316,12 +330,17 @@ public class Camunda7ProcessService<DE>
         final var attachedAggregate = workflowAggregateRepository
                 .save(workflowAggregate);
 
-        final var tenantId = parent.getWorkflowModuleId() == null ? applicationName : parent.getWorkflowModuleId();
         final var id = getWorkflowAggregateId.apply(workflowAggregate);
-        final var task = processEngine
-                .getTaskService()
-                .createTaskQuery()
-                .tenantIdIn(tenantId)
+
+        final var tenantId = camunda7Properties.getTenantId(parent.getWorkflowModuleId());
+        final var task = (tenantId == null
+                ? processEngine
+                        .getTaskService()
+                        .createTaskQuery()
+                : processEngine
+                        .getTaskService()
+                        .createTaskQuery()
+                        .tenantIdIn(tenantId))
                 .processInstanceBusinessKey(id.toString())
                 .taskId(taskId)
                 .singleResult();

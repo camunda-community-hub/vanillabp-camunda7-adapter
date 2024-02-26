@@ -109,6 +109,35 @@ For the taxi ride sample we have the BPMN process ID `TaxiRide` and e.g. the mes
 
 *Hint:* If you want to be prepared to upgrade to Camunda 8 then always set this correlation ID as a local variable since this is mandatory on using Camunda 8.
 
+## Using Camunda multi-tenancy
+
+Typically, on operating multiple workflow modules, one wants to avoid name clashes in Camunda (e.g. of event names, etc.).
+Therefore, each workflow module is deployed to Camunda as a separate tenant using the workflow module's id as the tenant-id.
+
+This behavior can be adapted.
+
+**If you wish to define a custom tenant-id instead:**
+
+```yaml
+vanillabp:
+  workflow-modules:
+    ride:
+      adapters:
+        camunda7:
+          tenant-id: taxiride
+```
+
+**If you want to disable multi-tenancy:**
+
+```yaml
+vanillabp:
+  workflow-modules:
+    ride:
+      adapters:
+        camunda7:
+          use-tenants: false
+```
+
 ## Transaction behavior
 
 Defining the right Camunda 7 transactional behavior can be difficult. We have seen a lot of developers struggling with all the possibilities Camunda 7 provides regarding transactions. The implementation uses one particular best-practice approach and applies this to every BPMN automatically: Every BPMN task/element is a separate transaction.
@@ -130,22 +159,24 @@ On introducing VanillaBP one might to keep some of the BPMNs unchanged. Therefor
 
 ```yaml
 vanillabp:
-  adapters:
-    camunda7:
-      use-bpmn-async-definitions: true
+  workflow-modules:
+    ride:
+      adapters:
+        camunda7:
+          use-bpmn-async-definitions: true
 ```
 
 or just for particular process definitions:
 
 ```yaml
 vanillabp:
-  adapters:
-    camunda7:
-      bpmn-async-definitions:
-        - workflow-module-id: ABC1
-          bpmn-process-id: XYZ1
-        - workflow-module-id: ABC2
-          bpmn-process-id: XYZ2
+   workflow-modules:
+     ride:
+       workflows:
+         Ride:
+           adapters:
+             camunda7:
+               bpmn-async-definitions: true
 ```
 
 ## Job-Executor

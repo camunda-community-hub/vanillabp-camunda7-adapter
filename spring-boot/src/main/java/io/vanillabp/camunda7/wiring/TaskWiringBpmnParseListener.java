@@ -1,6 +1,6 @@
 package io.vanillabp.camunda7.wiring;
 
-import io.vanillabp.springboot.utils.WorkflowAndModule;
+import io.vanillabp.camunda7.Camunda7VanillaBpProperties;
 import org.camunda.bpm.engine.impl.bpmn.behavior.DmnBusinessRuleTaskActivityBehavior;
 import org.camunda.bpm.engine.impl.bpmn.behavior.UserTaskActivityBehavior;
 import org.camunda.bpm.engine.impl.bpmn.listener.DelegateExpressionExecutionListener;
@@ -32,15 +32,13 @@ public class TaskWiringBpmnParseListener implements BpmnParseListener {
 
     private final Camunda7UserTaskEventHandler userTaskEventHandler;
     
-    private final boolean useBpmnAsyncDefinitions;
-    
-    private final List<WorkflowAndModule> bpmnAsyncDefinitions;
+    private final Camunda7VanillaBpProperties properties;
     
     private List<Camunda7Connectable> connectables = new LinkedList<>();
     
-    private List<ToBeWired> toBeWired = new LinkedList<>();
+    private static final ThreadLocal<LinkedList<ToBeWired>> toBeWired = ThreadLocal.withInitial(LinkedList::new);
     
-    private static ThreadLocal<Boolean> oldVersionBpmn = ThreadLocal.withInitial(() -> Boolean.FALSE);
+    private static final ThreadLocal<Boolean> oldVersionBpmn = ThreadLocal.withInitial(() -> Boolean.FALSE);
     
     static final ThreadLocal<String> workflowModuleId = new ThreadLocal<>();
 
@@ -62,14 +60,12 @@ public class TaskWiringBpmnParseListener implements BpmnParseListener {
     public TaskWiringBpmnParseListener(
             final Camunda7TaskWiring taskWiring,
             final Camunda7UserTaskEventHandler userTaskEventHandler,
-            final boolean useBpmnAsyncDefinitions,
-            final List<WorkflowAndModule> bpmnAsyncDefinitions) {
+            final Camunda7VanillaBpProperties properties) {
 
         super();
         this.taskWiring = taskWiring;
         this.userTaskEventHandler = userTaskEventHandler;
-        this.useBpmnAsyncDefinitions = useBpmnAsyncDefinitions;
-        this.bpmnAsyncDefinitions = bpmnAsyncDefinitions;
+        this.properties = properties;
         
     }
     
@@ -101,14 +97,14 @@ public class TaskWiringBpmnParseListener implements BpmnParseListener {
                 .filter(eventDefinition -> eventDefinition != null)
                 .map(eventDefinition -> eventDefinition.attribute("signalRef"))
                 .collect(Collectors.toList());
-        
+
         final var process = new ToBeWired();
         process.bpmnProcessId = bpmnProcessId;
         process.workflowModuleId = workflowModuleId.get();
         process.messageBasedStartEventsMessages = messageBasedStartEventsMessageRefs;
         process.signalBasedStartEventsSignals = signalBasedStartEventsSignalRefs;
         process.connectables = connectables;
-        toBeWired.add(process);
+        toBeWired.get().add(process);
 
         connectables = new LinkedList<>();
 
@@ -435,21 +431,16 @@ public class TaskWiringBpmnParseListener implements BpmnParseListener {
             final Element element,
             final ActivityImpl activity,
             final Async mode) {
-        
+
+        final var bpmnProcessId = ((ProcessDefinitionEntity) activity.getProcessDefinition()).getKey();
+        final var useBpmnAsyncDefinitions = properties.useBpmnAsyncDefinitions(
+                workflowModuleId.get(),
+                bpmnProcessId);
+
         if (useBpmnAsyncDefinitions) {
             return;
         }
-        
-        final var bpmnProcessId = ((ProcessDefinitionEntity) activity.getProcessDefinition()).getKey();
-        if (bpmnAsyncDefinitions
-                .stream()
-                .filter(d -> d.getWorkflowModuleId().equals(workflowModuleId.get()))
-                .filter(d -> d.getBpmnProcessId().equals(bpmnProcessId))
-                .findFirst()
-                .isPresent()) {
-            return;
-        }
-        
+
         activity.setAsyncAfter(false);
         activity.setAsyncBefore(false);
         
@@ -625,6 +616,7 @@ public class TaskWiringBpmnParseListener implements BpmnParseListener {
             final List<ProcessDefinitionEntity> processDefinitions) {
         
         toBeWired
+                .get()
                 .stream()
                 .peek(tbw -> {
                     // translate messageRef into message names
@@ -659,6 +651,7 @@ public class TaskWiringBpmnParseListener implements BpmnParseListener {
                     tbw.connectables
                             .forEach(connectable -> taskWiring.wireTask(workflowModuleId.get(), processService, connectable));
                 });
+        toBeWired.get().clear();
         
     }
 

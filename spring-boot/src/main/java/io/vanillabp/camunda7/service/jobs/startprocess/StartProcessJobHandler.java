@@ -23,13 +23,15 @@ public class StartProcessJobHandler implements JobHandler<StartProcessJobHandler
             final CommandContext commandContext,
             final String tenantId) {
 
-        commandContext
+        final var command = commandContext
                 .getProcessEngineConfiguration()
                 .getProcessEngine()
                 .getRuntimeService()
                 .createProcessInstanceByKey(configuration.getBpmnProcessId())
-                .businessKey(configuration.getBusinessKey())
-                .processDefinitionTenantId(configuration.getTenantId())
+                .businessKey(configuration.getBusinessKey());
+        (configuration.getTenantId() == null
+                ? command.processDefinitionWithoutTenantId()
+                : command.processDefinitionTenantId(configuration.getTenantId()))
                 .execute();
 
     }

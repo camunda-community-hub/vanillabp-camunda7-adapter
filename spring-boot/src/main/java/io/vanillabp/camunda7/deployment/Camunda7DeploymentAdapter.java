@@ -136,7 +136,7 @@ public class Camunda7DeploymentAdapter extends ModuleAwareBpmnDeployment {
                 : processEngine
                         .getRepositoryService()
                         .createProcessDefinitionQuery()
-                        .tenantIdIn(workflowModuleId))
+                        .tenantIdIn(tenantId))
                 .list()
                 .forEach(definition -> {
                     // process models parsed during deployment are cached and therefore

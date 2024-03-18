@@ -247,11 +247,7 @@ public class Camunda7ProcessService<DE>
                                 .getRuntimeService()
                                 .createMessageCorrelation(messageName)
                                 .tenantId(tenantId))
-                .tenantId(tenantId)
                 .processInstanceBusinessKey(id.toString());
-        if (tenantId != null) {
-            correlation.tenantId(tenantId);
-        }
         if (correlationIdLocalVariableName != null) {
             correlation.localVariableEquals(
                     correlationIdLocalVariableName,

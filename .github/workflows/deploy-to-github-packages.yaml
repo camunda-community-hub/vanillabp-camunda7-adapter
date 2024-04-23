@@ -1,5 +1,8 @@
 name: Publish to GitHub Packages
-on: push
+on:
+  push:
+    branches-ignore:
+      - 'renovate/**'
 jobs:
   publish:
     runs-on: ubuntu-latest

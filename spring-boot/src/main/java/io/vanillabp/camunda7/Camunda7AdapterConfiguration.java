@@ -13,6 +13,8 @@ import io.vanillabp.springboot.adapter.SpringBeanUtil;
 import io.vanillabp.springboot.adapter.SpringDataUtil;
 import io.vanillabp.springboot.adapter.VanillaBpProperties;
 import jakarta.annotation.PostConstruct;
+import java.math.BigInteger;
+import java.util.function.Function;
 import org.camunda.bpm.engine.ProcessEngine;
 import org.camunda.bpm.engine.spring.application.SpringProcessApplication;
 import org.camunda.bpm.spring.boot.starter.CamundaBpmAutoConfiguration;
@@ -31,9 +33,6 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.data.repository.CrudRepository;
-
-import java.math.BigInteger;
-import java.util.function.Function;
 
 @AutoConfigurationPackage(basePackageClasses = Camunda7AdapterConfiguration.class)
 @AutoConfigureBefore(CamundaBpmAutoConfiguration.class)
@@ -119,7 +118,8 @@ public class Camunda7AdapterConfiguration extends AdapterConfigurationBase<Camun
                 springBeanUtil,
                 processEntityAwareExpressionManager,
                 userTaskEventHandler,
-                getConnectableServices());
+                getConnectableServices(),
+                camunda7Properties);
         
     }
     

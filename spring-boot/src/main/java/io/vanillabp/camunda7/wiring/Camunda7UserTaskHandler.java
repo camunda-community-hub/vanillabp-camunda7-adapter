@@ -1,5 +1,7 @@
 package io.vanillabp.camunda7.wiring;
 
+import io.vanillabp.camunda7.Camunda7AdapterConfiguration;
+import io.vanillabp.camunda7.LoggingContext;
 import io.vanillabp.camunda7.service.Camunda7ProcessService;
 import io.vanillabp.spi.service.TaskEvent;
 import io.vanillabp.spi.service.TaskEvent.Event;
@@ -8,23 +10,25 @@ import io.vanillabp.springboot.adapter.TaskHandlerBase;
 import io.vanillabp.springboot.adapter.wiring.WorkflowAggregateCache;
 import io.vanillabp.springboot.parameters.MethodParameter;
 import io.vanillabp.springboot.parameters.TaskEventMethodParameter;
-import org.camunda.bpm.engine.delegate.DelegateTask;
-import org.camunda.bpm.engine.delegate.TaskListener;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.data.repository.CrudRepository;
-
 import java.lang.reflect.Method;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
+import org.camunda.bpm.engine.delegate.DelegateTask;
+import org.camunda.bpm.engine.delegate.TaskListener;
+import org.camunda.bpm.model.bpmn.instance.Activity;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.data.repository.CrudRepository;
 
 public class Camunda7UserTaskHandler extends TaskHandlerBase implements TaskListener {
 
     private static final Logger logger = LoggerFactory.getLogger(Camunda7UserTaskHandler.class);
 
     private final Camunda7ProcessService<?> processService;
+
+    private final String workflowModuleId;
     
     private final String bpmnProcessId;
 
@@ -34,11 +38,13 @@ public class Camunda7UserTaskHandler extends TaskHandlerBase implements TaskList
             final Object bean,
             final Method method,
             final List<MethodParameter> parameters,
-            final Camunda7ProcessService<?> processService) {
+            final Camunda7ProcessService<?> processService,
+            final String workflowModuleId) {
         
         super(workflowAggregateRepository, bean, method, parameters);
         this.bpmnProcessId = bpmnProcessId;
         this.processService = processService;
+        this.workflowModuleId = workflowModuleId;
         
     }
 
@@ -57,13 +63,26 @@ public class Camunda7UserTaskHandler extends TaskHandlerBase implements TaskList
 
         try {
 
+            final var execution = delegateTask.getExecution();
+            final var currentElement = (Activity) Camunda7TaskHandler.getCurrentElement(execution.getBpmnModelInstance(), execution);
+            LoggingContext.setLoggingContext(
+                    Camunda7AdapterConfiguration.ADAPTER_ID,
+                    delegateTask.getTenantId(),
+                    workflowModuleId,
+                    execution.getBusinessKey(),
+                    bpmnProcessId,
+                    delegateTask.getId(),
+                    Camunda7TaskHandler.getSuperProcessInstanceId(execution),
+                    Camunda7TaskHandler.getBpmnProcessId(execution)
+                            + "#"
+                            + currentElement.getId(),
+                    execution.getId());
+
             logger.trace("Will handle user-task '{}' of workflow '{}' ('{}') by execution '{}'",
-                    delegateTask.getBpmnModelElementInstance().getId(),
+                    currentElement.getId(),
                     delegateTask.getProcessInstanceId(),
                     bpmnProcessId,
                     delegateTask.getExecutionId());
-            
-            final var execution = delegateTask.getExecution();
             
             final Function<String, Object> multiInstanceSupplier = multiInstanceActivity -> {
                 if (multiInstanceCache[0] == null) {
@@ -125,6 +144,8 @@ public class Camunda7UserTaskHandler extends TaskHandlerBase implements TaskList
 
             throw new RuntimeException(e);
 
+        } finally {
+            LoggingContext.clearContext();
         }
 
     }

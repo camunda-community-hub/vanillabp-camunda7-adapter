@@ -1,5 +1,7 @@
 package io.vanillabp.camunda7.wiring;
 
+import io.vanillabp.camunda7.Camunda7AdapterConfiguration;
+import io.vanillabp.camunda7.LoggingContext;
 import io.vanillabp.camunda7.service.Camunda7ProcessService;
 import io.vanillabp.spi.service.MultiInstanceElementResolver;
 import io.vanillabp.spi.service.TaskEvent.Event;
@@ -8,6 +10,11 @@ import io.vanillabp.springboot.adapter.MultiInstance;
 import io.vanillabp.springboot.adapter.TaskHandlerBase;
 import io.vanillabp.springboot.adapter.wiring.WorkflowAggregateCache;
 import io.vanillabp.springboot.parameters.MethodParameter;
+import java.lang.reflect.Method;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
 import org.camunda.bpm.engine.delegate.BpmnError;
 import org.camunda.bpm.engine.delegate.DelegateExecution;
 import org.camunda.bpm.engine.delegate.JavaDelegate;
@@ -15,6 +22,7 @@ import org.camunda.bpm.engine.impl.persistence.entity.ExecutionEntity;
 import org.camunda.bpm.model.bpmn.instance.Activity;
 import org.camunda.bpm.model.bpmn.instance.BaseElement;
 import org.camunda.bpm.model.bpmn.instance.MultiInstanceLoopCharacteristics;
+import org.camunda.bpm.model.bpmn.instance.Process;
 import org.camunda.bpm.model.xml.ModelInstance;
 import org.camunda.bpm.model.xml.instance.ModelElementInstance;
 import org.slf4j.Logger;
@@ -22,17 +30,15 @@ import org.slf4j.LoggerFactory;
 import org.springframework.data.repository.CrudRepository;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.lang.reflect.Method;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.function.Function;
-
 public class Camunda7TaskHandler extends TaskHandlerBase implements JavaDelegate {
 
     private static final Logger logger = LoggerFactory.getLogger(Camunda7TaskHandler.class);
 
     private final String bpmnProcessId;
+
+    private final String tenantId;
+
+    private final String workflowModuleId;
 
     private Object result;
 
@@ -44,11 +50,15 @@ public class Camunda7TaskHandler extends TaskHandlerBase implements JavaDelegate
             final Object bean,
             final Method method,
             final List<MethodParameter> parameters,
-            final Camunda7ProcessService<?> processService) {
+            final Camunda7ProcessService<?> processService,
+            final String tenantId,
+            final String workflowModuleId) {
         
         super(workflowAggregateRepository, bean, method, parameters);
         this.bpmnProcessId = bpmnProcessId;
         this.processService = processService;
+        this.tenantId = tenantId;
+        this.workflowModuleId = workflowModuleId;
         
     }
 
@@ -75,8 +85,22 @@ public class Camunda7TaskHandler extends TaskHandlerBase implements JavaDelegate
 
         try {
 
+            final var currentElement = (Activity) getCurrentElement(execution.getBpmnModelInstance(), execution);
+            LoggingContext.setLoggingContext(
+                    Camunda7AdapterConfiguration.ADAPTER_ID,
+                    tenantId,
+                    workflowModuleId,
+                    execution.getBusinessKey(),
+                    bpmnProcessId,
+                    execution.getId(),
+                    getSuperProcessInstanceId(execution),
+                    getBpmnProcessId(execution)
+                            + "#"
+                            + currentElement.getId(),
+                    execution.getId());
+
             logger.trace("Will handle task '{}' of workflow '{}' ('{}') by execution '{}'",
-                    execution.getBpmnModelElementInstance().getId(),
+                    currentElement.getId(),
                     execution.getProcessInstanceId(),
                     bpmnProcessId,
                     execution.getId());
@@ -100,7 +124,7 @@ public class Camunda7TaskHandler extends TaskHandlerBase implements JavaDelegate
                     (args, param) -> processTaskParameter(
                             args,
                             param,
-                            taskParameter -> execution.getVariableLocal(taskParameter)),
+                            execution::getVariableLocal),
                     (args, param) -> processTaskEventParameter(
                             args,
                             param,
@@ -136,6 +160,8 @@ public class Camunda7TaskHandler extends TaskHandlerBase implements JavaDelegate
             }
             throw new BpmnError(e.getErrorCode(), e);
 
+        } finally {
+            LoggingContext.clearContext();
         }
 
     }
@@ -143,6 +169,45 @@ public class Camunda7TaskHandler extends TaskHandlerBase implements JavaDelegate
     public Object getResult() {
 
         return result;
+
+    }
+
+    static String getSuperProcessInstanceId(
+            final DelegateExecution execution) {
+
+        DelegateExecution cExecution = execution;
+        while (true) {
+
+            final var result = cExecution.getProcessInstanceId();
+            cExecution = cExecution.getParentId() != null
+                    ? ((ExecutionEntity) cExecution).getParent()
+                    : cExecution.getSuperExecution();
+            if (cExecution == null) {
+                return result;
+            }
+
+        }
+
+    }
+
+    static String getBpmnProcessId(
+            final DelegateExecution execution) {
+
+        DelegateExecution cExecution = execution;
+        while (true) {
+
+            final var flowElement = cExecution.getBpmnModelElementInstance();
+            if (flowElement instanceof Process) {
+                return flowElement.getId();
+            }
+            cExecution = cExecution.getParentId() != null
+                    ? ((ExecutionEntity) cExecution).getParent()
+                    : cExecution.getSuperExecution();
+            if (cExecution == null) {
+                return null;
+            }
+
+        }
 
     }
 
@@ -199,7 +264,7 @@ public class Camunda7TaskHandler extends TaskHandlerBase implements JavaDelegate
 
     }
 
-    private static ModelElementInstance getCurrentElement(final ModelInstance model, DelegateExecution miExecution) {
+    static ModelElementInstance getCurrentElement(final ModelInstance model, DelegateExecution miExecution) {
 
         // if current element is known then simply use it
         if (miExecution.getBpmnModelElementInstance() != null) {

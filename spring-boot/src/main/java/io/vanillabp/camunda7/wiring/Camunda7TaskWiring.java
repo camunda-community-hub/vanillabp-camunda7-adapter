@@ -1,5 +1,6 @@
 package io.vanillabp.camunda7.wiring;
 
+import io.vanillabp.camunda7.Camunda7VanillaBpProperties;
 import io.vanillabp.camunda7.service.Camunda7ProcessService;
 import io.vanillabp.spi.process.ProcessService;
 import io.vanillabp.spi.service.WorkflowTask;
@@ -7,13 +8,12 @@ import io.vanillabp.springboot.adapter.SpringBeanUtil;
 import io.vanillabp.springboot.adapter.TaskWiringBase;
 import io.vanillabp.springboot.parameters.MethodParameter;
 import io.vanillabp.springboot.parameters.MethodParameterFactory;
-import org.springframework.context.ApplicationContext;
-import org.springframework.data.repository.CrudRepository;
-import org.springframework.stereotype.Component;
-
 import java.lang.reflect.Method;
 import java.util.Collection;
 import java.util.List;
+import org.springframework.context.ApplicationContext;
+import org.springframework.data.repository.CrudRepository;
+import org.springframework.stereotype.Component;
 
 @Component
 public class Camunda7TaskWiring extends TaskWiringBase<Camunda7Connectable, Camunda7ProcessService<?>, MethodParameterFactory> {
@@ -24,17 +24,21 @@ public class Camunda7TaskWiring extends TaskWiringBase<Camunda7Connectable, Camu
     
     private final Camunda7UserTaskEventHandler userTaskEventHandler;
 
+    private final Camunda7VanillaBpProperties camunda7Properties;
+
     public Camunda7TaskWiring(
             final ApplicationContext applicationContext,
             final SpringBeanUtil springBeanUtil,
             final ProcessEntityAwareExpressionManager processEntityAwareExpressionManager,
             final Camunda7UserTaskEventHandler userTaskEventHandler,
-            final Collection<Camunda7ProcessService<?>> connectableServices) {
+            final Collection<Camunda7ProcessService<?>> connectableServices,
+            final Camunda7VanillaBpProperties camunda7Properties) {
         
         super(applicationContext, springBeanUtil);
         this.processEntityAwareExpressionManager = processEntityAwareExpressionManager;
         this.userTaskEventHandler = userTaskEventHandler;
         this.connectableServices = connectableServices;
+        this.camunda7Properties = camunda7Properties;
         
     }
     
@@ -65,19 +69,23 @@ public class Camunda7TaskWiring extends TaskWiringBase<Camunda7Connectable, Camu
                     bean,
                     method,
                     parameters,
-                    processService);
+                    processService,
+                    workflowModuleId);
             userTaskEventHandler.addTaskHandler(connectable, taskHandler);
             return;
             
         }
-        
+
+        final var tenantId = camunda7Properties.getTenantId(workflowModuleId);
         final var taskHandler = new Camunda7TaskHandler(
                 connectable.getBpmnProcessId(),
                 (CrudRepository<Object, Object>) repository,
                 bean,
                 method,
                 parameters,
-                processService);
+                processService,
+                tenantId,
+                workflowModuleId);
 
         processEntityAwareExpressionManager.addTaskHandler(connectable, taskHandler);
 

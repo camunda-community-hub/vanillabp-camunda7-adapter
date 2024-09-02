@@ -12,6 +12,7 @@ This adapter is aware of all the details needed to keep in mind on using Camunda
     1. [Worker ID](#worker-id)
     1. [Module aware deployment](#module-aware-deployment)
     1. [SPI Binding validation](#spi-binding-validation)
+1. [Call-Activity](#call-activity)
 1. [Multi-instance](#multi-instance)
 1. [Message correlation IDs](#message-correlation-ids)
 1. [Transaction behavior](#transaction-behavior)
@@ -92,6 +93,15 @@ On starting the application BPMNs of all workflow modules will be wired to the S
    1. BPMN files which are not part of the current workflow module bundle anymore
    
 This ensures that correct wiring of all process definitions according to the SPI is done.
+
+## Call-activity
+
+The adapter uses Camunda 7's business key to associate the workflow aggregate
+to the process instance. Therefor, on defining a call-activity in Camunda Modeler
+it is mandatory in the property panel to tick the checkbox
+`Business Key` and keep the default `Business key expression`:
+
+![Business Key for call-activity](./readme/call-activity_business-key.png)
 
 ## Multi-instance
 

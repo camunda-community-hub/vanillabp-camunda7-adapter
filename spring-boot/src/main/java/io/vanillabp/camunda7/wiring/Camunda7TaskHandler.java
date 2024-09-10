@@ -21,6 +21,7 @@ import org.camunda.bpm.engine.delegate.JavaDelegate;
 import org.camunda.bpm.engine.impl.persistence.entity.ExecutionEntity;
 import org.camunda.bpm.model.bpmn.instance.Activity;
 import org.camunda.bpm.model.bpmn.instance.BaseElement;
+import org.camunda.bpm.model.bpmn.instance.FlowNode;
 import org.camunda.bpm.model.bpmn.instance.MultiInstanceLoopCharacteristics;
 import org.camunda.bpm.model.bpmn.instance.Process;
 import org.camunda.bpm.model.xml.ModelInstance;
@@ -85,7 +86,8 @@ public class Camunda7TaskHandler extends TaskHandlerBase implements JavaDelegate
 
         try {
 
-            final var currentElement = (Activity) getCurrentElement(execution.getBpmnModelInstance(), execution);
+            final var currentElement = (FlowNode) getCurrentElement(execution.getBpmnModelInstance(), execution);
+
             LoggingContext.setLoggingContext(
                     Camunda7AdapterConfiguration.ADAPTER_ID,
                     tenantId,

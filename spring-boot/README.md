@@ -8,6 +8,7 @@ This adapter is aware of all the details needed to keep in mind on using Camunda
 ## Content
 
 1. [Usage](#usage)
+    1. [Task definitions](#task-definitions) 
 1. [Features](#features)
     1. [Worker ID](#worker-id)
     1. [Module aware deployment](#module-aware-deployment)
@@ -61,6 +62,42 @@ If you want a certain version of Camunda (either community or enterprise edition
 ```
 
 *Hint:* This adapter is compatible with the configuration of the regular Camunda 7 Spring Boot auto-configuration. However, some additional configuration is described in the upcoming sections.
+
+### Task definitions
+
+As mentioned in [VanillaBP SPI](https://github.com/vanillabp/spi-for-java?tab=readme-ov-file#wire-up-a-task) a task is
+wired by a task definition which is specific to the BPMS used. On using Camunda 7 this task-definition is defined
+in Camunda's modeler's property panel.
+
+For service tasks, in section "Implementation" set type to "Expression" and enter in input field
+"Expression" an expression like shown in the image where the text "processTask" is the task definition:
+
+![service-task](./readme/task-definition-service-task.png)
+
+*Hint:* If you are familiar to Camunda 7 this kind of expression might be new to you.
+It is specific to *VanillaBP* and and replaces existing Camunda 7 expressions which are vendor-specific. 
+
+For user tasks, in section "Forms" set type to "Embedded or External Task Forms" and
+in input field "Form key" enter a key identifying the user task which
+will be used as a task-definition. The value of form key is ignored by Camunda and there it is
+not necessary to use a prefix as you may need for service task's task definition.
+
+![user-task](./readme/task-definition-user-task.png)
+
+It is a rare case it is necessary to use one form for two different user tasks.
+In this situation you can specify the same form key and annotate the workflow service's
+method handling this user task by using the activities' ids as specified
+in the modeler instead of the task definition:
+
+```java
+    @WorkflowTask(id = "ProcessTask1")
+    @WorkflowTask(id = "ProcessTask2")
+    public void processTask(
+            final DemoAggregate demo,
+            @TaskId final String taskId) throws Exception {
+        ...
+    }
+```
 
 ## Features
 

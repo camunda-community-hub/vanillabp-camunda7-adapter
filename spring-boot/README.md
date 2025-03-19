@@ -17,6 +17,9 @@ This adapter is aware of all the details needed to keep in mind on using Camunda
 1. [Multi-instance](#multi-instance)
 1. [Message correlation IDs](#message-correlation-ids)
 1. [Transaction behavior](#transaction-behavior)
+1. [Workflow aggregate persistence](#workflow-aggregate-persistence)
+   1. [JPA](#jpa)
+   1. [MongoDB](#mongodb)
 1. [Job-Executor](#job-executor)
 
 ## Usage
@@ -225,6 +228,63 @@ vanillabp:
              camunda7:
                bpmn-async-definitions: true
 ```
+
+## Workflow aggregate persistence
+
+### JPA
+
+JPA is the default persistence. No additional configuration is required when using with Camunda 7.
+
+### MongoDB
+
+When using MongoDB for persistence an additional RDBMS is necessary to operate Camunda 7. This is
+done by providing this configuration class:
+
+```java
+@Configuration
+public class MongoDbSpringDataUtilConfiguration {
+
+    @Bean
+    @ConditionalOnProperty("spring.datasource.url")
+    public DataSource camundaBpmDataSource(
+            final DataSourceProperties dataSourceProperties) {
+        return dataSourceProperties
+                .initializeDataSourceBuilder()
+                .type(HikariDataSource.class)
+                .build();
+    }
+
+    @Bean
+    @ConditionalOnProperty("spring.datasource.url")
+    public PlatformTransactionManager camundaBpmTransactionManager(
+            @Qualifier("camundaBpmDataSource") DataSource dataSource) {
+        return new DataSourceTransactionManager(dataSource);
+    }
+
+    @Bean
+    @Primary
+    public MongoTransactionManager transactionManager(
+            final MongoDatabaseFactory dbFactory) {
+
+        return new MongoTransactionManager(dbFactory);
+
+    }
+
+    @Bean
+    public MongoDbSpringDataUtil mongoDbSpringDataUtil(
+            final ApplicationContext applicationContext,
+            final MongoDatabaseFactory mongoDbFactory,
+            @Nullable final MongoConverter mongoConverter) {
+
+        return new MongoDbSpringDataUtil(applicationContext, mongoDbFactory, mongoConverter);
+
+    }
+}
+```
+
+*Hint:* Note that `MongoTransactionManager` is marked as `@Primary`. The bean `camundaBpmTransactionManager`
+is only used by Camunda 7 and does NOT form a XA transaction and therefore you might experience
+data-inconsistency in case of MongoDB or RDBMS fails.
 
 ## Job-Executor
 

@@ -16,6 +16,15 @@
     <jakarta.servlet-api.version>6.0.0</jakarta.servlet-api.version>
   </properties>
 
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-source-plugin</artifactId>
+      </plugin>
+    </plugins>
+  </build>
+
   <dependencies>
     <dependency>
       <groupId>io.vanillabp</groupId>

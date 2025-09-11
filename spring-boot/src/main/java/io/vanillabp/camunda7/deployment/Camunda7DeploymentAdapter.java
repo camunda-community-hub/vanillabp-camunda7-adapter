@@ -8,6 +8,9 @@ import io.vanillabp.camunda7.wiring.TaskWiringBpmnParseListener;
 import io.vanillabp.springboot.adapter.ModuleAwareBpmnDeployment;
 import io.vanillabp.springboot.adapter.VanillaBpProperties;
 import jakarta.annotation.PostConstruct;
+import java.util.Collection;
+import java.util.Map;
+import java.util.Optional;
 import org.camunda.bpm.engine.ProcessEngine;
 import org.camunda.bpm.engine.repository.ResumePreviousBy;
 import org.camunda.bpm.engine.spring.application.SpringProcessApplication;
@@ -21,6 +24,8 @@ import org.springframework.transaction.annotation.Transactional;
 public class Camunda7DeploymentAdapter extends ModuleAwareBpmnDeployment {
 
 	private static final Logger logger = LoggerFactory.getLogger(Camunda7DeploymentAdapter.class);
+
+    public static final String MODELCACHE_PREFIX = "C7_";
 
     private final ProcessEngine processEngine;
     
@@ -96,7 +101,7 @@ public class Camunda7DeploymentAdapter extends ModuleAwareBpmnDeployment {
         }
 
         boolean hasDeployables = false;
-        
+
         for (final var resource : bpmns) {
             try (final var inputStream = resource.getInputStream()) {
                 deploymentBuilder.addInputStream(resource.getFilename(), inputStream);
@@ -121,9 +126,23 @@ public class Camunda7DeploymentAdapter extends ModuleAwareBpmnDeployment {
         // BPMNs which are new will be parsed and wired as part of the deployment
         final String deploymentId;
         if (hasDeployables) {
-            deploymentId = deploymentBuilder
-                    .deployWithResult()
-                    .getId();
+            final var result = deploymentBuilder
+                    .deployWithResult();
+            deploymentId = result.getId();
+            Optional
+                    .ofNullable(result.getDeployedProcessDefinitions())
+                    .stream()
+                    .flatMap(Collection::stream)
+                    .map(definition -> Map.entry(
+                            definition.getResourceName(),
+                            processEngine
+                                    .getRepositoryService()
+                                    .getBpmnModelInstance(definition.getId())))
+                    .map(resourceModel -> Map.entry(
+                            MODELCACHE_PREFIX + resourceModel.getKey(),
+                            Map.<String, Object>entry(workflowModuleId, resourceModel.getValue())))
+                    .forEach(cacheItem -> ModuleAwareBpmnDeployment.bpmnModelCache.put(
+                            cacheItem.getKey(), cacheItem.getValue()));
         } else {
             deploymentId = "";
         }
@@ -144,7 +163,10 @@ public class Camunda7DeploymentAdapter extends ModuleAwareBpmnDeployment {
                     try {
                         TaskWiringBpmnParseListener.setOldVersionBpmn(
                                 !definition.getDeploymentId().equals(deploymentId));
-                        processEngine.getRepositoryService().getProcessModel(definition.getId());
+                        final var model = processEngine.getRepositoryService().getBpmnModelInstance(definition.getId());
+                        ModuleAwareBpmnDeployment.bpmnModelCache.put(
+                                MODELCACHE_PREFIX + definition.getResourceName(),
+                                Map.entry(workflowModuleId, model));
                     } finally {
                         TaskWiringBpmnParseListener.setOldVersionBpmn(false);
                     }

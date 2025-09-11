@@ -1,6 +1,10 @@
 package io.vanillabp.camunda7.wiring;
 
 import io.vanillabp.camunda7.Camunda7VanillaBpProperties;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import org.camunda.bpm.engine.impl.bpmn.behavior.DmnBusinessRuleTaskActivityBehavior;
 import org.camunda.bpm.engine.impl.bpmn.behavior.UserTaskActivityBehavior;
 import org.camunda.bpm.engine.impl.bpmn.listener.DelegateExpressionExecutionListener;
@@ -17,11 +21,6 @@ import org.camunda.bpm.engine.impl.util.StringUtil;
 import org.camunda.bpm.engine.impl.util.xml.Element;
 import org.camunda.bpm.engine.impl.variable.VariableDeclaration;
 import org.springframework.util.StringUtils;
-
-import java.util.LinkedList;
-import java.util.List;
-import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
 @SuppressWarnings("deprecation")
 public class TaskWiringBpmnParseListener implements BpmnParseListener {
@@ -148,10 +147,8 @@ public class TaskWiringBpmnParseListener implements BpmnParseListener {
                 org.camunda.bpm.engine.delegate.TaskListener.EVENTNAME_DELETE,
                 userTaskEventHandler);
 
-        final var bpmnProcessId = ((ProcessDefinitionEntity) activity.getProcessDefinition()).getKey();
-
         final var connectable = new Camunda7Connectable(
-                bpmnProcessId,
+                (ProcessDefinitionEntity) activity.getProcessDefinition(),
                 activity.getId(),
                 taskDefinition.getFormKey() != null ? taskDefinition.getFormKey().getExpressionText() : null,
                 Camunda7Connectable.Type.USERTASK);
@@ -169,10 +166,8 @@ public class TaskWiringBpmnParseListener implements BpmnParseListener {
             final Camunda7Connectable.Type type,
             final String expression) {
         
-        final var bpmnProcessId = ((ProcessDefinitionEntity) activity.getProcessDefinition()).getKey();
-        
         final var connectable = new Camunda7Connectable(
-                bpmnProcessId,
+                (ProcessDefinitionEntity) activity.getProcessDefinition(),
                 activity.getId(),
                 expression,
                 type);
@@ -239,7 +234,7 @@ public class TaskWiringBpmnParseListener implements BpmnParseListener {
             final ScopeImpl scope,
             final ActivityImpl activity) {
         
-        final var bpmnProcessId = ((ProcessDefinitionEntity) activity.getProcessDefinition()).getKey();
+        final var processDefinition = (ProcessDefinitionEntity) activity.getProcessDefinition();
 
         final var delegateExpression = element.attributeNS(
                 BpmnParse.CAMUNDA_BPMN_EXTENSIONS_NS,
@@ -259,7 +254,7 @@ public class TaskWiringBpmnParseListener implements BpmnParseListener {
             final var unwrappedDelegateExpression = unwrapExpression(activity, delegateExpression);
             
             connectable = new Camunda7Connectable(
-                    bpmnProcessId,
+                    processDefinition,
                     activity.getId(),
                     unwrappedDelegateExpression,
                     Camunda7Connectable.Type.DELEGATE_EXPRESSION);
@@ -269,7 +264,7 @@ public class TaskWiringBpmnParseListener implements BpmnParseListener {
             final var unwrappedExpression = unwrapExpression(activity, expression);
             
             connectable = new Camunda7Connectable(
-                    bpmnProcessId,
+                    processDefinition,
                     activity.getId(),
                     unwrappedExpression,
                     Camunda7Connectable.Type.EXPRESSION);
@@ -277,7 +272,7 @@ public class TaskWiringBpmnParseListener implements BpmnParseListener {
         } else if (StringUtil.hasText(topic)) {
             
             connectable = new Camunda7Connectable(
-                    bpmnProcessId,
+                    processDefinition,
                     activity.getId(),
                     topic,
                     Camunda7Connectable.Type.EXTERNAL_TASK);
@@ -646,8 +641,8 @@ public class TaskWiringBpmnParseListener implements BpmnParseListener {
                     final var processService = taskWiring.wireService(
                             tbw.workflowModuleId,
                             tbw.bpmnProcessId,
-                            oldVersionBpmn.get().booleanValue() ? null : tbw.messageBasedStartEventsMessages,
-                            oldVersionBpmn.get().booleanValue() ? null : tbw.signalBasedStartEventsSignals);
+                            oldVersionBpmn.get() ? null : tbw.messageBasedStartEventsMessages,
+                            oldVersionBpmn.get() ? null : tbw.signalBasedStartEventsSignals);
                     tbw.connectables
                             .forEach(connectable -> taskWiring.wireTask(workflowModuleId.get(), processService, connectable));
                 });

@@ -1,6 +1,7 @@
 package io.vanillabp.camunda7.wiring;
 
 import io.vanillabp.springboot.adapter.Connectable;
+import org.camunda.bpm.engine.repository.ProcessDefinition;
 
 public class Camunda7Connectable implements Connectable {
 
@@ -10,22 +11,26 @@ public class Camunda7Connectable implements Connectable {
     
     private final Type type;
     private final String bpmnProcessId;
+    private final String versionInfo;
     private final String elementId;
     private final String taskDefinition;
     
     public Camunda7Connectable(
-            final String bpmnProcessId,
+            final ProcessDefinition processDefinition,
             final String elementId,
             final String taskDefinition,
             final Type type) {
 
-        this.bpmnProcessId = bpmnProcessId;
+        this.bpmnProcessId = processDefinition.getKey();
+        this.versionInfo = processDefinition.getVersionTag() != null
+                ? "%s (%d)".formatted(processDefinition.getVersionTag(), processDefinition.getVersion())
+                : Integer.toString(processDefinition.getVersion());
         this.elementId = elementId;
         this.taskDefinition = taskDefinition;
         this.type = type;
 
     }
-    
+
     public boolean applies(
             final String elementId,
             final String taskDefinition) {
@@ -34,7 +39,14 @@ public class Camunda7Connectable implements Connectable {
                 || getTaskDefinition().equals(taskDefinition);
         
     }
-    
+
+    @Override
+    public String getVersionInfo() {
+
+        return versionInfo;
+
+    }
+
     @Override
     public boolean isExecutableProcess() {
         

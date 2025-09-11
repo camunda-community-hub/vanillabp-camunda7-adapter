@@ -1,14 +1,13 @@
 package io.vanillabp.camunda7.wiring;
 
 import io.vanillabp.camunda7.service.Camunda7ProcessService;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.function.Supplier;
 import org.camunda.bpm.engine.spring.SpringExpressionManager;
 import org.camunda.bpm.impl.juel.jakarta.el.CompositeELResolver;
 import org.camunda.bpm.impl.juel.jakarta.el.ELResolver;
 import org.springframework.context.ApplicationContext;
-
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.function.Supplier;
 
 /*
  * Custom expression manager to resolve process entities and @WorkflowTask annotated methods
@@ -38,11 +37,7 @@ public class ProcessEntityAwareExpressionManager extends SpringExpressionManager
             processEntityELResolver = new ProcessEntityELResolver(
                     connectableServices);
             
-            toBeConnected
-                    .entrySet()
-                    .stream()
-                    .forEach(entry -> processEntityELResolver
-                            .addTaskHandler(entry.getKey(), entry.getValue()));
+            toBeConnected.forEach(processEntityELResolver::addTaskHandler);
             toBeConnected.clear();
             
         }

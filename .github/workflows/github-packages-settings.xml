@@ -14,6 +14,16 @@
                     <url>https://repo1.maven.org/maven2</url>
                 </repository>
                 <repository>
+                    <id>vanillabp-spi-for-java</id>
+                    <url>https://maven.pkg.github.com/vanillabp/spi-for-java</url>
+                    <snapshots>
+                        <enabled>true</enabled>
+                    </snapshots>
+                    <releases>
+                        <enabled>true</enabled>
+                    </releases>
+                </repository>
+                <repository>
                     <id>vanillabp-spring-boot-support</id>
                     <url>https://maven.pkg.github.com/vanillabp/spring-boot-support</url>
                     <snapshots>
@@ -30,6 +40,11 @@
     <servers>
         <server>
             <id>vanillabp-spring-boot-support</id>
+            <username>${env.USER_NAME}</username>
+            <password>${env.USER_TOKEN}</password>
+        </server>
+        <server>
+            <id>vanillabp-spi-for-java</id>
             <username>${env.USER_NAME}</username>
             <password>${env.USER_TOKEN}</password>
         </server>

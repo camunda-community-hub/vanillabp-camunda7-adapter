@@ -210,12 +210,44 @@ public class Camunda7ProcessService<DE>
     }
 
     @Override
+    public DE startWorkflowByMessage(
+            final DE workflowAggregate,
+            final String messageName) {
+
+        return correlateMessage(
+                workflowAggregate,
+                true,
+                messageName,
+                null,
+                null);
+
+    }
+
+    @Override
+    public DE startWorkflowByMessage(
+            final DE workflowAggregate,
+            final Object message) {
+
+        return correlateMessage(
+                workflowAggregate,
+                true,
+                message.getClass().getSimpleName(),
+                null,
+                null);
+
+    }
+
+    @Override
     public DE correlateMessage(
             final DE workflowAggregate,
             final String messageName) {
-        
+
+        final var isNewEntity = this.isNewEntity
+                .apply(workflowAggregate);
+
         return correlateMessage(
                 workflowAggregate,
+                isNewEntity,
                 messageName,
                 null,
                 null);
@@ -244,8 +276,12 @@ public class Camunda7ProcessService<DE>
                 + "-"
                 + messageName;
 
+        final var isNewEntity = this.isNewEntity
+                .apply(workflowAggregate);
+
         return correlateMessage(
                 workflowAggregate,
+                isNewEntity,
                 messageName,
                 correlationIdLocalVariableName,
                 correlationId);
@@ -267,14 +303,12 @@ public class Camunda7ProcessService<DE>
 
     private DE correlateMessage(
             final DE workflowAggregate,
+            final boolean isNewEntity,
             final String messageName,
             final String correlationIdLocalVariableName,
             final String correlationId) {
 
         try {
-
-            final var isNewEntity = this.isNewEntity
-                    .apply(workflowAggregate);
 
             // persist to get ID in case of @Id @GeneratedValue
             // and force optimistic locking exceptions before running

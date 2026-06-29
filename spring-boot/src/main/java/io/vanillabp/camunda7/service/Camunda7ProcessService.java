@@ -3,10 +3,18 @@ package io.vanillabp.camunda7.service;
 import io.vanillabp.camunda7.Camunda7AdapterConfiguration;
 import io.vanillabp.camunda7.Camunda7VanillaBpProperties;
 import io.vanillabp.camunda7.LoggingContext;
+import io.vanillabp.camunda7.service.bpmn.ProcessDefinitionCollector;
+import io.vanillabp.camunda7.service.bpmn.ProcessExecutionHistoryCollector;
 import io.vanillabp.camunda7.service.jobs.startprocess.StartProcessCommand;
+import io.vanillabp.spi.process.ProcessDefinition;
+import io.vanillabp.spi.process.ProcessDefinitionNotFoundException;
+import io.vanillabp.spi.process.WorkflowHistory;
+import io.vanillabp.spi.process.WorkflowNotFoundException;
 import io.vanillabp.springboot.adapter.AdapterAwareProcessService;
 import io.vanillabp.springboot.adapter.ProcessServiceImplementation;
+import java.io.InputStream;
 import java.util.Collection;
+import java.util.List;
 import java.util.function.Function;
 import org.camunda.bpm.engine.ProcessEngine;
 import org.camunda.bpm.engine.exception.NullValueException;
@@ -37,6 +45,10 @@ public class Camunda7ProcessService<DE>
 
     private final Camunda7VanillaBpProperties camunda7Properties;
 
+    private final ProcessDefinitionCollector processDefinitionCollector;
+
+    private final ProcessExecutionHistoryCollector processExecutionHistoryCollector;
+
     private AdapterAwareProcessService<DE> parent;
 
     public Camunda7ProcessService(
@@ -53,6 +65,8 @@ public class Camunda7ProcessService<DE>
         this.applicationEventPublisher = applicationEventPublisher;
         this.camunda7Properties = camunda7Properties;
         this.processEngine = processEngine;
+        this.processDefinitionCollector = new ProcessDefinitionCollector(processEngine);
+        this.processExecutionHistoryCollector = new ProcessExecutionHistoryCollector(processEngine);
         this.workflowAggregateRepository = workflowAggregateRepository;
         this.workflowAggregateClass = workflowAggregateClass;
         this.isNewEntity = isNewEntity;
@@ -67,6 +81,12 @@ public class Camunda7ProcessService<DE>
         
         this.parent = parent;
         
+    }
+
+    public String getWorkflowModuleId() {
+
+        return parent.getWorkflowModuleId();
+
     }
     
     public Collection<String> getBpmnProcessIds() {
@@ -143,7 +163,7 @@ public class Camunda7ProcessService<DE>
     
     @Override
     public DE startWorkflow(
-            final DE workflowAggregate) throws Exception {
+            final DE workflowAggregate) {
 
         try {
 
@@ -190,12 +210,44 @@ public class Camunda7ProcessService<DE>
     }
 
     @Override
+    public DE startWorkflowByMessage(
+            final DE workflowAggregate,
+            final String messageName) {
+
+        return correlateMessage(
+                workflowAggregate,
+                true,
+                messageName,
+                null,
+                null);
+
+    }
+
+    @Override
+    public DE startWorkflowByMessage(
+            final DE workflowAggregate,
+            final Object message) {
+
+        return correlateMessage(
+                workflowAggregate,
+                true,
+                message.getClass().getSimpleName(),
+                null,
+                null);
+
+    }
+
+    @Override
     public DE correlateMessage(
             final DE workflowAggregate,
             final String messageName) {
-        
+
+        final var isNewEntity = this.isNewEntity
+                .apply(workflowAggregate);
+
         return correlateMessage(
                 workflowAggregate,
+                isNewEntity,
                 messageName,
                 null,
                 null);
@@ -224,8 +276,12 @@ public class Camunda7ProcessService<DE>
                 + "-"
                 + messageName;
 
+        final var isNewEntity = this.isNewEntity
+                .apply(workflowAggregate);
+
         return correlateMessage(
                 workflowAggregate,
+                isNewEntity,
                 messageName,
                 correlationIdLocalVariableName,
                 correlationId);
@@ -247,14 +303,12 @@ public class Camunda7ProcessService<DE>
 
     private DE correlateMessage(
             final DE workflowAggregate,
+            final boolean isNewEntity,
             final String messageName,
             final String correlationIdLocalVariableName,
             final String correlationId) {
 
         try {
-
-            final var isNewEntity = this.isNewEntity
-                    .apply(workflowAggregate);
 
             // persist to get ID in case of @Id @GeneratedValue
             // and force optimistic locking exceptions before running
@@ -505,5 +559,79 @@ public class Camunda7ProcessService<DE>
                         this.getClass().getName()));
         
     }
-    
+
+    @Override
+    public List<ProcessDefinition> getProcessDefinitions(
+            final DE workflowAggregate,
+            final String historyContext) throws WorkflowNotFoundException {
+
+        final var aggregateId = getWorkflowAggregateId.apply(workflowAggregate).toString();
+
+        final var tenantId = camunda7Properties.getTenantId(parent.getWorkflowModuleId());
+
+        final var processInstance = historyContext == null
+                // root process instance
+                ? processEngine
+                        .getHistoryService()
+                        .createHistoricProcessInstanceQuery()
+                        .tenantIdIn(tenantId)
+                        .processInstanceBusinessKey(aggregateId)
+                        .processDefinitionKey(parent.getPrimaryBpmnProcessId())
+                        .singleResult()
+                // called sub process instance
+                : processEngine
+                        .getHistoryService()
+                        .createHistoricProcessInstanceQuery()
+                        .tenantIdIn(tenantId)
+                        .processInstanceId(historyContext)
+                        .singleResult();
+        if (processInstance == null) {
+            throw new WorkflowNotFoundException(aggregateId);
+        }
+
+        return processDefinitionCollector.collectAllDefinitions(processInstance, tenantId);
+
+    }
+
+    @Override
+    public InputStream getBpmnXml(
+            final String processDefinitionId) throws ProcessDefinitionNotFoundException {
+
+        try {
+            return processEngine
+                    .getRepositoryService()
+                    .getProcessModel(processDefinitionId);
+        } catch (Exception e) {
+            throw new ProcessDefinitionNotFoundException(processDefinitionId, e);
+        }
+
+    }
+
+    @Override
+    public WorkflowHistory getWorkflowHistory(
+            final DE workflowAggregate,
+            final String historyContext) throws WorkflowNotFoundException {
+
+        final var aggregateId = getWorkflowAggregateId.apply(workflowAggregate).toString();
+
+        final var tenantId = camunda7Properties.getTenantId(parent.getWorkflowModuleId());
+
+        final var processInstance = processEngine
+                .getHistoryService()
+                .createHistoricProcessInstanceQuery()
+                .tenantIdIn(tenantId)
+                .processInstanceBusinessKey(aggregateId)
+                .processDefinitionKey(parent.getPrimaryBpmnProcessId())
+                .singleResult();
+        if (processInstance == null) {
+            throw new WorkflowNotFoundException(aggregateId);
+        }
+
+        return processExecutionHistoryCollector.collectHistory(
+                historyContext == null
+                        ? processInstance.getId()
+                        : historyContext,
+                tenantId);
+
+    }
 }

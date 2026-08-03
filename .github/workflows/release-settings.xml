@@ -2,15 +2,16 @@
 <!--
   Maven settings for the release workflow.
 
-  Why this file exists at all: community-action-maven-release copies its own
-  resources/settings.xml over $HOME/.m2/settings.xml before it runs Maven, so adding a server entry
-  beforehand has no effect. The only hook the action offers is maven-additional-options, which it passes to
-  every Maven invocation - so the release workflow points -s at this file instead.
+  Why this file exists: the build needs credentials for the camunda-enterprise repository declared in the
+  pom, and community-action-maven-release copies its own resources/settings.xml over
+  $HOME/.m2/settings.xml before it runs Maven - so a server entry written beforehand has no effect. The
+  only hook the action offers is maven-additional-options, which it passes to every Maven invocation, so
+  the release workflow points -s at this file.
 
-  That means this file has to be a superset: it repeats the four server entries the action defines,
-  using the very same environment variable names the action exports, and adds the camunda-enterprise
-  server on top. If the action ever changes its server ids or variable names, this file has to follow -
-  the symptom would be a failing deploy, not a silent one.
+  That means this file has to be a superset: it repeats the four server entries the action defines, using
+  the very same environment variable names the action exports, and adds camunda-enterprise on top. If the
+  action ever changes its server ids or variable names, this file has to follow - the symptom would be a
+  failing deploy, not a silent one.
 -->
 <settings xmlns="http://maven.apache.org/SETTINGS/1.0.0"
           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
@@ -27,23 +28,6 @@
                 <repository>
                     <id>central</id>
                     <url>https://repo1.maven.org/maven2</url>
-                    <releases>
-                        <enabled>true</enabled>
-                    </releases>
-                    <snapshots>
-                        <enabled>false</enabled>
-                    </snapshots>
-                </repository>
-                <repository>
-                    <!--
-                      Camunda 7 enterprise artifacts. The id matches the repository declared in the pom,
-                      and a repository defined in an active settings profile wins over a pom repository of
-                      the same id. The pom therefore keeps pointing at the internal Nexus, which developers
-                      reach through the company VPN, while this build resolves the same artifacts straight
-                      from Camunda - GitHub runners have no VPN.
-                    -->
-                    <id>camunda-enterprise</id>
-                    <url>https://artifacts.camunda.com/artifactory/camunda-bpm/</url>
                     <releases>
                         <enabled>true</enabled>
                     </releases>

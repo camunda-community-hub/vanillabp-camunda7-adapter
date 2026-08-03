@@ -78,15 +78,11 @@
 
         Credentials come from settings.xml, never from here.
 
-        This URL is the internal Nexus, reachable through the company VPN. The GitHub workflows override
-        it: they declare a repository with the same id pointing at
-        https://artifacts.camunda.com/artifactory/camunda-bpm/, and a repository from an active settings
-        profile wins over a pom repository of the same id. Runners have no VPN, so they go to Camunda
-        directly with the CAMUNDA_EE_USR / CAMUNDA_EE_PSW secrets. See
-        .github/workflows/github-packages-settings.xml and release-settings.xml.
+        Note the "-ee" in the path: artifactory/camunda-bpm serves the community artifacts and answers 404
+        for camunda-bpm-spring-boot-starter-4, measured with valid enterprise credentials.
       -->
       <id>camunda-enterprise</id>
-      <url>https://nexus.el.wdw-elab.de/repository/camunda-repository/</url>
+      <url>https://artifacts.camunda.com/artifactory/camunda-bpm-ee/</url>
     </repository>
   </repositories>
 

@@ -30,27 +30,6 @@
                     </releases>
                 </repository>
                 <repository>
-                    <!--
-                      Camunda 7 enterprise artifacts. Since adapter 1.6.0 this build needs them: Spring
-                      Boot 4 support arrived in Camunda 7.24.3 and the 7.24 line is enterprise-only.
-
-                      The id matches the repository declared in the pom, and a repository defined in an
-                      active settings profile wins over a pom repository of the same id. So the pom keeps
-                      pointing at the internal Nexus, which is what developers reach through the company
-                      VPN, while the build here resolves the very same artifacts straight from Camunda -
-                      GitHub runners have no VPN. Credentials come from the CAMUNDA_EE_USR / CAMUNDA_EE_PSW
-                      secrets, see the server entry below.
-                    -->
-                    <id>camunda-enterprise</id>
-                    <url>https://artifacts.camunda.com/artifactory/camunda-bpm/</url>
-                    <releases>
-                        <enabled>true</enabled>
-                    </releases>
-                    <snapshots>
-                        <enabled>false</enabled>
-                    </snapshots>
-                </repository>
-                <repository>
                     <id>vanillabp-spring-boot-support</id>
                     <url>https://maven.pkg.github.com/vanillabp/spring-boot-support</url>
                     <snapshots>
@@ -76,6 +55,10 @@
             <password>${env.USER_TOKEN}</password>
         </server>
         <server>
+            <!--
+              Camunda 7 enterprise artifacts. The repository itself is declared in the pom; runners only
+              need the credentials for it, which come from these two repository secrets.
+            -->
             <id>camunda-enterprise</id>
             <username>${env.CAMUNDA_EE_USR}</username>
             <password>${env.CAMUNDA_EE_PSW}</password>

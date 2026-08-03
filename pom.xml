@@ -72,7 +72,19 @@
 
   <repositories>
     <repository>
-      <!-- credentials come from settings.xml, never from here -->
+      <!--
+        Camunda 7 enterprise artifacts, needed since 1.6.0: Spring Boot 4 support arrived in Camunda
+        7.24.3 and the 7.24 line is enterprise-only.
+
+        Credentials come from settings.xml, never from here.
+
+        This URL is the internal Nexus, reachable through the company VPN. The GitHub workflows override
+        it: they declare a repository with the same id pointing at
+        https://artifacts.camunda.com/artifactory/camunda-bpm/, and a repository from an active settings
+        profile wins over a pom repository of the same id. Runners have no VPN, so they go to Camunda
+        directly with the CAMUNDA_EE_USR / CAMUNDA_EE_PSW secrets. See
+        .github/workflows/github-packages-settings.xml and release-settings.xml.
+      -->
       <id>camunda-enterprise</id>
       <url>https://nexus.el.wdw-elab.de/repository/camunda-repository/</url>
     </repository>

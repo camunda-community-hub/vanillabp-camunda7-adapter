@@ -7,6 +7,12 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write # needed to push Git tags
+    env:
+      # Camunda 7 enterprise credentials. Set at job level so the composite steps of
+      # community-action-maven-release see them too; they are consumed by the camunda-enterprise server
+      # entry in release-settings.xml.
+      CAMUNDA_EE_USR: ${{ secrets.CAMUNDA_EE_USR }}
+      CAMUNDA_EE_PSW: ${{ secrets.CAMUNDA_EE_PSW }}
     steps:
       - name: Checks out code
         uses: actions/checkout@v4
@@ -21,6 +27,9 @@ jobs:
       - name: Deploy SNAPSHOT / Release
         uses: camunda-community-hub/community-action-maven-release@v2
         with:
+          # The action overwrites $HOME/.m2/settings.xml with its own copy, so the Camunda enterprise
+          # server has to come in through -s. See the header of release-settings.xml.
+          maven-additional-options: -s ${{ github.workspace }}/.github/workflows/release-settings.xml
           release-version: ${{ github.event.release.tag_name }}
           nexus-usr: ${{ secrets.NEXUS_USR }}
           nexus-psw: ${{ secrets.NEXUS_PSW }}

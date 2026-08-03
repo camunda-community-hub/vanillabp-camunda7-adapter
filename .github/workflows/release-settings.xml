@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Maven settings for the release workflow.
+
+  Why this file exists at all: community-action-maven-release copies its own
+  resources/settings.xml over $HOME/.m2/settings.xml before it runs Maven, so adding a server entry
+  beforehand has no effect. The only hook the action offers is maven-additional-options, which it passes to
+  every Maven invocation - so the release workflow points -s at this file instead.
+
+  That means this file has to be a superset: it repeats the four server entries the action defines,
+  using the very same environment variable names the action exports, and adds the camunda-enterprise
+  server on top. If the action ever changes its server ids or variable names, this file has to follow -
+  the symptom would be a failing deploy, not a silent one.
+-->
+<settings xmlns="http://maven.apache.org/SETTINGS/1.0.0"
+          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0 http://maven.apache.org/xsd/settings-1.0.0.xsd">
+
+    <activeProfiles>
+        <activeProfile>github</activeProfile>
+    </activeProfiles>
+
+    <profiles>
+        <profile>
+            <id>github</id>
+            <repositories>
+                <repository>
+                    <id>central</id>
+                    <url>https://repo1.maven.org/maven2</url>
+                    <releases>
+                        <enabled>true</enabled>
+                    </releases>
+                    <snapshots>
+                        <enabled>false</enabled>
+                    </snapshots>
+                </repository>
+                <repository>
+                    <!--
+                      Camunda 7 enterprise artifacts. The id matches the repository declared in the pom,
+                      and a repository defined in an active settings profile wins over a pom repository of
+                      the same id. The pom therefore keeps pointing at the internal Nexus, which developers
+                      reach through the company VPN, while this build resolves the same artifacts straight
+                      from Camunda - GitHub runners have no VPN.
+                    -->
+                    <id>camunda-enterprise</id>
+                    <url>https://artifacts.camunda.com/artifactory/camunda-bpm/</url>
+                    <releases>
+                        <enabled>true</enabled>
+                    </releases>
+                    <snapshots>
+                        <enabled>false</enabled>
+                    </snapshots>
+                </repository>
+            </repositories>
+            <pluginRepositories/>
+        </profile>
+    </profiles>
+
+    <servers>
+        <server>
+            <id>camunda-enterprise</id>
+            <username>${env.CAMUNDA_EE_USR}</username>
+            <password>${env.CAMUNDA_EE_PSW}</password>
+        </server>
+        <!-- The four below mirror community-action-maven-release/resources/settings.xml. -->
+        <server>
+            <id>camunda-nexus</id>
+            <username>${env.NEXUS_USR}</username>
+            <password>${env.NEXUS_PSW}</password>
+        </server>
+        <server>
+            <id>camunda-nexus-release</id>
+            <username>${env.NEXUS_USR}</username>
+            <password>${env.NEXUS_PSW}</password>
+        </server>
+        <server>
+            <id>central</id>
+            <username>${env.MAVEN_USR}</username>
+            <password>${env.MAVEN_PSW}</password>
+        </server>
+        <server>
+            <id>gpg.passphrase</id>
+            <passphrase>${env.MAVEN_GPG_PASSPHRASE}</passphrase>
+        </server>
+    </servers>
+
+    <mirrors/>
+    <pluginGroups/>
+</settings>

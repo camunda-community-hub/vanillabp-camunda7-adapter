@@ -37,6 +37,22 @@ releases, security patches included. Building or running adapter 1.6.x therefore
 Camunda's enterprise artifacts, and it uses `camunda-bpm-spring-boot-starter-4` instead of
 `camunda-bpm-spring-boot-starter`.
 
+### Building this repository in CI
+
+The GitHub workflows resolve the enterprise artifacts straight from
+`https://artifacts.camunda.com/artifactory/camunda-bpm/` and expect two repository secrets:
+
+| Secret | Meaning |
+|---|---|
+| `CAMUNDA_EE_USR` | user name for Camunda's artifact repository |
+| `CAMUNDA_EE_PSW` | the matching password or token |
+
+The pom points at an internal mirror instead, which is what developers reach through their company VPN.
+The workflows declare a repository with the same id, and a repository from an active settings profile wins
+over a pom repository of the same id - so both worlds resolve the same artifacts without either having to
+know about the other. Details in `.github/workflows/github-packages-settings.xml` (push builds) and
+`.github/workflows/release-settings.xml` (releases).
+
 Without an enterprise subscription, stay on 1.5.x. It is a complete adapter for Spring Boot 3.5 and
 Camunda 7 community edition; it is simply not going to move to Spring Boot 4.
 

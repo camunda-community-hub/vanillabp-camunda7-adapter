@@ -22,7 +22,7 @@
       artifacts carrying a "-4" suffix; Camunda 7 Community ended with 7.24.0 in October 2025. 7.24.12-ee
       is the highest version currently available in the internal repository.
 
-      Requires the company VPN - see prompts/check-camunda-ee-access.sh.
+      Requires the Camunda Artifactory
     -->
     <camunda.version>7.24.12-ee</camunda.version>
     <version.java>21</version.java>

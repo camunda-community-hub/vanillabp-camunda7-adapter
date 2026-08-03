@@ -1,0 +1,18 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended"
+  ],
+  "packageRules": [
+    {
+      "description": "One pull request for the whole Spring train. Boot, Framework, Security, Data and the starters only make sense together - the six different Boot 3.x baselines this workspace carried before the Boot 4 migration came from updating them one at a time.",
+      "groupName": "spring",
+      "matchPackagePatterns": ["^org\\.springframework"]
+    },
+    {
+      "description": "Camunda stays manual. Client and cluster are only guaranteed compatible at equal versions, and a cluster upgrade in a customer project takes its time, so a library must never force one.",
+      "matchPackagePatterns": ["^io\\.camunda", "^org\\.camunda"],
+      "enabled": false
+    }
+  ]
+}

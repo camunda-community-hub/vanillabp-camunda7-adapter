@@ -24,6 +24,22 @@ Currently, only Spring Boot is supported by including this Maven dependency:
 </dependency>
 ```
 
+### Which version do I need?
+
+| Adapter | Spring Boot | Camunda 7 | Edition |
+|---|---|---|---|
+| 1.5.x | 3.5.x | 7.24.x | community |
+| 1.6.x | 4.1.x | 7.24.3 and up | **enterprise only** |
+
+Spring Boot 4 support was added to Camunda 7 in 7.24.3, and the 7.24 line is available to enterprise
+subscribers only: the community edition ended with 7.24.0 in October 2025 and will receive no further
+releases, security patches included. Building or running adapter 1.6.x therefore requires access to
+Camunda's enterprise artifacts, and it uses `camunda-bpm-spring-boot-starter-4` instead of
+`camunda-bpm-spring-boot-starter`.
+
+Without an enterprise subscription, stay on 1.5.x. It is a complete adapter for Spring Boot 3.5 and
+Camunda 7 community edition; it is simply not going to move to Spring Boot 4.
+
 To learn about details of the adapter checkout the [module's README](./spring-boot/README.md). 
 
 ## How it looks like

@@ -24,8 +24,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.aop.framework.AopProxyUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.AutoConfigurationPackage;
-import org.springframework.boot.autoconfigure.AutoConfigureBefore;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.ApplicationContext;
@@ -34,8 +34,8 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.data.repository.CrudRepository;
 
+@AutoConfiguration(before = CamundaBpmAutoConfiguration.class)
 @AutoConfigurationPackage(basePackageClasses = Camunda7AdapterConfiguration.class)
-@AutoConfigureBefore(CamundaBpmAutoConfiguration.class)
 @EnableProcessApplication("org.camunda.bpm.spring.boot.starter.SpringBootProcessApplication")
 @EnableConfigurationProperties(Camunda7VanillaBpProperties.class)
 public class Camunda7AdapterConfiguration extends AdapterConfigurationBase<Camunda7ProcessService<?>> {

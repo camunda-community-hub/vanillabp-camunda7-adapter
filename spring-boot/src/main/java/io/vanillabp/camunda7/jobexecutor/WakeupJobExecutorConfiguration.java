@@ -13,12 +13,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.AutoConfigureOrder;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.core.task.TaskExecutor;
@@ -26,7 +26,13 @@ import org.springframework.scheduling.TaskScheduler;
 
 import java.util.Optional;
 
-@Configuration
+/*
+ * Registered through META-INF/spring/...AutoConfiguration.imports, so it has to be an
+ * @AutoConfiguration: @AutoConfigureOrder is only honoured for auto-configurations, and with a plain
+ * @Configuration the ordering was silently ignored. None of the @Bean methods calls another one, so the
+ * proxyBeanMethods = false implied by @AutoConfiguration changes nothing here.
+ */
+@AutoConfiguration
 @AutoConfigureOrder(Ordered.HIGHEST_PRECEDENCE)
 @ConditionalOnProperty(
         prefix = "camunda.bpm.job-execution",

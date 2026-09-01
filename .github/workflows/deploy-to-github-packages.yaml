@@ -13,7 +13,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
         with:
-          java-version: '17'
+          java-version: 21
           distribution: 'adopt'
           cache: 'maven'
       - name: Publish package
@@ -22,4 +22,8 @@ jobs:
           USER_NAME: ${{ secrets.VANILLABP_USER_NAME }}
           USER_TOKEN: ${{ secrets.VANILLABP_USER_TOKEN }}
           CAMUNDA_USER_TOKEN: ${{ secrets.CAMUNDA_USER_TOKEN }}
+          # Camunda 7 enterprise credentials, consumed by the camunda-enterprise
+          # server entry in github-packages-settings.xml.
+          CAMUNDA_EE_USR: ${{ secrets.CAMUNDA_EE_USR }}
+          CAMUNDA_EE_PSW: ${{ secrets.CAMUNDA_EE_PSW }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

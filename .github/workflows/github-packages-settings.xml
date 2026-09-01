@@ -55,6 +55,15 @@
             <password>${env.USER_TOKEN}</password>
         </server>
         <server>
+            <!--
+              Camunda 7 enterprise artifacts. The repository itself is declared in the pom; runners only
+              need the credentials for it, which come from these two repository secrets.
+            -->
+            <id>camunda-enterprise</id>
+            <username>${env.CAMUNDA_EE_USR}</username>
+            <password>${env.CAMUNDA_EE_PSW}</password>
+        </server>
+        <server>
             <id>github</id>
             <username>${env.USER_NAME}</username>
             <password>${env.CAMUNDA_USER_TOKEN}</password>

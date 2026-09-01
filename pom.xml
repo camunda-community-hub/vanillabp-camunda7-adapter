@@ -12,13 +12,20 @@
   <artifactId>camunda7-adapter</artifactId>
 
   <name>VanillaBP SPI adapter for Camunda 7.x</name>
-  <version>1.5.1-SNAPSHOT</version>
+  <version>1.6.0-SNAPSHOT</version>
   <packaging>pom</packaging>
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <camunda.version>7.24.0</camunda.version>
-    <version.java>17</version.java>
+    <!--
+      Camunda 7 Enterprise. Spring Boot 4 is only supported from 7.24.3 onwards, and only through the
+      artifacts carrying a "-4" suffix; Camunda 7 Community ended with 7.24.0 in October 2025. 7.24.12-ee
+      is the highest version currently available in the internal repository.
+
+      Requires the Camunda Artifactory
+    -->
+    <camunda.version>7.24.12-ee</camunda.version>
+    <version.java>21</version.java>
   </properties>
 
   <build>
@@ -63,8 +70,31 @@
     </pluginManagement>
   </build>
 
+  <repositories>
+    <repository>
+      <!--
+        Camunda 7 enterprise artifacts, needed since 1.6.0: Spring Boot 4 support arrived in Camunda
+        7.24.3 and the 7.24 line is enterprise-only.
+
+        Credentials come from settings.xml, never from here.
+
+        Note the "-ee" in the path: artifactory/camunda-bpm serves the community artifacts and answers 404
+        for camunda-bpm-spring-boot-starter-4, measured with valid enterprise credentials.
+      -->
+      <id>camunda-enterprise</id>
+      <url>https://artifacts.camunda.com/artifactory/camunda-bpm-ee/</url>
+    </repository>
+  </repositories>
+
   <dependencyManagement>
     <dependencies>
+      <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-dependencies</artifactId>
+        <version>4.1.0</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
       <dependency>
         <groupId>org.camunda.bpm</groupId>
         <artifactId>camunda-bom</artifactId>

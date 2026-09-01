@@ -5,7 +5,7 @@
   <parent>
     <groupId>org.camunda.community.vanillabp</groupId>
     <artifactId>camunda7-adapter</artifactId>
-    <version>1.5.1-SNAPSHOT</version>
+    <version>1.6.0-SNAPSHOT</version>
   </parent>
 
   <artifactId>camunda7-spring-boot-adapter</artifactId>
@@ -13,7 +13,6 @@
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <jakarta.servlet-api.version>6.0.0</jakarta.servlet-api.version>
   </properties>
 
   <build>
@@ -29,26 +28,42 @@
     <dependency>
       <groupId>io.vanillabp</groupId>
       <artifactId>spring-boot-support</artifactId>
-      <version>1.3.0</version>
+      <version>1.4.0</version>
     </dependency>
     <dependency>
       <groupId>org.camunda.bpm.springboot</groupId>
-      <artifactId>camunda-bpm-spring-boot-starter</artifactId>
+      <!-- the "-4" variant is the Spring Boot 4 build; the unsuffixed one targets Spring Boot 3 -->
+      <artifactId>camunda-bpm-spring-boot-starter-4</artifactId>
     </dependency>
     <dependency>
       <groupId>org.camunda.bpm.springboot</groupId>
+      <!--
+        There is no "-4" variant of the webapp starter. It reaches the unsuffixed, Spring Boot 3 core
+        starter transitively through camunda-bpm-spring-boot-starter-webapp-core, and both core starters
+        contain the very same 100 class names - including CamundaBpmAutoConfiguration. Having both on the
+        classpath would leave it to class path order which one wins, so the Spring Boot 3 one is excluded.
+      -->
       <artifactId>camunda-bpm-spring-boot-starter-webapp</artifactId>
       <exclusions>
         <exclusion>
           <groupId>org.springframework.boot</groupId>
           <artifactId>spring-boot-starter-tomcat</artifactId>
         </exclusion>
+        <exclusion>
+          <groupId>org.camunda.bpm.springboot</groupId>
+          <artifactId>camunda-bpm-spring-boot-starter</artifactId>
+        </exclusion>
       </exclusions>
     </dependency>
     <dependency>
+      <!-- version from the Spring Boot BOM: Jakarta EE 11 means Servlet 6.1 -->
       <groupId>jakarta.servlet</groupId>
       <artifactId>jakarta.servlet-api</artifactId>
-      <version>${jakarta.servlet-api.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-test</artifactId>
+      <scope>test</scope>
     </dependency>
   </dependencies>
 

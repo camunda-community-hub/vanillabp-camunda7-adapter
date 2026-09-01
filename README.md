@@ -24,6 +24,47 @@ Currently, only Spring Boot is supported by including this Maven dependency:
 </dependency>
 ```
 
+### Which version do I need?
+
+| Adapter | Spring Boot | Camunda 7 | Edition |
+|---|---|---|---|
+| 1.5.x | 3.5.x | 7.24.x | community |
+| 1.6.x | 4.1.x | 7.24.3 and up | **enterprise only** |
+
+Spring Boot 4 support was added to Camunda 7 in 7.24.3, and the 7.24 line is available to enterprise
+subscribers only: the community edition ended with 7.24.0 in October 2025 and will receive no further
+releases, security patches included. Building or running adapter 1.6.x therefore requires access to
+Camunda's enterprise artifacts, and it uses `camunda-bpm-spring-boot-starter-4` instead of
+`camunda-bpm-spring-boot-starter`.
+
+### Credentials
+
+The pom declares Camunda's artifact repository under the id `camunda-enterprise`. Locally, put the
+matching credentials into your `~/.m2/settings.xml`:
+
+```xml
+<server>
+  <id>camunda-enterprise</id>
+  <username>your-camunda-user</username>
+  <password>your-camunda-password</password>
+</server>
+```
+
+In CI the same credentials come from two repository secrets:
+
+| Secret | Meaning |
+|---|---|
+| `CAMUNDA_EE_USR` | user name for Camunda's artifact repository |
+| `CAMUNDA_EE_PSW` | the matching password or token |
+
+They are wired up in `.github/workflows/github-packages-settings.xml` for push builds and in
+`.github/workflows/release-settings.xml` for releases. The second file exists because
+`community-action-maven-release` replaces `$HOME/.m2/settings.xml` with its own copy before running Maven,
+so the server entry has to be passed in with `-s`.
+
+Without an enterprise subscription, stay on 1.5.x. It is a complete adapter for Spring Boot 3.5 and
+Camunda 7 community edition; it is simply not going to move to Spring Boot 4.
+
 To learn about details of the adapter checkout the [module's README](./spring-boot/README.md). 
 
 ## How it looks like

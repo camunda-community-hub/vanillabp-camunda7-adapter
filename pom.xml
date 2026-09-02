@@ -12,7 +12,7 @@
   <artifactId>camunda7-adapter</artifactId>
 
   <name>VanillaBP SPI adapter for Camunda 7.x</name>
-  <version>1.6.0-SNAPSHOT</version>
+  <version>1.6.0</version>
   <packaging>pom</packaging>
   <description>This is an adapter which implements the binding of the VanillaBP SPI in order to run business processes using Camunda 7.</description>
   <url>https://github.com/camunda-community-hub/vanillabp-camunda7-adapter</url>

@@ -14,6 +14,8 @@
   <name>VanillaBP SPI adapter for Camunda 7.x</name>
   <version>1.6.0-SNAPSHOT</version>
   <packaging>pom</packaging>
+  <description>This is an adapter which implements the binding of the VanillaBP SPI in order to run business processes using Camunda 7.</description>
+  <url>https://github.com/camunda-community-hub/vanillabp-camunda7-adapter</url>
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -68,6 +70,24 @@
         </plugin>
       </plugins>
     </pluginManagement>
+    <plugins>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>flatten-maven-plugin</artifactId>
+        <version>1.8.0</version>
+        <configuration>
+          <flattenMode>oss</flattenMode>
+        </configuration>
+        <executions>
+          <execution>
+            <id>flatten</id><phase>process-resources</phase><goals><goal>flatten</goal></goals>
+          </execution>
+          <execution>
+            <id>flatten.clean</id><phase>clean</phase><goals><goal>clean</goal></goals>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
   </build>
 
   <repositories>

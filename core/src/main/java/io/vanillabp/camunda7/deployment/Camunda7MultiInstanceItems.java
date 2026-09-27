@@ -59,6 +59,40 @@ public final class Camunda7MultiInstanceItems {
   }
 
   /**
+   * The IDs of the multi-instance elements ENCLOSING the given BPMN element which name no
+   * <code>camunda:elementVariable</code>, outermost first.
+   * <p>
+   * This is the chain of one task rather than the set of the whole process, which is what
+   * the core is told about a task of a version the engine still holds: the question there is
+   * which rounds THIS task iterates in without being handed their value. A level a CALLER
+   * contributes is not in this model, and the core knows that an element the model does not
+   * carry belongs to a caller.
+   * <p>
+   * The element itself is part of the chain when it is multi-instance, which is the usual
+   * case of a multi-instance service task.
+   *
+   * @param element The BPMN element a handler serves
+   * @return The element IDs, outermost first, possibly empty
+   */
+  public static List<String> elementsWithoutAnItemAround(
+      final org.camunda.bpm.model.bpmn.instance.FlowElement element) {
+
+    final var innermostFirst = new java.util.LinkedList<String>();
+    org.camunda.bpm.model.xml.instance.ModelElementInstance current = element;
+    while (current != null) {
+      if ((current instanceof Activity activity) && (activity
+          .getLoopCharacteristics() instanceof MultiInstanceLoopCharacteristics loop) && (Camunda7MultiInstances
+              .elementVariableOf(loop) == null)) {
+        innermostFirst.add(activity.getId());
+      }
+      current = current.getParentElement();
+    }
+    java.util.Collections.reverse(innermostFirst);
+    return List.copyOf(innermostFirst);
+
+  }
+
+  /**
    * One handler asking for an item its model never hands over.
    *
    * @param taskElementId The BPMN element the handler serves

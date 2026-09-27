@@ -794,6 +794,15 @@ public class Camunda7DeploymentService implements AdapterDeploymentService<BpmnM
             bpmnProcessId,
             Camunda7ConcurrentTokens.elementIdsOf(model, scopedBpmnProcessId));
 
+    // compensation is the same second token drawn differently, and it needs its shape: a
+    // throw event which compensates two finished activities starts both handlers, and the
+    // developer has to read WHICH event starts WHICH handlers
+    workflowTaskWiring
+        .reportCompensation(
+            workflowModuleId,
+            bpmnProcessId,
+            Camunda7ConcurrentTokens.compensationOf(model, scopedBpmnProcessId));
+
     // What the expressions of this model read, which two checks ask the core about. The
     // model is parsed for them once: both questions are about the same paths
     final var expressionOrigins = io.vanillabp.camunda7.sync.Camunda7ExpressionIdentifiers
@@ -1039,8 +1048,22 @@ public class Camunda7DeploymentService implements AdapterDeploymentService<BpmnM
       final String bpmnProcessId,
       final BpmnModelInstance model) {
 
-    return Camunda7ConcurrentTokens
-        .elementIdsOf(model, scopedProcessId(workflowModuleId, bpmnProcessId));
+    final var scopedBpmnProcessId = scopedProcessId(workflowModuleId, bpmnProcessId);
+    final var elementIds = new java.util.LinkedHashSet<>(
+        Camunda7ConcurrentTokens.elementIdsOf(model, scopedBpmnProcessId));
+    // a version the engine still holds carries its compensation flat, as element ids among
+    // the others. The shaped report belongs to the model this boot deploys, which is the one
+    // a developer can still redraw; for an older version the fact that its workflows can hold
+    // two tokens is what there is to say
+    Camunda7ConcurrentTokens
+        .compensationOf(model, scopedBpmnProcessId)
+        .stream()
+        .filter(compensation -> compensation.handlerIds().size() > 1)
+        .forEach(compensation -> {
+          elementIds.add(compensation.throwEventId());
+          elementIds.addAll(compensation.handlerIds());
+        });
+    return List.copyOf(elementIds);
 
   }
 
@@ -1310,7 +1333,10 @@ public class Camunda7DeploymentService implements AdapterDeploymentService<BpmnM
           } else {
             // no implementation given: reported by the wiring validation with a
             // guiding message (task definition null - matched by activity ID only)
-            specs.add(new BpmnTaskSpec(task.getId(), null));
+            specs
+                .add(new BpmnTaskSpec(
+                    task.getId(), null, false, null, Camunda7MultiInstanceItems
+                        .elementsWithoutAnItemAround(task)));
             return;
           }
           final String taskDefinition;
@@ -1339,7 +1365,13 @@ public class Camunda7DeploymentService implements AdapterDeploymentService<BpmnM
             taskDefinition = unwrapExpression(
                 rawExpression, task.getId(), bpmnProcessId, describedSource, workflowModuleId);
           }
-          specs.add(new BpmnTaskSpec(task.getId(), taskDefinition));
+          // which rounds this task iterates in without being handed their value: the core
+          // holds it against the methods serving a version the engine still holds, and a
+          // method reading the item of such an element would be given null
+          specs
+              .add(new BpmnTaskSpec(
+                  task.getId(), taskDefinition, false, null, Camunda7MultiInstanceItems
+                      .elementsWithoutAnItemAround(task)));
           if (connectables != null) {
             connectables.add(new Camunda7TaskConnectable(
                 workflowModuleId, bpmnProcessId, scopedBpmnProcessId, task.getId(), taskDefinition, type));
@@ -1358,7 +1390,10 @@ public class Camunda7DeploymentService implements AdapterDeploymentService<BpmnM
           // it: the form key AS WRITTEN, an expression included - see
           // io.vanillabp.camunda7.api.Camunda7TaskDefinitions
           final var formKey = io.vanillabp.camunda7.api.Camunda7TaskDefinitions.formKeyOf(task);
-          specs.add(BpmnTaskSpec.userTask(task.getId(), formKey));
+          specs
+              .add(new BpmnTaskSpec(
+                  task.getId(), formKey, true, null, Camunda7MultiInstanceItems
+                      .elementsWithoutAnItemAround(task)));
           if (connectables != null) {
             connectables.add(new Camunda7TaskConnectable(
                 workflowModuleId, bpmnProcessId, scopedBpmnProcessId, task

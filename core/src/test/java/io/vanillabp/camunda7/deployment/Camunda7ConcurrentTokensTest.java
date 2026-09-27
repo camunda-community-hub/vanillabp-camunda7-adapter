@@ -19,6 +19,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 
 import io.vanillabp.camunda7.TestCollaborators;
 import io.vanillabp.camunda7.wiring.Camunda7TaskRegistry;
+import io.vanillabp.integration.adapter.spi.workflowtask.CompensationSpec;
 import io.vanillabp.integration.test.utils.SuppressOutputExtension;
 
 /**
@@ -66,6 +67,140 @@ public class Camunda7ConcurrentTokensTest {
       final String processContent) {
 
     return Camunda7ConcurrentTokens.elementIdsOf(model(processContent), PROCESS_ID);
+
+  }
+
+  private static List<CompensationSpec> compensationOf(
+      final String processContent) {
+
+    return Camunda7ConcurrentTokens.compensationOf(model(processContent), PROCESS_ID);
+
+  }
+
+  /**
+   * Two activities which were compensated, drawn the way a modeller draws them: a
+   * compensation boundary event on each, and an association to the handler undoing it.
+   */
+  private static final String TWO_ACTIVITIES_WITH_A_HANDLER = """
+          <bpmn:serviceTask id="Activity_Book" camunda:delegateExpression="${book}" />
+          <bpmn:serviceTask id="Activity_Pay" camunda:delegateExpression="${pay}" />
+          <bpmn:boundaryEvent id="Event_BookWasMade" attachedToRef="Activity_Book">
+            <bpmn:compensateEventDefinition id="Compensate_Book" />
+          </bpmn:boundaryEvent>
+          <bpmn:boundaryEvent id="Event_PaymentWasMade" attachedToRef="Activity_Pay">
+            <bpmn:compensateEventDefinition id="Compensate_Pay" />
+          </bpmn:boundaryEvent>
+          <bpmn:serviceTask id="Activity_CancelBooking" isForCompensation="true" camunda:delegateExpression="${cancelBooking}" />
+          <bpmn:serviceTask id="Activity_RefundPayment" isForCompensation="true" camunda:delegateExpression="${refundPayment}" />
+          <bpmn:association id="To_CancelBooking" associationDirection="One" sourceRef="Event_BookWasMade" targetRef="Activity_CancelBooking" />
+          <bpmn:association id="To_RefundPayment" associationDirection="One" sourceRef="Event_PaymentWasMade" targetRef="Activity_RefundPayment" />
+      """;
+
+  @Test
+  @DisplayName("A throw event compensating everything names every handler it starts")
+  public void aThrowEventCompensatingEverything() {
+
+    final var found = compensationOf("""
+            <bpmn:intermediateThrowEvent id="Event_UndoEverything">
+              <bpmn:compensateEventDefinition id="Throw_All" />
+            </bpmn:intermediateThrowEvent>
+        """ + TWO_ACTIVITIES_WITH_A_HANDLER);
+
+    assertEquals(
+        List
+            .of(
+                new CompensationSpec(
+                    "Event_UndoEverything", List.of("Activity_CancelBooking", "Activity_RefundPayment"))),
+        found);
+
+  }
+
+  @Test
+  @DisplayName("A throw event naming ONE activity starts that activity's handler only")
+  public void aThrowEventNamingOneActivity() {
+
+    final var found = compensationOf("""
+            <bpmn:intermediateThrowEvent id="Event_UndoTheBooking">
+              <bpmn:compensateEventDefinition id="Throw_One" activityRef="Activity_Book" />
+            </bpmn:intermediateThrowEvent>
+        """ + TWO_ACTIVITIES_WITH_A_HANDLER);
+
+    assertEquals(
+        List.of(new CompensationSpec("Event_UndoTheBooking", List.of("Activity_CancelBooking"))), found);
+
+  }
+
+  @Test
+  @DisplayName("An end event throwing compensation is read like an intermediate one")
+  public void anEndEventThrowingCompensation() {
+
+    final var found = compensationOf("""
+            <bpmn:endEvent id="Event_EndUndoing">
+              <bpmn:compensateEventDefinition id="Throw_End" />
+            </bpmn:endEvent>
+        """ + TWO_ACTIVITIES_WITH_A_HANDLER);
+
+    assertEquals(
+        List
+            .of(
+                new CompensationSpec(
+                    "Event_EndUndoing", List.of("Activity_CancelBooking", "Activity_RefundPayment"))),
+        found);
+
+  }
+
+  @Test
+  @DisplayName("A throw event inside a subprocess undoes that subprocess only")
+  public void aThrowEventInsideASubProcess() {
+
+    final var found = compensationOf(
+        """
+                <bpmn:subProcess id="SubProcess_Trip">
+                  <bpmn:serviceTask id="Activity_Seat" camunda:delegateExpression="${seat}" />
+                  <bpmn:boundaryEvent id="Event_SeatWasTaken" attachedToRef="Activity_Seat">
+                    <bpmn:compensateEventDefinition id="Compensate_Seat" />
+                  </bpmn:boundaryEvent>
+                  <bpmn:serviceTask id="Activity_CancelSeat" isForCompensation="true" camunda:delegateExpression="${cancelSeat}" />
+                  <bpmn:intermediateThrowEvent id="Event_UndoTheTrip">
+                    <bpmn:compensateEventDefinition id="Throw_Trip" />
+                  </bpmn:intermediateThrowEvent>
+                  <bpmn:association id="To_CancelSeat" associationDirection="One" sourceRef="Event_SeatWasTaken" targetRef="Activity_CancelSeat" />
+                </bpmn:subProcess>
+            """ + TWO_ACTIVITIES_WITH_A_HANDLER);
+
+    // the two handlers of the process scope are not started by a throw event of the
+    // subprocess, so this one starts one handler and is no finding for the caller
+    assertEquals(
+        List.of(new CompensationSpec("Event_UndoTheTrip", List.of("Activity_CancelSeat"))), found);
+
+  }
+
+  @Test
+  @DisplayName("A model without compensation reports nothing")
+  public void aModelWithoutCompensation() {
+
+    assertTrue(compensationOf("""
+            <bpmn:serviceTask id="Activity_Book" camunda:delegateExpression="${book}" />
+            <bpmn:intermediateThrowEvent id="Event_Signal">
+              <bpmn:signalEventDefinition id="Signal_1" />
+            </bpmn:intermediateThrowEvent>
+        """).isEmpty());
+
+  }
+
+  @Test
+  @DisplayName("A compensation handler is no concurrent-token element of its own")
+  public void aCompensationHandlerIsNoElementOfTheFlatList() {
+
+    final var found = elementsOf("""
+            <bpmn:intermediateThrowEvent id="Event_UndoEverything">
+              <bpmn:compensateEventDefinition id="Throw_All" />
+            </bpmn:intermediateThrowEvent>
+        """ + TWO_ACTIVITIES_WITH_A_HANDLER);
+
+    // what compensation means is reported with its shape, so nothing of it leaks into the
+    // flat list the other constructs are reported through
+    assertTrue(found.isEmpty(), found.toString());
 
   }
 

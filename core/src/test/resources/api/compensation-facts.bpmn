@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:camunda="http://camunda.org/schema/1.0/bpmn"
+                  id="CompensationFactsDefinitions"
+                  targetNamespace="http://vanillabp.io/test">
+  <bpmn:process id="CompensationFactsProcess" isExecutable="true" camunda:historyTimeToLive="1">
+    <bpmn:startEvent id="Start">
+      <bpmn:outgoing>ToBook</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:sequenceFlow id="ToBook" sourceRef="Start" targetRef="Book" />
+    <bpmn:serviceTask id="Book" camunda:class="io.vanillabp.camunda7.api.CompensationRecorder$DoingNothing">
+      <bpmn:incoming>ToBook</bpmn:incoming>
+      <bpmn:outgoing>ToPay</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="ToPay" sourceRef="Book" targetRef="Pay" />
+    <bpmn:serviceTask id="Pay" camunda:class="io.vanillabp.camunda7.api.CompensationRecorder$DoingNothing">
+      <bpmn:incoming>ToPay</bpmn:incoming>
+      <bpmn:outgoing>ToUndo</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="ToUndo" sourceRef="Pay" targetRef="UndoEverything" />
+    <bpmn:intermediateThrowEvent id="UndoEverything">
+      <bpmn:incoming>ToUndo</bpmn:incoming>
+      <bpmn:outgoing>ToEnd</bpmn:outgoing>
+      <bpmn:compensateEventDefinition id="UndoEverythingDefinition" />
+    </bpmn:intermediateThrowEvent>
+    <bpmn:sequenceFlow id="ToEnd" sourceRef="UndoEverything" targetRef="End" />
+    <bpmn:endEvent id="End">
+      <bpmn:incoming>ToEnd</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:boundaryEvent id="BookWasMade" attachedToRef="Book">
+      <bpmn:compensateEventDefinition id="BookWasMadeDefinition" />
+    </bpmn:boundaryEvent>
+    <bpmn:serviceTask id="CancelBooking" isForCompensation="true"
+                      camunda:class="io.vanillabp.camunda7.api.CompensationRecorder$Handler" />
+    <bpmn:boundaryEvent id="PaymentWasMade" attachedToRef="Pay">
+      <bpmn:compensateEventDefinition id="PaymentWasMadeDefinition" />
+    </bpmn:boundaryEvent>
+    <bpmn:serviceTask id="RefundPayment" isForCompensation="true"
+                      camunda:class="io.vanillabp.camunda7.api.CompensationRecorder$Handler" />
+    <bpmn:association id="ToCancelBooking" associationDirection="One"
+                      sourceRef="BookWasMade" targetRef="CancelBooking" />
+    <bpmn:association id="ToRefundPayment" associationDirection="One"
+                      sourceRef="PaymentWasMade" targetRef="RefundPayment" />
+  </bpmn:process>
+</bpmn:definitions>

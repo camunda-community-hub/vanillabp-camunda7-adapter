@@ -1220,6 +1220,21 @@ still carry it were started before that change, and they are the ones which run 
 `Camunda7ConcurrentTokensTest` holds the constructs and the reading of a held version; the core
 asks only about a version workflows really run on.
 
+Compensation is that same finding drawn differently, and it is reported with a shape of its own.
+`Camunda7ConcurrentTokens#compensationOf` reads every compensation throw event of a process
+together with the handlers it starts, and the adapter reports the ones which start more than one:
+from that event the workflow holds a token per handler, and a reader has to see which event
+starts which handlers rather than a flat list of ids. A throw event which undoes a single
+activity is left out.
+
+This engine starts the handlers one after the other and not next to each other, which was
+measured before the message was written: `Camunda7CompensationTokensTest` runs a real engine and
+records that both compensating executions exist while only one handler is inside its delegate,
+that the `asyncBefore` this adapter sets on every service task never turns a handler into a job,
+and that the order the handlers run in is not stable. Why the report is made all the same is in
+the decision log. A version the engine still holds carries its compensation as plain element ids
+among the others, because the shaped message belongs to the model somebody can still redraw.
+
 ### A process id which is only declared
 
 A workflow module may name a BPMN process id no file of it carries any more, which is how a

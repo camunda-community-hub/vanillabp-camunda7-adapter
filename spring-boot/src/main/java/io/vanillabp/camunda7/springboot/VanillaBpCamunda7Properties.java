@@ -5,8 +5,6 @@ import java.util.Map;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 import io.vanillabp.camunda7.engine.Camunda7EngineProperties;
-import lombok.Getter;
-import lombok.Setter;
 
 /**
  * The Camunda 7 adapter's OVERLAY of the shared <code>vanillabp.*</code> configuration
@@ -25,8 +23,6 @@ import lombok.Setter;
  * overrides can materialize phantom map entries in the overlay).
  */
 @ConfigurationProperties("vanillabp")
-@Getter
-@Setter
 public class VanillaBpCamunda7Properties {
 
   /**
@@ -53,11 +49,47 @@ public class VanillaBpCamunda7Properties {
   private Map<String, Camunda7WorkflowModuleProperties> workflowModules = Map.of();
 
   /**
+   * The adapter sections of the shared tree, keyed by adapter id.
+   *
+   * @return The sections found, empty where the application configured none
+   */
+  public Map<String, Camunda7EngineProperties> getAdapters() {
+    return adapters;
+  }
+
+  /**
+   * The adapter sections of the shared tree, keyed by adapter id.
+   *
+   * @param adapters The sections Spring Boot bound
+   */
+  public void setAdapters(
+      final Map<String, Camunda7EngineProperties> adapters) {
+    this.adapters = adapters;
+  }
+
+  /**
+   * The workflow-module sections of the shared tree, keyed by workflow module id.
+   *
+   * @return The sections found, empty where the application configured none
+   */
+  public Map<String, Camunda7WorkflowModuleProperties> getWorkflowModules() {
+    return workflowModules;
+  }
+
+  /**
+   * The workflow-module sections of the shared tree, keyed by workflow module id.
+   *
+   * @param workflowModules The sections Spring Boot bound
+   */
+  public void setWorkflowModules(
+      final Map<String, Camunda7WorkflowModuleProperties> workflowModules) {
+    this.workflowModules = workflowModules;
+  }
+
+  /**
    * The Camunda 7 keys of one <code>vanillabp.workflow-modules.&lt;module&gt;</code>
    * section which may override what the adapter section says.
    */
-  @Getter
-  @Setter
   public static class Camunda7WorkflowModuleProperties {
 
     /**
@@ -67,17 +99,55 @@ public class VanillaBpCamunda7Properties {
 
     }
 
+    /** The per-adapter-id overrides of this workflow module. */
     private Map<String, Camunda7ModuleScopedProperties> adapters = Map.of();
 
+    /** The workflows of this workflow module, keyed by BPMN process id. */
     private Map<String, Camunda7WorkflowProperties> workflows = Map.of();
+
+    /**
+     * The per-adapter-id overrides of this workflow module.
+     *
+     * @return The adapter sections of this module, empty where there are none
+     */
+    public Map<String, Camunda7ModuleScopedProperties> getAdapters() {
+      return adapters;
+    }
+
+    /**
+     * The per-adapter-id overrides of this workflow module.
+     *
+     * @param adapters The adapter sections Spring Boot bound
+     */
+    public void setAdapters(
+        final Map<String, Camunda7ModuleScopedProperties> adapters) {
+      this.adapters = adapters;
+    }
+
+    /**
+     * The workflows of this workflow module, keyed by BPMN process id.
+     *
+     * @return The workflow sections of this module, empty where there are none
+     */
+    public Map<String, Camunda7WorkflowProperties> getWorkflows() {
+      return workflows;
+    }
+
+    /**
+     * The workflows of this workflow module, keyed by BPMN process id.
+     *
+     * @param workflows The workflow sections Spring Boot bound
+     */
+    public void setWorkflows(
+        final Map<String, Camunda7WorkflowProperties> workflows) {
+      this.workflows = workflows;
+    }
 
   }
 
   /**
    * The Camunda 7 keys of one workflow.
    */
-  @Getter
-  @Setter
   public static class Camunda7WorkflowProperties {
 
     /**
@@ -87,6 +157,7 @@ public class VanillaBpCamunda7Properties {
 
     }
 
+    /** The per-adapter-id overrides of this workflow. */
     private Map<String, Camunda7ScopedProperties> adapters = Map.of();
 
     /**
@@ -96,14 +167,50 @@ public class VanillaBpCamunda7Properties {
      */
     private Map<String, Camunda7TaskProperties> tasks = Map.of();
 
+    /**
+     * The per-adapter-id overrides of this workflow.
+     *
+     * @return The adapter sections of this workflow, empty where there are none
+     */
+    public Map<String, Camunda7ScopedProperties> getAdapters() {
+      return adapters;
+    }
+
+    /**
+     * The per-adapter-id overrides of this workflow.
+     *
+     * @param adapters The adapter sections Spring Boot bound
+     */
+    public void setAdapters(
+        final Map<String, Camunda7ScopedProperties> adapters) {
+      this.adapters = adapters;
+    }
+
+    /**
+     * The tasks of this workflow, keyed by task definition.
+     *
+     * @return The task sections of this workflow, empty where there are none
+     */
+    public Map<String, Camunda7TaskProperties> getTasks() {
+      return tasks;
+    }
+
+    /**
+     * The tasks of this workflow, keyed by task definition.
+     *
+     * @param tasks The task sections Spring Boot bound
+     */
+    public void setTasks(
+        final Map<String, Camunda7TaskProperties> tasks) {
+      this.tasks = tasks;
+    }
+
   }
 
   /**
    * The Camunda 7 keys of one task - the most specific level, and the one
    * <code>allow-listeners</code> does not resolve at.
    */
-  @Getter
-  @Setter
   public static class Camunda7TaskProperties {
 
     /**
@@ -113,15 +220,33 @@ public class VanillaBpCamunda7Properties {
 
     }
 
+    /** The per-adapter-id overrides of this task. */
     private Map<String, Camunda7ScopedProperties> adapters = Map.of();
+
+    /**
+     * The per-adapter-id overrides of this task.
+     *
+     * @return The adapter sections of this task, empty where there are none
+     */
+    public Map<String, Camunda7ScopedProperties> getAdapters() {
+      return adapters;
+    }
+
+    /**
+     * The per-adapter-id overrides of this task.
+     *
+     * @param adapters The adapter sections Spring Boot bound
+     */
+    public void setAdapters(
+        final Map<String, Camunda7ScopedProperties> adapters) {
+      this.adapters = adapters;
+    }
 
   }
 
   /**
    * The Camunda 7 keys which may be set per workflow module and per workflow.
    */
-  @Getter
-  @Setter
   public static class Camunda7ScopedProperties {
 
     /**
@@ -145,6 +270,48 @@ public class VanillaBpCamunda7Properties {
      */
     private Boolean allowListeners;
 
+    /**
+     * The serialization format of the shared values the engine has no variable type
+     * for, for this scope.
+     *
+     * @return The configured format, <code>null</code> where this scope says nothing
+     */
+    public String getSerializationFormat() {
+      return serializationFormat;
+    }
+
+    /**
+     * The serialization format of the shared values the engine has no variable type
+     * for, for this scope.
+     *
+     * @param serializationFormat The format this scope asks for
+     */
+    public void setSerializationFormat(
+        final String serializationFormat) {
+      this.serializationFormat = serializationFormat;
+    }
+
+    /**
+     * Whether the execution listeners somebody modelled are served by
+     * <code>@WorkflowTask</code> methods, for this scope.
+     *
+     * @return The configured answer, <code>null</code> where this scope says nothing
+     */
+    public Boolean getAllowListeners() {
+      return allowListeners;
+    }
+
+    /**
+     * Whether the execution listeners somebody modelled are served by
+     * <code>@WorkflowTask</code> methods, for this scope.
+     *
+     * @param allowListeners The answer of this scope, <code>null</code> where it says nothing
+     */
+    public void setAllowListeners(
+        final Boolean allowListeners) {
+      this.allowListeners = allowListeners;
+    }
+
   }
 
   /**
@@ -152,8 +319,6 @@ public class VanillaBpCamunda7Properties {
    * level has, plus the tenant, which only a workflow module may override because a tenant
    * id is an attribute of the deployment this adapter makes per workflow module.
    */
-  @Getter
-  @Setter
   public static class Camunda7ModuleScopedProperties extends Camunda7ScopedProperties {
 
     /**
@@ -168,6 +333,25 @@ public class VanillaBpCamunda7Properties {
      * adapter section gives every module of this application.
      */
     private String tenantId;
+
+    /**
+     * The Camunda tenant this workflow module is deployed into.
+     *
+     * @return The configured tenant, <code>null</code> where the adapter section decides
+     */
+    public String getTenantId() {
+      return tenantId;
+    }
+
+    /**
+     * The Camunda tenant this workflow module is deployed into.
+     *
+     * @param tenantId The name of the tenant
+     */
+    public void setTenantId(
+        final String tenantId) {
+      this.tenantId = tenantId;
+    }
 
   }
 

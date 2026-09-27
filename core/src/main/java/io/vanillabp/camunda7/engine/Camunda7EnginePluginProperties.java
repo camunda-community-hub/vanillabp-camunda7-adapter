@@ -2,9 +2,6 @@ package io.vanillabp.camunda7.engine;
 
 import java.util.Map;
 
-import lombok.Getter;
-import lombok.Setter;
-
 /**
  * One engine plugin of an adapter id: which class, and the properties Camunda
  * applies to it.
@@ -24,8 +21,6 @@ import lombok.Setter;
  *             allowed-types: my.project.**,other.project.**
  * </pre>
  */
-@Getter
-@Setter
 public class Camunda7EnginePluginProperties {
 
   /**
@@ -36,9 +31,41 @@ public class Camunda7EnginePluginProperties {
 
   }
 
+  /** The class Camunda instantiates for this plugin section. */
   private String pluginClass;
 
+  /** The properties Camunda applies to the plugin, keyed in kebab-case. */
   private Map<String, String> properties = Map.of();
+
+  /**
+   * The class Camunda instantiates for this plugin section, e.g.
+   * <code>org.camunda.xstream.ProcessEnginePlugin</code>.
+   *
+   * @return The class name, <code>null</code> where the section names none
+   */
+  public String getPluginClass() {
+    return pluginClass;
+  }
+
+  /**
+   * The class Camunda instantiates for this plugin section.
+   *
+   * @param pluginClass The class name
+   */
+  public void setPluginClass(
+      final String pluginClass) {
+    this.pluginClass = pluginClass;
+  }
+
+  /**
+   * The plugin's own properties in kebab-case - Camunda converts them to the types the
+   * plugin declares.
+   *
+   * @return The properties, empty where the section has none
+   */
+  public Map<String, String> getProperties() {
+    return properties;
+  }
 
   /**
    * Keeps an empty map instead of <code>null</code>, so a plugin section which names a

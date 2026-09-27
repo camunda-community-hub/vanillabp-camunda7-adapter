@@ -262,6 +262,25 @@
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-javadoc-plugin</artifactId>
       </plugin>
+      <!-- the sources jar every build attaches. Without it the snapshots of this
+           repository carried no sources, and an IDE showed decompiled code to everyone
+           developing against one. This repository has no parent POM, so the version
+           stands here. It is the one the release parent uses for the other
+           repositories, so all of them pack their sources the same way. -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-source-plugin</artifactId>
+        <version>3.2.1</version>
+        <executions>
+          <execution>
+            <id>attach-sources</id>
+            <goals>
+              <goal>jar</goal>
+            </goals>
+            <phase>package</phase>
+          </execution>
+        </executions>
+      </plugin>
       <plugin>
         <groupId>org.jacoco</groupId>
         <artifactId>jacoco-maven-plugin</artifactId>

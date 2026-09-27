@@ -138,8 +138,12 @@ public class Camunda7OldProcessVersionsTest {
     final var reported = prodModeTest.getStartupConsoleOutput();
 
     assertTrue(
-        reported.contains("still run on version '1'"),
+        reported.contains("version '1' of process 'OldProcessVersionsProcess'"),
         () -> "the check has to report the version the parked workflow runs on: "
+            + reported);
+    assertTrue(
+        reported.contains("still run on this version"),
+        () -> "and it has to count the workflows sitting on that version: "
             + reported);
     assertTrue(
         reported.contains("OldProcessVersionsProcess"),

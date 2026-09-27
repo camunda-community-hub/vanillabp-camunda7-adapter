@@ -93,7 +93,7 @@ public class Camunda7MissingDeliveryLogIT {
     final var log = output.getAll().substring(alreadyLogged);
     Assertions.assertTrue(log.contains(MISSING_DELIVERY_LOG), () -> "expected the guiding message but got: "
         + log);
-    Assertions.assertTrue(log.contains("Adapter 'c7own'"), () -> "expected the adapter id but got: "
+    Assertions.assertTrue(log.contains("adapter 'c7own'"), () -> "expected the adapter id but got: "
         + log);
     Assertions
         .assertTrue(

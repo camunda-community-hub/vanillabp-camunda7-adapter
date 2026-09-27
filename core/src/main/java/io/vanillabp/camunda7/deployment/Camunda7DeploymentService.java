@@ -2127,9 +2127,9 @@ public class Camunda7DeploymentService implements AdapterDeploymentService<BpmnM
    * <p>
    * EVERY start event of the process is reported, the plain one included: what a start of a
    * workflow means is read from the state of that workflow and not from the kind of its
-   * start event, see {@code DECISIONS.pending/653.md}. The kind travels along, because the
-   * core demands a <code>&#64;WorkflowStartedByBpms</code> method only where the engine
-   * fires the event by itself.
+   * start event, see decision 28 in the repository's DECISIONS.md. The kind travels along,
+   * because the core demands a <code>&#64;WorkflowStartedByBpms</code> method only where
+   * the engine fires the event by itself.
    * <p>
    * One walk for both directions: the core validates the
    * <code>&#64;WorkflowStartedByBpms</code> methods of a deployed process against it, and

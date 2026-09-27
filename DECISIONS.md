@@ -705,13 +705,12 @@ through a bean of the engine and not by asking the engine, because every questio
 embedded engine is a command whose commit wakes the acquisition - a test polling the engine wakes
 the sleep it measures.
 
-### 24. A start is the application's own where the ID already has an aggregate - superseded by `DECISIONS.pending/653.md`
+### 24. A start is the application's own where the ID already has an aggregate - superseded by decision 28
 
 > Superseded. A workflow started past VanillaBP no longer keeps the business key it was started
 > with: the id of a workflow is the id of its workflow aggregate, the application assigns it, and
-> a key VanillaBP did not write is refused. `DECISIONS.pending/653.md` says why and what replaced
-> the parts of this entry which still hold. The entry stays because code and messages pointed at
-> it.
+> a key VanillaBP did not write is refused. Decision 28 says why and what replaced the parts of
+> this entry which still hold. The entry stays because code and messages pointed at it.
 
 On Camunda 7 the business key IS the workflow aggregate's ID. `Camunda7ProcessService` writes the ID
 into the key when the application starts a workflow, and every other part of this adapter reads the
@@ -823,3 +822,90 @@ engine reports.
 `Camunda7ModelledListenerIT` holds a boundary event taking an element away and the method hearing it.
 
 See [Listeners somebody modelled](./README.md#listeners-somebody-modelled).
+
+### 27. An event subprocess does not start a workflow
+
+A workflow starts when the BPMS creates an instance of a BPMN process. At that moment there is no
+workflow aggregate, so VanillaBP asks the application to build one, and every start event the
+engine fires by itself needs a `@WorkflowStartedByBpms` method. That is what this adapter means by
+a start of a workflow.
+
+The start event of an event subprocess is not one. The engine fires it inside a workflow which is
+already running, and that workflow carries the aggregate it was started with. Building one here
+would leave one workflow with two aggregates, and the application would hear that a workflow
+started, long after it did.
+
+So this adapter counts a start event only where the process itself holds it. Walking up to the
+enclosing process is not enough. That walk gives the same answer for a start event at any depth of
+a model. Once every start of a workflow had to be served by a method, no model with an event
+subprocess booted any more.
+
+The rule covers the start event of a plain embedded subprocess as well. BPMN allows only a none
+start event there, and this adapter reports no none start event anyway, so nothing changes for such
+a model. One rule for every nesting is shorter than two.
+
+Two places read a start event and both follow the rule. The deployment reads the BPMN model and
+tells the core which starts a process has. The parse listener sees the scope the engine parses a
+start event in, and the engine draws the same line there: a start event whose scope is no process
+definition becomes a scope start event. So the listener which builds an aggregate goes onto the
+start events of the process and onto no other.
+
+`Camunda7EventSubprocessStartsNoWorkflowTest` holds both halves and the event subprocess still
+taking a running workflow over. Four models of the integration tests carry such an event
+subprocess, and the applications around them boot again.
+See [The start of a workflow](./README.md#the-start-of-a-workflow-and-workflows-which-ended).
+
+### 28. The business key is the name VanillaBP gave the workflow, and only that
+
+The id of a workflow is the id of its workflow aggregate, the application assigns it in the
+`@WorkflowStartedByBpms` method, and nobody else does. On Camunda 7 the BUSINESS KEY is where that
+id is kept. The rule itself and what the core does with it are decision 98 of
+`adapter-platform-integration`.
+
+This supersedes decision 24 of this repository. Decision 24 said the opposite: a workflow somebody
+started past VanillaBP kept the business key it was started with, and the aggregate was built under
+that key so the workflow kept the name its starter was working with. That is no longer true. A key
+VanillaBP did not write is refused, and the message says that VanillaBP names a workflow.
+
+Decision 24 was right about the one thing Camunda 7 can answer - a start is the application's own
+where the id already has an aggregate - and wrong about what to do with a key which names no
+aggregate. Taking such a key over made the starter the one who names the workflow, and from then on
+there were two parties naming workflows. An id is a value of the workflow aggregate like any other,
+and decision 92 of the platform had already handed the aggregate to the application. So the key
+follows the id, not the other way round.
+
+The refusal costs nothing anybody wanted. Somebody who starts a VanillaBP process through
+`startProcessInstanceByKey` with a key of their own gets an incident with a message telling them to
+use `ProcessService` or to leave the key alone, instead of a workflow which quietly carries a name
+the application never chose.
+
+The listener sits on every start event now. Decision 5 says this adapter edits the model it deploys
+and what bounds each edit. The start listener used to go on timer, signal and conditional start
+events. It now goes on every start event the PROCESS itself holds, the plain and the message one
+included. That follows from the rule. Anybody with access to the engine can start any of these
+processes, so the kind of the start event says nothing about who started this instance. The state
+does: a business key whose workflow aggregate exists is a start of the application's own, no key at
+all is a start past VanillaBP, and a key nothing carries is refused. A start event of an event
+subprocess stays out, which is decision 27, because it fires inside a workflow which already runs.
+
+A process this application does not serve is left alone. An embedded engine holds every definition
+deployed against its database, this application's unclaimed processes and another application's
+processes included. The listener sits on the start events of all of them, because the parse
+listener sees a model and not a claim, so it asks before it reports: a process no workflow service
+of this application serves is none of VanillaBP's business and the listener returns. Without that
+question the core would be asked to name a workflow it has no workflow service for, and the engine
+would retry the start into an incident.
+
+What it costs is one execution listener per start event in the parsed process definition, and one
+load of the workflow aggregate per start of a workflow. The listener runs inside the engine's own
+transaction, so the load hits the same persistence context the start is already using, and the
+first task of the workflow reads the same aggregate a moment later anyway.
+
+Two things stay invisible, with open eyes. A key somebody chose which happens to be the id of an
+existing workflow aggregate attaches that instance to it without a word, and nothing on Camunda 7
+can catch that: catching it needs two values naming the instance and Camunda 7 keeps one. And an
+application which deletes a workflow aggregate while its workflow still runs makes the next start
+of that id look like a foreign one. Both were in decision 24 and both still hold.
+
+`Camunda7ForeignStartIT` walks every case against a running engine.
+See [The start of a workflow](./README.md#the-start-of-a-workflow-and-workflows-which-ended).

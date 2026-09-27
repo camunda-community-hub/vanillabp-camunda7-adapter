@@ -27,7 +27,8 @@ public final class Camunda7StartEvents {
    * Which trigger a start event carries, read from the model while the engine parses it.
    * Every start event has an answer, the plain one included: what a start of a workflow
    * MEANS is read from the state of that workflow and not from the kind of its start event,
-   * so the listener hangs on all of them - see {@code DECISIONS.pending/653.md}.
+   * so the listener hangs on all of them - see decision 28 in the repository's
+   * DECISIONS.md.
    *
    * @param startEventElement The start event's XML element as the engine's parser
    *          sees it

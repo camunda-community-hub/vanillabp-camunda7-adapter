@@ -1,0 +1,189 @@
+name: Nightly platform snapshot issue
+# A night which breaks has to be seen. Nobody opens the list of workflow runs in the
+# morning to find out, and a red run scrolls out of sight within a day, so a red night gets
+# a GitHub issue which stays until somebody has dealt with it. That is the shape the
+# Camunda 8 adapter uses for a release line which broke, in release-lines-issue.yaml of
+# that repository.
+#
+# One issue for this nightly, never a second one for the same break: a night which is red
+# again tomorrow comments on the issue it already has. The label and a title which never
+# changes are what make that issue findable again.
+#
+# This is a workflow of its own and not a step of the nightly, for two reasons. Writing an
+# issue needs 'issues: write', which the build itself has no use for. And a night which is
+# green again has to be reported by a run which succeeded, which no step of a failed run
+# can do.
+"on":
+  workflow_run:
+    workflows: ["Nightly against the platform snapshot"]
+    types: [completed]
+permissions:
+  contents: read
+jobs:
+  issue:
+    # The night on main, and a dispatch of the same workflow on main, which is how somebody
+    # checks that a fix worked. A dispatch on a branch says nothing about main, so it says
+    # nothing about an issue of main either.
+    if: >-
+      github.event.workflow_run.head_branch == 'main'
+      && (github.event.workflow_run.event == 'schedule'
+      || github.event.workflow_run.event == 'workflow_dispatch')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      # the jobs, the logs and the artifacts of the run which triggered this one
+      actions: read
+      issues: write
+    steps:
+      - name: Open, comment on or leave alone the issue of the nightly
+        env:
+          GH_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+          GH_REPO: "${{ github.repository }}"
+          RUN_ID: "${{ github.event.workflow_run.id }}"
+          RUN_URL: "${{ github.event.workflow_run.html_url }}"
+          RUN_CONCLUSION: "${{ github.event.workflow_run.conclusion }}"
+          HEAD_SHA: "${{ github.event.workflow_run.head_sha }}"
+          SERVER_URL: "${{ github.server_url }}"
+        run: |
+          set -euo pipefail
+
+          label=nightly-platform-snapshot
+          title="The nightly against the platform snapshot is red"
+
+          case "$RUN_CONCLUSION" in
+            success) state=green ;;
+            failure | timed_out) state=red ;;
+            # cancelled or skipped is somebody stopping the run. It says nothing about the
+            # platform and nothing about this repository.
+            *)
+              echo "The run ended as '${RUN_CONCLUSION}', which proves nothing either way."
+              exit 0 ;;
+          esac
+
+          # The label is how an open issue is found again, so it has to exist before the
+          # first issue carries it. Creating a label which is already there is an error and
+          # not a no-op, and that error is the normal case here.
+          gh label create "$label" --color B60205 \
+            --description "The nightly build against the published platform snapshot broke" \
+            >/dev/null 2>&1 || true
+
+          work=$(mktemp -d)
+
+          number=$(gh issue list --state open --label "$label" --limit 100 \
+            --json number,title \
+            | jq -r --arg t "$title" 'map(select(.title == $t)) | .[0].number // empty')
+
+          # What the run built against, written down by the nightly itself. Without it the
+          # reader of the issue cannot tell a platform break from a break of this
+          # repository, because both are red here and both say '2.0.0-SNAPSHOT'.
+          gh run download "$RUN_ID" --name platform-snapshot --dir "$work/snapshot" \
+            >/dev/null 2>&1 || true
+          snapshot="$work/snapshot/platform-snapshot.md"
+
+          if [ "$state" = "green" ]; then
+            # Only worth saying where an issue is open and the last thing written into it
+            # was red, otherwise every quiet night would add a comment.
+            if [ -z "$number" ]; then
+              echo "The night was green and no issue is open. Nothing to report."
+              exit 0
+            fi
+            last=$(gh issue view "$number" --json body,comments \
+              | jq -r '[.body] + [.comments[].body] | last' \
+              | sed -n 's/.*nightly-platform-snapshot-state: \([a-z]*\).*/\1/p' \
+              | tail -1) || true
+            if [ "${last:-}" != "red" ]; then
+              echo "The night was green and issue ${number} was last told the same."
+              exit 0
+            fi
+            {
+              echo "The nightly build was green again."
+              echo
+              echo "- run: $RUN_URL"
+              echo "- commit: $SERVER_URL/$GH_REPO/commit/$HEAD_SHA"
+              if [ -s "$snapshot" ]; then
+                echo
+                echo "It was built against:"
+                echo
+                cat "$snapshot"
+              fi
+              echo
+              echo "This issue is not closed by that, on purpose. A green night after a red"
+              echo "one can be a fix, and it can be a test which fails one run in four."
+              echo "Whoever merged the fix knows it is one, and closes this."
+              echo
+              echo "<!-- nightly-platform-snapshot-state: green -->"
+            } > "$work/body.md"
+            gh issue comment "$number" --body-file "$work/body.md"
+            exit 0
+          fi
+
+          # Red. What the log of the failed job says, so the issue is worth reading on its
+          # own and not only as a link.
+          job_id=$(gh api --paginate "repos/$GH_REPO/actions/runs/$RUN_ID/jobs" \
+            --jq '.jobs[] | select(.conclusion == "failure") | .id' \
+            | head -1) || true
+          : > "$work/excerpt.md"
+          if [ -n "${job_id:-}" ]; then
+            gh run view --job "$job_id" --log-failed > "$work/job.log" 2>/dev/null || true
+            # every log line carries the job, the step and a timestamp before what was
+            # printed
+            sed -E 's/^[^\t]*\t[^\t]*\t[^ ]+ //' "$work/job.log" > "$work/plain.log" || true
+            # Maven's own summary, without the lines it prints after every failure about the
+            # switches to re-run it with
+            grep -aE '^\[ERROR\]' "$work/plain.log" \
+              | grep -avE '^\[ERROR\][[:space:]]*$|-> \[Help|\[Help [0-9]+\] http|To see the full stack trace|Re-run Maven using|For more information about the errors|After correcting the problems|mvn <args> -rf|See dump files|See /home/runner/' \
+              | head -30 > "$work/excerpt.md" || true
+            if [ ! -s "$work/excerpt.md" ]; then
+              # A job can go red where Maven said nothing at all, for instance in a step
+              # which runs after the build. The ten lines up to the runner's own error are
+              # what that leaves behind, and the tail of the log is not those lines: the
+              # cleanup of the job runs afterwards and prints more.
+              end=$(grep -anF '##[error]' "$work/plain.log" | tail -1 | cut -d: -f1) || true
+              if [ -n "${end:-}" ]; then
+                start=$(( end > 9 ? end - 9 : 1 ))
+                sed -n "${start},${end}p" "$work/plain.log" > "$work/excerpt.md" || true
+              fi
+            fi
+          fi
+
+          {
+            echo "The nightly build against the published platform snapshot failed."
+            echo
+            echo "- run: $RUN_URL"
+            echo "- commit: $SERVER_URL/$GH_REPO/commit/$HEAD_SHA"
+            echo
+            if [ -s "$snapshot" ]; then
+              echo "It was built against:"
+              echo
+              cat "$snapshot"
+            else
+              echo "The run left no note of which platform snapshot it used, so the run"
+              echo "itself is the place to read."
+            fi
+            echo
+            if [ -s "$work/excerpt.md" ]; then
+              echo "What the log says:"
+              echo
+              echo '```'
+              cat "$work/excerpt.md"
+              echo '```'
+            else
+              echo "Nothing in that log is marked as an error, so there is nothing to quote"
+              echo "here. The run itself is the place to read."
+            fi
+            echo
+            echo "The test reports and the application logs of a failed build are attached to"
+            echo "the run as \`test-reports\`."
+            echo
+            echo "The night runs the same command on the same modules a pull request of this"
+            echo "repository runs, so the thing which differs between a red night and a green"
+            echo "pull request of the same commit is what the platform published in between."
+            echo
+            echo "<!-- nightly-platform-snapshot-state: red -->"
+          } > "$work/body.md"
+
+          if [ -n "$number" ]; then
+            gh issue comment "$number" --body-file "$work/body.md"
+          else
+            gh issue create --title "$title" --label "$label" --body-file "$work/body.md"
+          fi

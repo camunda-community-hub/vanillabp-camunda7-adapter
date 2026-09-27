@@ -1522,6 +1522,16 @@ mvn install
 The engine runs embedded on an in-memory database, so the tests need neither Docker nor a network.
 What a pull request needs beyond a green build is in [`CONTRIBUTING.md`](./CONTRIBUTING.md).
 
+A build also runs once a night, without anybody pushing. The workflow *Nightly against the platform
+snapshot* (`.github/workflows/nightly-platform-snapshot.yaml`) builds what a pull request builds,
+with `--update-snapshots`, against whatever the platform published since yesterday, and a red night
+opens an issue labelled `nightly-platform-snapshot`. Without it a platform snapshot can break this
+repository and nobody sees it until the next pull request: on the 26th of September 2026 the
+platform published at 12:19, the last build here had run at 10:15, and the break surfaced a day and
+a half later inside somebody's pull request. The night writes down which platform snapshot it
+resolved, with the timestamp and the build number, so a red night can be read as a break of the
+platform or as a break of this repository.
+
 ## Test coverage
 
 `mvn install` builds one aggregated JaCoCo report per platform (`install`, not

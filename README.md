@@ -382,6 +382,14 @@ of a called process asks for an element of its caller, and this model is the wro
 it. The core is asked by the task definition and by the element id, because a method may name either
 of the two.
 
+The same question is asked about a version the engine still HOLDS, and there the answer travels
+instead of ending anything. Nobody can redraw such a model, so the adapter puts the elements
+without an item into `BpmnTaskSpec#multiInstanceElementsWithoutAnItem` of every task it reads, and
+the core holds them against the methods which still serve that version. What travels is the chain
+of THAT task, outermost first, rather than the elements of the whole process. An adapter which
+does not read the shape answers `null` there and the core asks nothing;
+`Camunda7ItemsOfHeldVersionsTest` reads a held version with an item and one without.
+
 ### Two engines on one database: `table-prefix`
 
 `vanillabp.adapters.<id>.table-prefix` sets Camunda's `databaseTablePrefix`, which is how

@@ -29,9 +29,8 @@ import io.vanillabp.spi.service.BpmsStartTrigger;
  * workflow aggregate exists is the application's own start (or the second delivery of this
  * very listener), an instance carrying no key was started past VanillaBP and its aggregate
  * is built by the application, and an instance carrying a key nothing carries is refused,
- * because VanillaBP names a workflow and nobody else. All of that is
- * {@code DECISIONS.pending/653.md}, which supersedes decision 24 in the repository's
- * DECISIONS.md.
+ * because VanillaBP names a workflow and nobody else. All of that is decision 28 in the
+ * repository's DECISIONS.md, which supersedes decision 24 there.
  * <p>
  * One thing stays invisible, with open eyes: a key somebody chose which happens to be the
  * id of an existing workflow aggregate attaches that instance to it without a word. Nothing

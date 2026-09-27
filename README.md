@@ -1155,8 +1155,9 @@ process whose engine fires a start event by itself - a timer, a signal, a condit
 which has no `@WorkflowStartedByBpms` method ends the boot; a process with only plain or
 message start events needs none until somebody starts it past VanillaBP, and that start is
 refused with the method to write in its message. The reasoning is
-`DECISIONS.pending/653.md`, which supersedes
-[decision 24](./DECISIONS.md#24-a-start-is-the-applications-own-where-the-id-already-has-an-aggregate-superseded-by-decisionspending653md),
+[decision 28](./DECISIONS.md#28-the-business-key-is-the-name-vanillabp-gave-the-workflow-and-only-that),
+which supersedes
+[decision 24](./DECISIONS.md#24-a-start-is-the-applications-own-where-the-id-already-has-an-aggregate---superseded-by-decision-28),
 and `Camunda7ForeignStartIT` walks every case against the engine.
 
 What it costs is one execution listener per start event in the parsed process definition

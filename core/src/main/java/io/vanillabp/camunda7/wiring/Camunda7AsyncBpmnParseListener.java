@@ -221,7 +221,7 @@ public class Camunda7AsyncBpmnParseListener extends AbstractBpmnParseListener {
     }
     // EVERY start event of the process carries the listener, the plain one included: what
     // a start means is read from the state of the workflow and not from the kind of its
-    // start event, see DECISIONS.pending/653.md
+    // start event, see decision 28 in the repository's DECISIONS.md
     final var kind = Camunda7StartEvents.kindOf(startEventElement);
     activity
         .addListener(

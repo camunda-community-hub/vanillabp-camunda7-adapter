@@ -74,7 +74,10 @@ public class Camunda7OldProcessVersionsIT {
 
     final var reported = whatIsReportedWhileBooting(output, "v2");
     assertTrue(reported.contains("'servedForAnUnknownVersion'"), "the unserved task of version 1 is named");
-    assertTrue(reported.contains("still run on version '1'"), "the workflow of version 1 is counted");
+    assertTrue(
+        reported.contains("version '1' of process 'OldProcessVersionsProcess'"),
+        "the finding is about version 1 of that process");
+    assertTrue(reported.contains("still run on this version"), "the workflow of version 1 is counted");
     assertTrue(reported.contains("OldProcessVersionsProcess"), "the process is named");
     assertTrue(reported.contains("outfaded-versions"), "the way out is named");
     // the method kept for version 1 serves its task, so that one is not demanded
@@ -149,7 +152,10 @@ public class Camunda7OldProcessVersionsIT {
     assertTrue(
         reported.contains("'servedForAnUnknownVersion'"),
         "suspending version 1 does not answer what it still needs");
-    assertTrue(reported.contains("still run on version '1'"), "and its workflow is counted as before");
+    assertTrue(
+        reported.contains("version '1' of process 'OldProcessVersionsProcess'"),
+        "the finding is still about version 1");
+    assertTrue(reported.contains("still run on this version"), "and its workflow is counted as before");
 
   }
 
@@ -171,7 +177,7 @@ public class Camunda7OldProcessVersionsIT {
           !reported.contains("served by NO @WorkflowTask method"),
           "nothing is demanded of the suspended version any more");
       assertTrue(
-          !reported.contains("still run on version '1'"),
+          !reported.contains("still run on this version"),
           "and its workflow is not counted either");
       // what the switch costs on the code side: version 1 is not among the versions the
       // check believes the engine holds, so the method kept for it looks dead

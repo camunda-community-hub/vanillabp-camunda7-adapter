@@ -27,7 +27,8 @@ import io.vanillabp.integration.test.utils.SuppressOutputExtension;
  * <code>@WorkflowStartedByBpms</code> method, and the name that method gives becomes the
  * instance's business key. A start which brings a name no workflow aggregate carries is
  * refused. A process without such a method refuses the start and says which method to
- * write. All of it is {@code DECISIONS.pending/653.md}, which supersedes decision 24.
+ * write. All of it is decision 28 in the repository's DECISIONS.md, which supersedes
+ * decision 24.
  */
 @SpringBootTest(classes = TestApplication.class, properties = {
     // own database: contexts are cached and live in parallel - a foreign engine

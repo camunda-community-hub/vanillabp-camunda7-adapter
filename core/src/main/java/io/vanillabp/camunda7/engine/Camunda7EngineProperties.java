@@ -1,8 +1,5 @@
 package io.vanillabp.camunda7.engine;
 
-import lombok.Getter;
-import lombok.Setter;
-
 /**
  * Per-adapter-id engine settings of the Camunda 7 adapter, living at the canonical
  * per-adapter location <code>vanillabp.adapters.&lt;id&gt;.*</code> (contributed to
@@ -58,7 +55,6 @@ import lombok.Setter;
  *       by its own metrics.</li>
  * </ul>
  */
-@Getter
 public class Camunda7EngineProperties {
 
   /**
@@ -69,16 +65,16 @@ public class Camunda7EngineProperties {
 
   }
 
-  @Setter
+  /** What the engine does to its schema on boot. */
   private String databaseSchemaUpdate = "true";
 
-  @Setter
+  /** The engine-wide default history time to live. */
   private String historyTimeToLive = "P180D";
 
-  @Setter
+  /** The name of the datasource this adapter id's engine runs on. */
   private String dataSourceName;
 
-  @Setter
+  /** The prefix of the engine's database tables. */
   private String tablePrefix;
 
   /**
@@ -94,7 +90,6 @@ public class Camunda7EngineProperties {
    * The matching dataformat has to be on the classpath - that dependency and its own
    * settings belong to the application, VanillaBP only names the format.
    */
-  @Setter
   private String serializationFormat;
 
   /**
@@ -111,7 +106,6 @@ public class Camunda7EngineProperties {
    * avoidance mode {@code by-adapter}. Unset (the default) means the
    * workflow module ID is the tenant - VanillaBP 1's behavior.
    */
-  @Setter
   private String tenantId;
 
   /**
@@ -122,7 +116,6 @@ public class Camunda7EngineProperties {
    * two workflow modules address the same process definitions and tasks. Default
    * {@code false}.
    */
-  @Setter
   private boolean acceptUnscopedIdentifiers = false;
 
   /**
@@ -142,7 +135,6 @@ public class Camunda7EngineProperties {
    * There is deliberately no TASK level: that level is keyed by a task DEFINITION, and whether a
    * listener becomes a task at all is what this key decides.
    */
-  @Setter
   private boolean allowListeners = false;
 
   /**
@@ -156,7 +148,6 @@ public class Camunda7EngineProperties {
    * two make no sense apart. An executor which sleeps on a due date and nobody wakes is
    * worse than either half.
    */
-  @Setter
   private boolean sleepUntilSomethingIsDue = false;
 
   /**
@@ -167,8 +158,221 @@ public class Camunda7EngineProperties {
    * engine, which costs a wake-up four times an hour. Metrics are still counted in memory
    * either way, only the writing stops.
    */
-  @Setter
   private Boolean dbMetricsReporting;
+
+  /**
+   * What the engine does to its schema on boot, e.g. <code>true</code>,
+   * <code>false</code> or <code>create-drop</code>.
+   *
+   * @return The configured value, <code>true</code> unless a deployment says otherwise
+   */
+  public String getDatabaseSchemaUpdate() {
+    return databaseSchemaUpdate;
+  }
+
+  /**
+   * What the engine does to its schema on boot.
+   *
+   * @param databaseSchemaUpdate An engine value, e.g. <code>create-drop</code>
+   */
+  public void setDatabaseSchemaUpdate(
+      final String databaseSchemaUpdate) {
+    this.databaseSchemaUpdate = databaseSchemaUpdate;
+  }
+
+  /**
+   * The engine-wide default history time to live, which Camunda 7.24 asks every
+   * deployed process for.
+   *
+   * @return The configured duration, <code>P180D</code> unless a deployment says otherwise
+   */
+  public String getHistoryTimeToLive() {
+    return historyTimeToLive;
+  }
+
+  /**
+   * The engine-wide default history time to live.
+   *
+   * @param historyTimeToLive An ISO-8601 duration, e.g. <code>P180D</code>
+   */
+  public void setHistoryTimeToLive(
+      final String historyTimeToLive) {
+    this.historyTimeToLive = historyTimeToLive;
+  }
+
+  /**
+   * The name of the datasource this adapter id's engine runs on. Unset means the
+   * application's default one, which is what lets the engine join the caller's
+   * transaction.
+   *
+   * @return The configured name, <code>null</code> for the application's default datasource
+   */
+  public String getDataSourceName() {
+    return dataSourceName;
+  }
+
+  /**
+   * The name of the datasource this adapter id's engine runs on.
+   *
+   * @param dataSourceName The name of a datasource the application provides
+   */
+  public void setDataSourceName(
+      final String dataSourceName) {
+    this.dataSourceName = dataSourceName;
+  }
+
+  /**
+   * The prefix of the engine's database tables, which lets two adapter ids run
+   * separate engines on one datasource.
+   *
+   * @return The configured prefix, <code>null</code> for the plain table names
+   */
+  public String getTablePrefix() {
+    return tablePrefix;
+  }
+
+  /**
+   * The prefix of the engine's database tables.
+   *
+   * @param tablePrefix The prefix the tables of this engine carry
+   */
+  public void setTablePrefix(
+      final String tablePrefix) {
+    this.tablePrefix = tablePrefix;
+  }
+
+  /**
+   * The serialization format of a shared value the engine has no variable type for,
+   * e.g. <code>application/json</code>.
+   *
+   * @return The configured format, <code>null</code> where the engine's own default applies
+   */
+  public String getSerializationFormat() {
+    return serializationFormat;
+  }
+
+  /**
+   * The serialization format of a shared value the engine has no variable type for.
+   *
+   * @param serializationFormat A format the application brought a dataformat for
+   */
+  public void setSerializationFormat(
+      final String serializationFormat) {
+    this.serializationFormat = serializationFormat;
+  }
+
+  /**
+   * The Camunda engine plugins of this adapter id, keyed by the name the application
+   * gave the section.
+   *
+   * @return The plugin sections, empty where there are none
+   */
+  public java.util.Map<String, Camunda7EnginePluginProperties> getEnginePlugins() {
+    return enginePlugins;
+  }
+
+  /**
+   * The Camunda tenant a workflow module is deployed to under the name-clash-avoidance
+   * mode {@code by-adapter}.
+   *
+   * @return The configured tenant, <code>null</code> where the workflow module id names it
+   */
+  public String getTenantId() {
+    return tenantId;
+  }
+
+  /**
+   * The Camunda tenant a workflow module is deployed to.
+   *
+   * @param tenantId The name of the tenant
+   */
+  public void setTenantId(
+      final String tenantId) {
+    this.tenantId = tenantId;
+  }
+
+  /**
+   * Whether the application states that its identifiers are unique across all of its
+   * workflow modules, which silences the WARN of the mode {@code none}.
+   *
+   * @return Whether the application acknowledged unscoped identifiers
+   */
+  public boolean isAcceptUnscopedIdentifiers() {
+    return acceptUnscopedIdentifiers;
+  }
+
+  /**
+   * Whether the application states that its identifiers are unique across all of its
+   * workflow modules.
+   *
+   * @param acceptUnscopedIdentifiers The acknowledgement
+   */
+  public void setAcceptUnscopedIdentifiers(
+      final boolean acceptUnscopedIdentifiers) {
+    this.acceptUnscopedIdentifiers = acceptUnscopedIdentifiers;
+  }
+
+  /**
+   * Whether the execution listeners somebody modelled are served by
+   * <code>@WorkflowTask</code> methods. The adapter-level base of a resolution over
+   * three levels.
+   *
+   * @return Whether modelled listeners become tasks for this adapter id
+   */
+  public boolean isAllowListeners() {
+    return allowListeners;
+  }
+
+  /**
+   * Whether the execution listeners somebody modelled are served by
+   * <code>@WorkflowTask</code> methods.
+   *
+   * @param allowListeners Whether modelled listeners become tasks
+   */
+  public void setAllowListeners(
+      final boolean allowListeners) {
+    this.allowListeners = allowListeners;
+  }
+
+  /**
+   * Whether this adapter id's job executor waits for the next job to fall due instead
+   * of polling for it.
+   *
+   * @return Whether the job executor waits for a due date
+   */
+  public boolean isSleepUntilSomethingIsDue() {
+    return sleepUntilSomethingIsDue;
+  }
+
+  /**
+   * Whether this adapter id's job executor waits for the next job to fall due.
+   *
+   * @param sleepUntilSomethingIsDue Whether the job executor waits for a due date
+   */
+  public void setSleepUntilSomethingIsDue(
+      final boolean sleepUntilSomethingIsDue) {
+    this.sleepUntilSomethingIsDue = sleepUntilSomethingIsDue;
+  }
+
+  /**
+   * Whether the engine's metrics reporter writes its counters to the database.
+   * <code>null</code> follows {@link #sleepUntilSomethingIsDue}.
+   *
+   * @return The configured answer, <code>null</code> to follow the setting above
+   */
+  public Boolean getDbMetricsReporting() {
+    return dbMetricsReporting;
+  }
+
+  /**
+   * Whether the engine's metrics reporter writes its counters to the database.
+   *
+   * @param dbMetricsReporting The answer, <code>null</code> to follow the setting above
+   */
+  public void setDbMetricsReporting(
+      final Boolean dbMetricsReporting) {
+    this.dbMetricsReporting = dbMetricsReporting;
+  }
 
   /**
    * Whether this engine's job executor waits for the next job instead of polling for it.

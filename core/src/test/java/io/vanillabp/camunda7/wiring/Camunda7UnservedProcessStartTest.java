@@ -26,7 +26,7 @@ import io.vanillabp.spi.service.BpmsStartTrigger;
  * An embedded engine holds whatever was deployed against its database: the processes of
  * this application, the ones it deploys without serving them, and another application's on
  * a shared database. The core can only answer for the first kind, so the listener asks
- * before it reports - see {@code DECISIONS.pending/653.md}.
+ * before it reports - see decision 28 in the repository's DECISIONS.md.
  */
 @ExtendWith(SuppressOutputExtension.class)
 public class Camunda7UnservedProcessStartTest {

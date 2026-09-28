@@ -31,6 +31,11 @@ import io.vanillabp.integration.test.utils.SuppressOutputExtension;
  * Boot resets the logging context while it starts, which takes an appender attached
  * beforehand with it. The engine keeps its deployments in the database of this class,
  * so the boots build on each other and therefore run in order.
+ * <p>
+ * Every sentence a case here asks NOT to be in the output is asserted POSITIVELY by
+ * another case of this class. A negative assertion on a text goes quiet the moment the
+ * text is reworded, and nothing says so; the positive one beside it fails, and whoever
+ * reworded the message is sent to both.
  */
 @ExtendWith(SuppressOutputExtension.class)
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
@@ -73,7 +78,15 @@ public class Camunda7OldProcessVersionsIT {
       final CapturedOutput output) {
 
     final var reported = whatIsReportedWhileBooting(output, "v2");
-    assertTrue(reported.contains("'servedForAnUnknownVersion'"), "the unserved task of version 1 is named");
+    // this case carries the positive side of every sentence the cases below ask NOT to be
+    // there. A negative assertion on a text stops checking the moment the text is
+    // reworded, and it says nothing about it; the positive next to it goes red instead
+    assertTrue(
+        reported.contains("definition(s) 'servedForAnUnknownVersion'"),
+        "the unserved task of version 1 is named");
+    assertTrue(
+        reported.contains("served by NO @WorkflowTask method"),
+        "and the finding says what is missing for it");
     assertTrue(
         reported.contains("version '1' of process 'OldProcessVersionsProcess'"),
         "the finding is about version 1 of that process");

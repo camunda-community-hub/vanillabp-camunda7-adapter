@@ -149,8 +149,10 @@ public class Camunda7OldProcessVersionsTest {
         reported.contains("OldProcessVersionsProcess"),
         () -> "the report has to name the BPMN process: "
             + reported);
+    // asserted in the shape the case below asks NOT to be there, so rewording that
+    // sentence fails here rather than making the negative assertion go quiet
     assertTrue(
-        reported.contains("servedForAnUnknownVersion"),
+        reported.contains("definition(s) 'servedForAnUnknownVersion'"),
         () -> "the report has to name the task definition nobody serves for that version: "
             + reported);
     assertTrue(

@@ -1240,7 +1240,8 @@ measured before the message was written: `Camunda7CompensationTokensTest` runs a
 records that both compensating executions exist while only one handler is inside its delegate,
 that the `asyncBefore` this adapter sets on every service task never turns a handler into a job,
 and that the order the handlers run in is not stable. Why the report is made all the same is in
-the decision log. A version the engine still holds carries its compensation as plain element ids
+[decision 29](./DECISIONS.md#29-compensation-is-reported-although-this-engine-starts-the-handlers-one-after-the-other).
+A version the engine still holds carries its compensation as plain element ids
 among the others, because the shaped message belongs to the model somebody can still redraw.
 
 ### A process id which is only declared

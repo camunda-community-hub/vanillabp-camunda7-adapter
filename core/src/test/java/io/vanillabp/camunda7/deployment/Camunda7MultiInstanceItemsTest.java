@@ -12,7 +12,6 @@ import java.io.ByteArrayInputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import org.camunda.bpm.model.bpmn.Bpmn;
 import org.camunda.bpm.model.bpmn.BpmnModelInstance;
@@ -245,18 +244,53 @@ public class Camunda7MultiInstanceItemsTest {
   }
 
   @Test
-  @DisplayName("The elements without an item are read per process, and another process' never leak in")
-  public void theElementsAreReadPerProcess() {
+  @DisplayName("An element of another branch of the same process is no finding")
+  public void anElementOfAnotherBranchIsNoFinding() {
 
+    assertDoesNotThrow(
+        () -> deploy(
+            aCoreWantingTheItemOf(Map.of("checkCredit", List.of("Subprocess_otherRounds"))),
+            model(
+                """
+                        <bpmn:subProcess id="Subprocess_rounds">
+                          <bpmn:multiInstanceLoopCharacteristics camunda:collection="${applications}" camunda:elementVariable="application">
+                            <bpmn:loopCardinality>3</bpmn:loopCardinality>
+                          </bpmn:multiInstanceLoopCharacteristics>
+                          <bpmn:serviceTask id="Activity_check" camunda:delegateExpression="${checkCredit}" />
+                        </bpmn:subProcess>
+                        <bpmn:subProcess id="Subprocess_otherRounds">
+                          <bpmn:multiInstanceLoopCharacteristics>
+                            <bpmn:loopCardinality>2</bpmn:loopCardinality>
+                          </bpmn:multiInstanceLoopCharacteristics>
+                          <bpmn:serviceTask id="Activity_rate" camunda:delegateExpression="${rateCredit}" />
+                        </bpmn:subProcess>
+                    """)),
+        "the handler runs inside 'Subprocess_rounds' and the item of a branch it never "
+            + "enters cannot reach it, so the model this boot brings is not the place to "
+            + "refuse anything");
+
+  }
+
+  @Test
+  @DisplayName("The chain of a task carries the enclosing elements, outermost first")
+  public void theChainOfATaskIsRead() {
+
+    final var counting = model(COUNTING_SUBPROCESS);
     assertEquals(
-        Set.of("Subprocess_rounds"),
-        Camunda7MultiInstanceItems.elementsWithoutAnItem(model(COUNTING_SUBPROCESS), PROCESS));
+        List.of("Subprocess_rounds"),
+        Camunda7MultiInstanceItems
+            .elementsWithoutAnItemAround(counting.getModelElementById("Activity_check")));
+    final var collecting = model(COLLECTING_SUBPROCESS);
     assertEquals(
-        Set.of(),
-        Camunda7MultiInstanceItems.elementsWithoutAnItem(model(COLLECTING_SUBPROCESS), PROCESS));
+        List.of(),
+        Camunda7MultiInstanceItems
+            .elementsWithoutAnItemAround(collecting.getModelElementById("Activity_check")));
     assertEquals(
-        Set.of("Subprocess_ofTheOtherProcess"),
-        Camunda7MultiInstanceItems.elementsWithoutAnItem(model(COUNTING_SUBPROCESS), "OtherProcess"));
+        List.of(),
+        Camunda7MultiInstanceItems
+            .elementsWithoutAnItemAround(counting.getModelElementById("Subprocess_ofTheOtherProcess")
+                .getParentElement()),
+        "a process is no iteration, so the chain of anything ends there");
 
   }
 

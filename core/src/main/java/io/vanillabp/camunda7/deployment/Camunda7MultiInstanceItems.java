@@ -1,12 +1,9 @@
 package io.vanillabp.camunda7.deployment;
 
 import java.util.Collection;
-import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Set;
 import java.util.stream.Collectors;
 
-import org.camunda.bpm.model.bpmn.BpmnModelInstance;
 import org.camunda.bpm.model.bpmn.instance.Activity;
 import org.camunda.bpm.model.bpmn.instance.MultiInstanceLoopCharacteristics;
 
@@ -35,47 +32,27 @@ public final class Camunda7MultiInstanceItems {
   }
 
   /**
-   * The IDs of the multi-instance elements of the given BPMN process whose characteristics
-   * name no <code>camunda:elementVariable</code>.
-   *
-   * @param model The BPMN model
-   * @param bpmnProcessId The process' ID as the model knows it (the SCOPED ID)
-   * @return The element IDs, possibly empty
-   */
-  public static Set<String> elementsWithoutAnItem(
-      final BpmnModelInstance model,
-      final String bpmnProcessId) {
-
-    return model
-        .getModelElementsByType(Activity.class)
-        .stream()
-        .filter(activity -> bpmnProcessId.equals(Camunda7DeploymentService.owningProcessId(activity)))
-        .filter(activity -> activity.getLoopCharacteristics() instanceof MultiInstanceLoopCharacteristics)
-        .filter(activity -> Camunda7MultiInstances
-            .elementVariableOf((MultiInstanceLoopCharacteristics) activity.getLoopCharacteristics()) == null)
-        .map(Activity::getId)
-        .collect(Collectors.toCollection(LinkedHashSet::new));
-
-  }
-
-  /**
    * The IDs of the multi-instance elements ENCLOSING the given BPMN element which name no
    * <code>camunda:elementVariable</code>, outermost first.
    * <p>
-   * This is the chain of one task rather than the set of the whole process, which is what
-   * the core is told about a task of a version the engine still holds: the question there is
-   * which rounds THIS task iterates in without being handed their value. A level a CALLER
-   * contributes is not in this model, and the core knows that an element the model does not
-   * carry belongs to a caller.
+   * The chain of ONE element, which is the only reading of the question that holds: a
+   * handler is handed the item of the rounds its own element runs in, and an element of
+   * another branch never reaches it whatever that element names. Reading the whole process
+   * instead would refuse a model which is right, and it is the reading Camunda 8 has always
+   * had.
+   * <p>
+   * A level a CALLER contributes is not in this model, and the core knows that an element
+   * the model does not carry belongs to a caller.
    * <p>
    * The element itself is part of the chain when it is multi-instance, which is the usual
    * case of a multi-instance service task.
    *
-   * @param element The BPMN element a handler serves
+   * @param element The BPMN element a handler serves, or <code>null</code> where the model
+   *          carries no element under that id
    * @return The element IDs, outermost first, possibly empty
    */
   public static List<String> elementsWithoutAnItemAround(
-      final org.camunda.bpm.model.bpmn.instance.FlowElement element) {
+      final org.camunda.bpm.model.xml.instance.ModelElementInstance element) {
 
     final var innermostFirst = new java.util.LinkedList<String>();
     org.camunda.bpm.model.xml.instance.ModelElementInstance current = element;

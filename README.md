@@ -365,12 +365,17 @@ out. The item of an iteration is the variable named by `camunda:elementVariable`
 multi-instance element whose model names none, a cardinality-based one above all, has no item to
 report. The index and the total are there either way.
 
-`Camunda7MultiInstanceItems` joins the two halves of that while `wireBpmn` runs. This adapter reads
-the model and collects the multi-instance elements of the process which name no
+`Camunda7MultiInstanceItems` joins the two halves of that while `wireBpmn` runs. Per task, this
+adapter walks the chain of multi-instance elements ENCLOSING it and keeps the ones which name no
 `camunda:elementVariable`. The core answers `WorkflowTaskWiring#multiInstanceElementNames` for every
 task wired here, which is the element ids the methods serving it declare `@MultiInstanceElement`
 for. Where the two meet, the boot ends with a message naming the task, the element, the attribute
 and the two ways out.
+
+The chain and not the whole process, because a handler is handed the item of the rounds its own
+element runs in and of nothing else: an element in another branch never reaches it, whatever that
+element names, so refusing over such a pair would end the boot of a model which is right. This
+adapter read the process until wave 118 and Camunda 8 read the chain from the start.
 
 Neither half alone would do. An element which iterates a number of times is a model somebody meant
 to write, and so is a handler which reads the index and the total only; refusing either would end
@@ -383,12 +388,13 @@ it. The core is asked by the task definition and by the element id, because a me
 of the two.
 
 The same question is asked about a version the engine still HOLDS, and there the answer travels
-instead of ending anything. Nobody can redraw such a model, so the adapter puts the elements
-without an item into `BpmnTaskSpec#multiInstanceElementsWithoutAnItem` of every task it reads, and
-the core holds them against the methods which still serve that version. What travels is the chain
-of THAT task, outermost first, rather than the elements of the whole process. An adapter which
-does not read the shape answers `null` there and the core asks nothing;
-`Camunda7ItemsOfHeldVersionsTest` reads a held version with an item and one without.
+instead of ending anything. Nobody can redraw such a model, so the adapter puts the chain of every
+task it reads, outermost first, into `BpmnTaskSpec#multiInstanceElementsWithoutAnItem`, and the core
+holds it against the methods which still serve that version. A modelled listener carries its chain
+too: a listener method reads its item out of the same iteration a task's method does. An adapter
+which does not read the shape answers `null` there and the core asks nothing;
+`Camunda7ItemsOfHeldVersionsTest` reads a held version with an item, one without and one whose
+listener sits inside a round that names none.
 
 ### Two engines on one database: `table-prefix`
 

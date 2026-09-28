@@ -772,7 +772,7 @@ public class Camunda7DeploymentService implements AdapterDeploymentService<BpmnM
     // why. Only this adapter reads the model and only the core scans the handlers, so
     // this is the one place the two halves meet
     refuseHandlersWantingAnItemTheModelHasNot(
-        workflowModuleId, bpmnProcessId, scopedBpmnProcessId, model, connectables);
+        workflowModuleId, bpmnProcessId, model, connectables);
 
     connectables.forEach(taskRegistry::register);
 
@@ -1054,7 +1054,10 @@ public class Camunda7DeploymentService implements AdapterDeploymentService<BpmnM
     // a version the engine still holds carries its compensation flat, as element ids among
     // the others. The shaped report belongs to the model this boot deploys, which is the one
     // a developer can still redraw; for an older version the fact that its workflows can hold
-    // two tokens is what there is to say
+    // two tokens is what there is to say. Carrying the shape here as well would take a second
+    // method on the version catalog - the flat list has no room for which throw event starts
+    // which handlers - and nothing an old version could answer would change what a developer
+    // does about it
     Camunda7ConcurrentTokens
         .compensationOf(model, scopedBpmnProcessId)
         .stream()
@@ -1197,6 +1200,12 @@ public class Camunda7DeploymentService implements AdapterDeploymentService<BpmnM
    * Ends the deployment where a <code>&#64;WorkflowTask</code> method wants the item of a
    * multi-instance element this model never names one for.
    * <p>
+   * Judged per task, over the chain of iterations ENCLOSING it. A handler is handed the item
+   * of the rounds its own element runs in, so an element of another branch of the same
+   * process is no finding here: that item never reaches this handler, whatever the element
+   * names. Reading the whole process instead - which this adapter did until wave 118 - ends
+   * the boot over a model which is right, and Camunda 8 has read the chain from the start.
+   * <p>
    * Only elements of THIS model are judged. The multi-instance chain crosses a call
    * activity, so a task of a called process asks for an element of its caller, and this
    * model is the wrong place to look for that element. An id nothing here knows is
@@ -1213,16 +1222,16 @@ public class Camunda7DeploymentService implements AdapterDeploymentService<BpmnM
   private void refuseHandlersWantingAnItemTheModelHasNot(
       final String workflowModuleId,
       final String bpmnProcessId,
-      final String scopedBpmnProcessId,
       final BpmnModelInstance model,
       final List<Camunda7TaskConnectable> connectables) {
 
-    final var withoutAnItem = Camunda7MultiInstanceItems.elementsWithoutAnItem(model, scopedBpmnProcessId);
-    if (withoutAnItem.isEmpty()) {
-      return;
-    }
     final var findings = new LinkedList<Camunda7MultiInstanceItems.Finding>();
     for (final var connectable : connectables) {
+      final var withoutAnItem = Camunda7MultiInstanceItems
+          .elementsWithoutAnItemAround(model.getModelElementById(connectable.elementId()));
+      if (withoutAnItem.isEmpty()) {
+        continue;
+      }
       final var wanted = new java.util.LinkedHashSet<String>();
       wanted
           .addAll(workflowTaskWiring
@@ -1484,7 +1493,15 @@ public class Camunda7DeploymentService implements AdapterDeploymentService<BpmnM
     }
     served
         .forEach(listener -> {
-          specs.add(new BpmnTaskSpec(listener.elementId(), listener.taskDefinition()));
+          // the rounds the listener's element runs in without being handed their value: the
+          // core warns about a method reading that item on a version the engine still holds,
+          // and a listener method reads it the same way a task's method does. Read off the
+          // element rather than passed along with the listener, because the collection above
+          // reads the BPMN for the id and the id is all it needs
+          specs
+              .add(new BpmnTaskSpec(
+                  listener.elementId(), listener.taskDefinition(), false, null, Camunda7MultiInstanceItems
+                      .elementsWithoutAnItemAround(model.getModelElementById(listener.elementId()))));
           if (context != null) {
             context.recordModelledListener(listener);
           }

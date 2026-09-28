@@ -144,16 +144,26 @@ public final class Camunda7Scoping {
         .forEach(callActivity -> {
           final var calledElement = callActivity.getCalledElement();
           if ((calledElement == null) || calledElement.isBlank()) {
-            return; // addressed by an expression - the application owns that string
+            return; // nothing is addressed, so there is nothing to rewrite
           }
+          // an expression gets the prefix written in FRONT of it, on purpose. Camunda 7
+          // evaluates this attribute as one expression, so '${processToCall}' becomes
+          // 'loan-approval__${processToCall}' and the engine resolves the prefixed id of
+          // whatever the expression yields. That is the id this module's processes are
+          // deployed under, so a process of this module is still found.
+          // Camunda7CallActivities skips an expression instead, and that difference is
+          // meant: it has to ask the core whether the called process shares the workflow
+          // aggregate, and the core can only answer about a process it knows by name
           callActivity.setCalledElement(
               scoping.scopedProcessId(workflowModuleId, calledElement, adapterId));
         });
 
     // a business rule task addresses a decision BY ID, and the decisions this module
     // deploys were renamed the same way while their files were read. An id given as an
-    // expression is the application's own string and stays untouched, like a call
-    // activity's
+    // expression is left exactly as the application wrote it, which is NOT what happens to
+    // the called element of a call activity: that one gets the prefix written in front of
+    // the expression. So a decision named by an expression resolves to the plain id while
+    // the decision this module deployed carries the prefix, and the engine finds nothing
     model
         .getModelElementsByType(BusinessRuleTask.class)
         .forEach(businessRuleTask -> {

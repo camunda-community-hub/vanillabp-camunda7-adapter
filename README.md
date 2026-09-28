@@ -854,10 +854,13 @@ process and decision together. A business rule task binding its decision to the 
 Under `use-prefix` the decision ids are rewritten like the process ids, and the
 `camunda:decisionRef` of the business rule tasks is rewritten with them, so both sides name
 the same string (`Camunda7ScopingTest#aBusinessRuleTaskFindsItsRenamedDecision`). A
-`decisionRef` given as an expression is the application's own string and stays untouched,
-like a call activity's `calledElement`. What this mode cannot do is follow a reference to a
-decision the module does not deploy: that one is renamed here and not in the engine. Deploy
-the decision with the module, or keep the tenant isolation of `by-adapter`.
+`decisionRef` given as an expression is left exactly as the application wrote it. A call
+activity's `calledElement` is NOT: there the prefix is written in front of the expression,
+because Camunda 7 evaluates that attribute as one expression and the prefixed id is the one
+the engine holds (`Camunda7ScopingTest#callActivityByExpressionStaysEvaluable`). What this
+mode cannot do is follow a reference to a decision the module does not deploy: that one is
+renamed here and not in the engine. Deploy the decision with the module, or keep the tenant
+isolation of `by-adapter`.
 
 ## Keeping workflow modules apart
 
@@ -1482,9 +1485,10 @@ from the embedded engine: `RepositoryService` (every deployed version incl. its 
 `HistoryService` (instance timeline, incidents). Both are cheap local queries - there is
 neither an eventual-consistency lag nor an application-version boundary.
 
-- The workflow is addressed by **business key** (aggregate ID) + **tenant** (workflow module);
-  the adapter-native process definition id is Camunda's own (`MyProcess:1:8a9c…`), so the exact
-  version an instance runs on is reported.
+- The workflow is addressed by **business key** (aggregate ID) plus the scope its workflow
+  module is deployed in - a tenant named after the module under `by-adapter`, no tenant at all
+  under the other two modes. The adapter-native process definition id is Camunda's own
+  (`MyProcess:1:8a9c…`), so the exact version an instance runs on is reported.
 - `getProcessDefinitions` additionally reports the definitions the process' **call activities**
   would call next (latest deployed version of the called process id in the same tenant);
   call activities addressing their process by expression are skipped (only known at runtime).

@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -17,6 +18,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import io.vanillabp.camunda7.processservice.Camunda7ProcessService;
+import io.vanillabp.integration.test.utils.CapturedOutput;
 import io.vanillabp.integration.test.utils.SuppressOutputExtension;
 import io.vanillabp.spi.process.ProcessService;
 
@@ -112,6 +114,37 @@ public class Camunda7StartWorkflowIT {
     });
 
     assertNotNull(aggregateId);
+
+  }
+
+  @Test
+  @DisplayName("The start reports the tenant of this mode and nothing about a prefix")
+  public void theStartReportsTheTenantOfThisMode(
+      final CapturedOutput output) {
+
+    final var alreadyLogged = output.getAll().length();
+
+    final var aggregateId = transactionTemplate.execute(status -> {
+
+      final var aggregate = new TestAggregate();
+      aggregate.setContent("reported-start");
+      final var saved = aggregateRepository.save(aggregate);
+
+      camunda7ProcessService.startProcessInstance(MODULE_ID, BPMN_PROCESS_ID, saved.getId());
+
+      return saved.getId();
+
+    });
+
+    final var reported = output.getAll().substring(alreadyLogged);
+    assertTrue(
+        reported
+            .contains(
+                "started workflow '%s' of workflow module '%s' (tenant '%s', business key '%s')"
+                    .formatted(BPMN_PROCESS_ID, MODULE_ID, MODULE_ID, aggregateId)),
+        () -> "'by-adapter' deploys into a tenant named after the workflow module, so the start has "
+            + "to name that tenant and no second process id: "
+            + reported);
 
   }
 

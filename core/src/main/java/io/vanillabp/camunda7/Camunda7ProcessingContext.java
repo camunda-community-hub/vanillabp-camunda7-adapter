@@ -15,10 +15,12 @@ import lombok.Getter;
  * {@link io.vanillabp.camunda7.deployment.Camunda7DeploymentService#deployResources(String, Camunda7ProcessingContext)}.
  * <p>
  * It collects the parsed BPMN models and the module's decision tables, to be deployed as
- * a single Camunda 7 deployment (using the workflow module ID as the Camunda tenant ID). Models are keyed by their
- * BPMN file name so that a file containing several executable processes contributes its
- * model only once (the deployment pipeline calls {@code prepareBpmn} once per executable
- * process, all sharing the same file-level model instance).
+ * a single Camunda 7 deployment. The module's name-clash-avoidance mode decides whether
+ * that deployment goes into a tenant named after the workflow module. Models are keyed by
+ * their BPMN file name so that a file containing several
+ * executable processes contributes its model only once (the deployment pipeline calls
+ * {@code prepareBpmn} once per executable process, all sharing the same file-level model
+ * instance).
  */
 @Getter
 public class Camunda7ProcessingContext {

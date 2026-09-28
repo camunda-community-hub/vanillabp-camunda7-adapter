@@ -772,7 +772,7 @@ public class Camunda7DeploymentService implements AdapterDeploymentService<BpmnM
     // why. Only this adapter reads the model and only the core scans the handlers, so
     // this is the one place the two halves meet
     refuseHandlersWantingAnItemTheModelHasNot(
-        workflowModuleId, bpmnProcessId, scopedBpmnProcessId, model, connectables);
+        workflowModuleId, bpmnProcessId, model, connectables);
 
     connectables.forEach(taskRegistry::register);
 
@@ -825,6 +825,12 @@ public class Camunda7DeploymentService implements AdapterDeploymentService<BpmnM
     // called and nothing was logged. The same is asked for a declared id in
     // wireTheVersionsHeldUnder, where no model of this boot passes by
     warnAboutUnservedWorkflowEndedHandlers(workflowModuleId, bpmnProcessId);
+
+    // Everything VanillaBP scopes is scoped per workflow module, a BPMN error code among
+    // it. A call activity which sends this engine into another tenant calls a process of
+    // another module, and the error that process raises then carries the other module's
+    // prefix while the boundary event here waits for this one's
+    warnAboutCallActivitiesLeavingTheWorkflowModule(workflowModuleId, bpmnProcessId, scopedBpmnProcessId, model);
 
     wireBpmsInitiatedStarts(workflowModuleId, bpmnProcessId, scopedBpmnProcessId, model);
 
@@ -1054,7 +1060,10 @@ public class Camunda7DeploymentService implements AdapterDeploymentService<BpmnM
     // a version the engine still holds carries its compensation flat, as element ids among
     // the others. The shaped report belongs to the model this boot deploys, which is the one
     // a developer can still redraw; for an older version the fact that its workflows can hold
-    // two tokens is what there is to say
+    // two tokens is what there is to say. Carrying the shape here as well would take a second
+    // method on the version catalog - the flat list has no room for which throw event starts
+    // which handlers - and nothing an old version could answer would change what a developer
+    // does about it
     Camunda7ConcurrentTokens
         .compensationOf(model, scopedBpmnProcessId)
         .stream()
@@ -1197,6 +1206,12 @@ public class Camunda7DeploymentService implements AdapterDeploymentService<BpmnM
    * Ends the deployment where a <code>&#64;WorkflowTask</code> method wants the item of a
    * multi-instance element this model never names one for.
    * <p>
+   * Judged per task, over the chain of iterations ENCLOSING it. A handler is handed the item
+   * of the rounds its own element runs in, so an element of another branch of the same
+   * process is no finding here: that item never reaches this handler, whatever the element
+   * names. Reading the whole process instead - which this adapter did until wave 118 - ends
+   * the boot over a model which is right, and Camunda 8 has read the chain from the start.
+   * <p>
    * Only elements of THIS model are judged. The multi-instance chain crosses a call
    * activity, so a task of a called process asks for an element of its caller, and this
    * model is the wrong place to look for that element. An id nothing here knows is
@@ -1213,16 +1228,16 @@ public class Camunda7DeploymentService implements AdapterDeploymentService<BpmnM
   private void refuseHandlersWantingAnItemTheModelHasNot(
       final String workflowModuleId,
       final String bpmnProcessId,
-      final String scopedBpmnProcessId,
       final BpmnModelInstance model,
       final List<Camunda7TaskConnectable> connectables) {
 
-    final var withoutAnItem = Camunda7MultiInstanceItems.elementsWithoutAnItem(model, scopedBpmnProcessId);
-    if (withoutAnItem.isEmpty()) {
-      return;
-    }
     final var findings = new LinkedList<Camunda7MultiInstanceItems.Finding>();
     for (final var connectable : connectables) {
+      final var withoutAnItem = Camunda7MultiInstanceItems
+          .elementsWithoutAnItemAround(model.getModelElementById(connectable.elementId()));
+      if (withoutAnItem.isEmpty()) {
+        continue;
+      }
       final var wanted = new java.util.LinkedHashSet<String>();
       wanted
           .addAll(workflowTaskWiring
@@ -1484,7 +1499,15 @@ public class Camunda7DeploymentService implements AdapterDeploymentService<BpmnM
     }
     served
         .forEach(listener -> {
-          specs.add(new BpmnTaskSpec(listener.elementId(), listener.taskDefinition()));
+          // the rounds the listener's element runs in without being handed their value: the
+          // core warns about a method reading that item on a version the engine still holds,
+          // and a listener method reads it the same way a task's method does. Read off the
+          // element rather than passed along with the listener, because the collection above
+          // reads the BPMN for the id and the id is all it needs
+          specs
+              .add(new BpmnTaskSpec(
+                  listener.elementId(), listener.taskDefinition(), false, null, Camunda7MultiInstanceItems
+                      .elementsWithoutAnItemAround(model.getModelElementById(listener.elementId()))));
           if (context != null) {
             context.recordModelledListener(listener);
           }
@@ -1808,6 +1831,58 @@ public class Camunda7DeploymentService implements AdapterDeploymentService<BpmnM
                 path,
                 origins.get(path),
                 verdict));
+
+  }
+
+  /**
+   * Says where a call activity of this model calls a process of ANOTHER workflow module, and
+   * what that costs a BPMN error on its way back.
+   * <p>
+   * A warning and not a refusal: such a call runs, and a called process which raises no BPMN
+   * error is a model somebody may well have meant. What cannot be left silent is the error,
+   * because the code is composed from the module of the process which raises it and the
+   * catcher looks for the module of the process which waits - two different prefixes, and
+   * the engine answers with an incident in the called workflow rather than with a word about
+   * either.
+   * <p>
+   * The code is not bent to fit instead. A code which travels between modules would have to
+   * be composed from the CALLER's module, which is a second rule for the same identifier,
+   * and both processes would carry a name neither of them asked for. Saying it at the boot,
+   * where somebody can still model the error differently, costs nothing and hides nothing.
+   *
+   * @param workflowModuleId The workflow module ID
+   * @param bpmnProcessId The PLAIN BPMN process ID
+   * @param scopedBpmnProcessId The BPMN process ID as the model spells it now
+   * @param model The model this boot deploys
+   */
+  private void warnAboutCallActivitiesLeavingTheWorkflowModule(
+      final String workflowModuleId,
+      final String bpmnProcessId,
+      final String scopedBpmnProcessId,
+      final BpmnModelInstance model) {
+
+    io.vanillabp.camunda7.wiring.Camunda7CallActivities
+        .callActivitiesLeavingTheWorkflowModule(model, scopedBpmnProcessId, tenantIdOf(workflowModuleId))
+        .forEach((
+            callActivityId,
+            tenantId) -> log
+                .warn(
+                    """
+                        Camunda7[{}]: call activity '{}' of BPMN process '{}' (workflow module '{}') \
+                        names the tenant '{}', so the process it calls belongs to another workflow \
+                        module. A BPMN error raised in that process carries the prefix of ITS \
+                        workflow module, and an error boundary event on this call activity waits \
+                        for the prefix of this one - the error finds no catcher and the called \
+                        workflow fails with an incident, which is the first thing anybody hears \
+                        about it. Two ways out: let the called process end normally and report the \
+                        outcome in a variable this process branches on, or move the called process \
+                        into this workflow module, where an error code means the same on both \
+                        sides.""",
+                    adapterId,
+                    callActivityId,
+                    bpmnProcessId,
+                    workflowModuleId,
+                    tenantId));
 
   }
 

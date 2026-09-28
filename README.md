@@ -365,12 +365,17 @@ out. The item of an iteration is the variable named by `camunda:elementVariable`
 multi-instance element whose model names none, a cardinality-based one above all, has no item to
 report. The index and the total are there either way.
 
-`Camunda7MultiInstanceItems` joins the two halves of that while `wireBpmn` runs. This adapter reads
-the model and collects the multi-instance elements of the process which name no
+`Camunda7MultiInstanceItems` joins the two halves of that while `wireBpmn` runs. Per task, this
+adapter walks the chain of multi-instance elements ENCLOSING it and keeps the ones which name no
 `camunda:elementVariable`. The core answers `WorkflowTaskWiring#multiInstanceElementNames` for every
 task wired here, which is the element ids the methods serving it declare `@MultiInstanceElement`
 for. Where the two meet, the boot ends with a message naming the task, the element, the attribute
 and the two ways out.
+
+The chain and not the whole process, because a handler is handed the item of the rounds its own
+element runs in and of nothing else: an element in another branch never reaches it, whatever that
+element names, so refusing over such a pair would end the boot of a model which is right. This
+adapter read the process until wave 118 and Camunda 8 read the chain from the start.
 
 Neither half alone would do. An element which iterates a number of times is a model somebody meant
 to write, and so is a handler which reads the index and the total only; refusing either would end
@@ -383,12 +388,13 @@ it. The core is asked by the task definition and by the element id, because a me
 of the two.
 
 The same question is asked about a version the engine still HOLDS, and there the answer travels
-instead of ending anything. Nobody can redraw such a model, so the adapter puts the elements
-without an item into `BpmnTaskSpec#multiInstanceElementsWithoutAnItem` of every task it reads, and
-the core holds them against the methods which still serve that version. What travels is the chain
-of THAT task, outermost first, rather than the elements of the whole process. An adapter which
-does not read the shape answers `null` there and the core asks nothing;
-`Camunda7ItemsOfHeldVersionsTest` reads a held version with an item and one without.
+instead of ending anything. Nobody can redraw such a model, so the adapter puts the chain of every
+task it reads, outermost first, into `BpmnTaskSpec#multiInstanceElementsWithoutAnItem`, and the core
+holds it against the methods which still serve that version. A modelled listener carries its chain
+too: a listener method reads its item out of the same iteration a task's method does. An adapter
+which does not read the shape answers `null` there and the core asks nothing;
+`Camunda7ItemsOfHeldVersionsTest` reads a held version with an item, one without and one whose
+listener sits inside a round that names none.
 
 ### Two engines on one database: `table-prefix`
 
@@ -873,6 +879,21 @@ Two decisions worth recording:
   keeping modules apart, until `accept-unscoped-identifiers` acknowledges that the
   identifiers are unique. The acknowledgement is a statement about the application, not a
   log level, which is why it is not simply a logger configuration.
+- **A BPMN error code belongs to one workflow module, and so does its catcher.** The code a
+  `TaskException` raises is composed from the module of the process whose task raised it
+  (`Camunda7WorkflowTaskBehavior`), and the codes in a model are rewritten with the module
+  whose file declares them. Both sides of a throw and its catcher are therefore the same
+  module for every call activity this adapter can see: a static `camunda:calledElement` gets
+  this module's prefix under `use-prefix`, and under `by-adapter` the engine looks for the
+  called process in the tenant of the CALLING instance. One attribute leaves the module,
+  `camunda:calledElementTenantId`, and a model which writes it hears about it while the
+  application starts: the error the called process raises carries the other module's prefix,
+  the boundary event waits for this one's, and the called workflow fails with an incident.
+  The warning is the whole answer - the code is not composed from the caller's module
+  instead, because that would be a second rule for one identifier and both processes would
+  carry a name neither asked for. `Camunda7CrossModuleCallActivityTest` holds the message,
+  and a called element given as an expression is the application's own string, which no
+  deployment can resolve.
 - **Task definitions are NOT prefixed**, unlike on Camunda 8. A Camunda 7 task definition
   is the expression text of the task (`camunda:expression`/`camunda:delegateExpression`)
   respectively the `camunda:formKey`, and it is resolved WITHIN the process by VanillaBP's
@@ -1172,6 +1193,15 @@ What it costs is one execution listener per start event in the parsed process de
 and one load of the workflow aggregate per start of a workflow. The listener runs in the
 engine's own transaction, so that load hits the persistence context the start already uses,
 and the first task of the workflow reads the same aggregate a moment later anyway.
+
+There is no number to measure here, and that is worth saying because a remote BPMS has one.
+An adapter which writes the listener INTO the model before deploying it makes every start
+event of every deployed process grow, and somebody can count the bytes. This adapter
+attaches the listener to the element the engine PARSED, so the deployed bytes stay the
+modeller's own, the engine creates no job for it, and no query answers differently because
+of it. What a start does becomes visible in the workflow aggregate and nowhere else, which
+`Camunda7ForeignStartIT` reads. A gap with a reason is not a gap, and this paragraph is the
+reason there is no cost test beside that one.
 
 Where a workflow service declares a `@WorkflowEnded` method, the adapter attaches an END
 execution listener to the PROCESS scope, again inside the engine's transaction. Camunda 7

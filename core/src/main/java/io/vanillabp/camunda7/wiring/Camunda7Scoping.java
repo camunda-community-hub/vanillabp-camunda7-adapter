@@ -127,6 +127,12 @@ public final class Camunda7Scoping {
         .getModelElementsByType(Escalation.class)
         .forEach(escalation -> escalation.setEscalationCode(
             scoping.scopedIdentifier(workflowModuleId, escalation.getEscalationCode(), adapterId)));
+    // an error code carries the prefix of the module whose model declares it, and so does
+    // the code a TaskException raises (Camunda7WorkflowTaskBehavior). Both sides of a throw
+    // and its catcher are therefore the same module, which they are: this engine resolves
+    // the called process of a call activity in the tenant of the calling instance, and the
+    // called element below gets this module's prefix. A call activity naming another tenant
+    // is the one way out of the module, and the deployment warns about it
     model
         .getModelElementsByType(Error.class)
         .forEach(error -> error.setErrorCode(

@@ -73,6 +73,9 @@ public class Camunda7ForeignStartIT {
   @Autowired
   private RuntimeService runtimeService;
 
+  @Autowired
+  private org.springframework.transaction.support.TransactionTemplate transactionTemplate;
+
   private void awaitUntil(
       final Supplier<Boolean> condition,
       final String description) throws InterruptedException {
@@ -287,6 +290,80 @@ public class Camunda7ForeignStartIT {
         "the application",
         timerRepository.findById("started-by-the-application").orElseThrow().getStartedBy(),
         "what the application wrote into the aggregate survived its own start");
+
+  }
+
+  @Test
+  @DisplayName("A second delivery of the same start builds no second aggregate")
+  public void aSecondDeliveryBuildsNoSecondAggregate() throws Exception {
+
+    // the first delivery brings no name, so the application names the workflow and this
+    // adapter writes that name into the instance's business key
+    final var untouched = timerRepository
+        .findAll()
+        .stream()
+        .map(ForeignTimerAggregate::getId)
+        .toList();
+    runtimeService
+        .createProcessInstanceByKey("ForeignTimerProcess")
+        .processDefinitionTenantId(TENANT)
+        .execute();
+    awaitUntil(
+        () -> timerRepository.count() > untouched.size(),
+        "the workflow aggregate of the first delivery to be built");
+    final var named = timerRepository
+        .findAll()
+        .stream()
+        .map(ForeignTimerAggregate::getId)
+        .filter(id -> id.startsWith("timer-") && !untouched.contains(id))
+        .findFirst()
+        .orElseThrow();
+    // the first workflow runs to its end before anything is written, because its task
+    // writes the aggregate as well and a half-finished workflow would race this test
+    awaitUntil(
+        () -> "recordForeignTimerStart".equals(
+            timerRepository
+                .findById(named)
+                .map(ForeignTimerAggregate::getProcessedBy)
+                .orElse(null)),
+        "the task of the first delivery to be processed");
+    final var afterTheFirstDelivery = timerRepository.count();
+
+    // business data written between the two deliveries. A second aggregate built over this
+    // one would take it with it, and nothing would say so. The mark of the task is cleared
+    // in the same breath, so the second delivery's own workflow is recognizable
+    transactionTemplate.executeWithoutResult(status -> {
+      final var aggregate = timerRepository.findById(named).orElseThrow();
+      aggregate.setStartedBy("changed meanwhile");
+      aggregate.setProcessedBy(null);
+      timerRepository.save(aggregate);
+    });
+
+    // what a second delivery of that very listener hands the core: the instance already
+    // carries the name of a workflow aggregate which exists. The engine hands a start job
+    // out again whenever the transaction of the first one did not commit, and the
+    // application has to survive that
+    runtimeService
+        .createProcessInstanceByKey("ForeignTimerProcess")
+        .processDefinitionTenantId(TENANT)
+        .businessKey(named)
+        .execute();
+    awaitUntil(
+        () -> "recordForeignTimerStart".equals(
+            timerRepository
+                .findById(named)
+                .map(ForeignTimerAggregate::getProcessedBy)
+                .orElse(null)),
+        "the task of the second delivery to be processed");
+
+    assertEquals(
+        afterTheFirstDelivery,
+        timerRepository.count(),
+        "the second delivery must build nothing");
+    assertEquals(
+        "changed meanwhile",
+        timerRepository.findById(named).orElseThrow().getStartedBy(),
+        "and what was written between the two deliveries has to survive it");
 
   }
 

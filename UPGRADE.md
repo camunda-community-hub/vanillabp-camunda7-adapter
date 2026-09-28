@@ -327,10 +327,10 @@ a `camunda:in` on the call activity, and read it with `@TaskParam`.
 so in version 1 the parameter received `null` and nothing said why. A cardinality-based element is
 the everyday case: it iterates a number of times and walks over nothing at all.
 
-Version 2 says it while the application boots. The deployment reads the multi-instance elements of
-the model, asks the core which of them a `@WorkflowTask` method wants the item of, and ends the boot
-where the two meet. The message names the task, the element, the attribute the model would have to
-carry and the two ways out.
+Version 2 says it while the application boots. Per task, the deployment walks the multi-instance
+elements enclosing it, asks the core which of them a `@WorkflowTask` method wants the item of, and
+ends the boot where the two meet. The message names the task, the element, the attribute the model
+would have to carry and the two ways out.
 
 Either write the attribute on the element, giving it a collection to walk:
 
@@ -343,7 +343,9 @@ multi-instance element, whatever it iterates, so a handler which only counts nee
 model.
 
 Nothing else is refused. An element which iterates a number of times still deploys where no handler
-asks for its item, and so does a collection whose handler reads the index and the total only.
+asks for its item, and so does a collection whose handler reads the index and the total only. A
+method naming an element of another branch of the process is not refused either: that item never
+reaches it, so the model it is deployed with is not the place to say anything about it.
 
 ### A task which has to stay open but is wired by *Expression* ends the boot
 

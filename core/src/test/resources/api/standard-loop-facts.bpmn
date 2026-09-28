@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Definitions_StandardLoop" targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:process id="StandardLoopFactsProcess" isExecutable="true">
+    <bpmn:startEvent id="Start">
+      <bpmn:outgoing>Flow_ToRepeat</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:sequenceFlow id="Flow_ToRepeat" sourceRef="Start" targetRef="Activity_repeat" />
+    <bpmn:serviceTask id="Activity_repeat" camunda:class="io.vanillabp.camunda7.api.CountingDelegate">
+      <bpmn:incoming>Flow_ToRepeat</bpmn:incoming>
+      <bpmn:outgoing>Flow_ToEnd</bpmn:outgoing>
+      <bpmn:standardLoopCharacteristics testBefore="false" loopMaximum="3">
+        <bpmn:loopCondition xsi:type="bpmn:tFormalExpression">${true}</bpmn:loopCondition>
+      </bpmn:standardLoopCharacteristics>
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="Flow_ToEnd" sourceRef="Activity_repeat" targetRef="End" />
+    <bpmn:endEvent id="End">
+      <bpmn:incoming>Flow_ToEnd</bpmn:incoming>
+    </bpmn:endEvent>
+  </bpmn:process>
+</bpmn:definitions>

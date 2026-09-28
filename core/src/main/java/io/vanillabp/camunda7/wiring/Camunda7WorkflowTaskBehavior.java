@@ -114,6 +114,14 @@ public class Camunda7WorkflowTaskBehavior extends AbstractBpmnActivityBehavior {
 
   /**
    * The BPMN error code as the engine knows it.
+   * <p>
+   * Composed from the workflow module of the process this task belongs to, which is the
+   * module the catcher belongs to as well: this engine looks for the called process of a call
+   * activity in the tenant of the calling instance, and a static called element carries the
+   * calling module's prefix under {@code use-prefix}, so a call activity stays inside its
+   * module. The one model which leaves it names another tenant on the call activity, and the
+   * deployment warns about that one, because the code raised there would carry the other
+   * module's prefix and this code is not bent to fit.
    */
   private String scopedErrorCode(
       final String errorCode) {

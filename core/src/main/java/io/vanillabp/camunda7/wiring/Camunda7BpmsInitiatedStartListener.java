@@ -39,6 +39,12 @@ import io.vanillabp.spi.service.BpmsStartTrigger;
  * <p>
  * Why a listener is added to the deployed model at all is decision 5 in the repository's
  * DECISIONS.md.
+ * <p>
+ * What this listener costs the deployed model is nothing. It is attached to the element the
+ * engine PARSED, so the bytes in the engine stay the ones the modeller wrote and no job is
+ * created for it. An adapter which writes its listener into the model before deploying it
+ * pays per start event and can count the difference; there is nothing here to count, which
+ * the repository's README says where the start is described.
  */
 public class Camunda7BpmsInitiatedStartListener implements ExecutionListener {
 

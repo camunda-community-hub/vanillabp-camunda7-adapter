@@ -1,7 +1,9 @@
 package io.vanillabp.camunda7.deployment;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.util.List;
 import java.util.Map;
@@ -11,8 +13,10 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import io.vanillabp.camunda7.TestCollaborators;
+import io.vanillabp.camunda7.wiring.Camunda7AllowListenersResolver;
 import io.vanillabp.camunda7.wiring.Camunda7TaskRegistry;
 import io.vanillabp.integration.adapter.spi.workflowtask.BpmnTaskSpec;
+import io.vanillabp.integration.adapter.spi.workflowtask.WorkflowTaskInvoker;
 import io.vanillabp.integration.test.utils.SuppressOutputExtension;
 
 /**
@@ -61,6 +65,19 @@ public class Camunda7ItemsOfHeldVersionsTest {
           </bpmn:serviceTask>
       """;
 
+  private static final String LISTENER_ELEMENT = "Event_RoundDone";
+
+  private static final String A_LISTENER_IN_A_SUBPROCESS_NAMING_NO_ITEM = """
+          <bpmn:subProcess id="SubProcess_Applications">
+            <bpmn:multiInstanceLoopCharacteristics camunda:collection="applications" />
+            <bpmn:endEvent id="Event_RoundDone">
+              <bpmn:extensionElements>
+                <camunda:executionListener event="end" expression="${auditTheRound}" />
+              </bpmn:extensionElements>
+            </bpmn:endEvent>
+          </bpmn:subProcess>
+      """;
+
   private static final String A_SUBPROCESS_NAMING_NO_ITEM = """
           <bpmn:subProcess id="SubProcess_Applications">
             <bpmn:multiInstanceLoopCharacteristics camunda:collection="applications" />
@@ -96,25 +113,67 @@ public class Camunda7ItemsOfHeldVersionsTest {
 
   }
 
+  @Test
+  @DisplayName("A modelled listener of a held version names the rounds around it too")
+  public void aListenerOfAHeldVersion() {
+
+    // a listener method reads its item out of the same iteration a task's method does, so
+    // leaving the chain off a listener would hide the finding for that half of the model
+    assertEquals(
+        List.of("SubProcess_Applications"),
+        itemsNeverNamedBy(A_LISTENER_IN_A_SUBPROCESS_NAMING_NO_ITEM, LISTENER_ELEMENT));
+
+  }
+
   /**
    * What the catalog answers about the one task of version 3 of the given model.
    */
   private static List<String> itemsNeverNamedBy(
       final String multiInstanceShape) {
 
+    return itemsNeverNamedBy(multiInstanceShape, TASK);
+
+  }
+
+  /**
+   * What the catalog answers about one element of version 3 of the given model.
+   */
+  private static List<String> itemsNeverNamedBy(
+      final String multiInstanceShape,
+      final String elementId) {
+
     final var service = new Camunda7DeploymentService(
         "c7", AnEngineHolding.theseModels(PROCESS_ID, Map.of("3", heldModel(multiInstanceShape))), mock(
             Camunda7WorkflowProcessingLifecycle.class), TestCollaborators
                 .builder()
+                .workflowTaskInvoker(aCoreServingEveryListener())
                 .build(), new Camunda7TaskRegistry());
+    // the key an application switched on before it deployed that version: without it a
+    // listener of a held model is nothing this application ever had a method for
+    service
+        .setAllowListenersResolver((
+            workflowModuleId,
+            bpmnProcessId) -> new Camunda7AllowListenersResolver.Setting(
+                true, "vanillabp.adapters.c7.allow-listeners"));
     return service
         .processVersionCatalogOf(MODULE, PROCESS_ID)
         .tasksOfVersion(MODULE, PROCESS_ID, "3")
         .stream()
-        .filter(task -> TASK.equals(task.activityId()))
+        .filter(task -> elementId.equals(task.activityId()))
         .map(BpmnTaskSpec::multiInstanceElementsWithoutAnItem)
         .findFirst()
         .orElseThrow(() -> new AssertionError("the task of the held version was not read at all"));
+
+  }
+
+  /**
+   * The core of an application which has a method for every task definition a model names.
+   */
+  private static WorkflowTaskInvoker aCoreServingEveryListener() {
+
+    final var invoker = mock(WorkflowTaskInvoker.class);
+    when(invoker.workflowTaskHandlerExists(anyString(), anyString(), anyString())).thenReturn(Boolean.TRUE);
+    return invoker;
 
   }
 

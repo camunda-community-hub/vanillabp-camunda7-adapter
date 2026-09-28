@@ -879,6 +879,21 @@ Two decisions worth recording:
   keeping modules apart, until `accept-unscoped-identifiers` acknowledges that the
   identifiers are unique. The acknowledgement is a statement about the application, not a
   log level, which is why it is not simply a logger configuration.
+- **A BPMN error code belongs to one workflow module, and so does its catcher.** The code a
+  `TaskException` raises is composed from the module of the process whose task raised it
+  (`Camunda7WorkflowTaskBehavior`), and the codes in a model are rewritten with the module
+  whose file declares them. Both sides of a throw and its catcher are therefore the same
+  module for every call activity this adapter can see: a static `camunda:calledElement` gets
+  this module's prefix under `use-prefix`, and under `by-adapter` the engine looks for the
+  called process in the tenant of the CALLING instance. One attribute leaves the module,
+  `camunda:calledElementTenantId`, and a model which writes it hears about it while the
+  application starts: the error the called process raises carries the other module's prefix,
+  the boundary event waits for this one's, and the called workflow fails with an incident.
+  The warning is the whole answer - the code is not composed from the caller's module
+  instead, because that would be a second rule for one identifier and both processes would
+  carry a name neither asked for. `Camunda7CrossModuleCallActivityTest` holds the message,
+  and a called element given as an expression is the application's own string, which no
+  deployment can resolve.
 - **Task definitions are NOT prefixed**, unlike on Camunda 8. A Camunda 7 task definition
   is the expression text of the task (`camunda:expression`/`camunda:delegateExpression`)
   respectively the `camunda:formKey`, and it is resolved WITHIN the process by VanillaBP's

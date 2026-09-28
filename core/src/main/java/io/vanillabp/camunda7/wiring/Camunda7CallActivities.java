@@ -125,6 +125,52 @@ public final class Camunda7CallActivities {
   }
 
   /**
+   * The call activities of one BPMN process which send the engine looking for the called
+   * process in ANOTHER tenant, with the tenant each of them names.
+   * <p>
+   * A tenant is how this adapter keeps workflow modules apart under
+   * {@code name-clash-avoidance: by-adapter}, so a call activity naming a tenant of its own
+   * calls a process of another workflow module. Everything VanillaBP scopes is scoped per
+   * module, a BPMN error code among it: the called process raises the code under ITS
+   * module's prefix and the boundary event of this call activity waits for this module's, so
+   * the error finds no catcher and the called workflow fails with an incident instead.
+   * Whoever wrote that attribute hears it while the application starts.
+   * <p>
+   * Only {@code camunda:calledElementTenantId} can leave the module. Without it this engine
+   * resolves the called process in the tenant of the CALLING instance, which is this module,
+   * and a static {@code calledElement} carries this module's prefix under
+   * {@code use-prefix} anyway. An id given as an expression is the application's own string
+   * and can name anything, and no deployment can resolve it, so nothing is said about one.
+   *
+   * @param model The BPMN model
+   * @param bpmnProcessId The process' ID as the model knows it at this point
+   * @param ownTenantId The tenant this workflow module is deployed to, or
+   *          <code>null</code> where it uses none
+   * @return The tenant per call activity ID, in model order, empty where every call
+   *         activity stays in this module
+   */
+  public static java.util.Map<String, String> callActivitiesLeavingTheWorkflowModule(
+      final BpmnModelInstance model,
+      final String bpmnProcessId,
+      final String ownTenantId) {
+
+    final var leaving = new java.util.LinkedHashMap<String, String>();
+    model
+        .getModelElementsByType(CallActivity.class)
+        .stream()
+        .filter(callActivity -> bpmnProcessId.equals(processIdOf(callActivity)))
+        .forEach(callActivity -> {
+          final var tenantId = callActivity.getCamundaCalledElementTenantId();
+          if ((tenantId == null) || tenantId.isBlank() || tenantId.equals(ownTenantId)) {
+            return;
+          }
+          leaving.put(callActivity.getId(), tenantId);
+        });
+    return leaving;
+
+  }
+
+  /**
    * The ID of the process a call activity belongs to (it may sit in a subprocess, so
    * the parents are walked).
    */

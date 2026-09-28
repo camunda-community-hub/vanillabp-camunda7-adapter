@@ -53,6 +53,26 @@ public class Camunda7CallActivitiesTest {
       """;
 
   /**
+   * Call activities of one process with every shape a tenant can have on them: none, this
+   * module's own, and one of another module.
+   */
+  private static final String TENANTS = """
+      <?xml version="1.0" encoding="UTF-8"?>
+      <bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+          xmlns:camunda="http://camunda.org/schema/1.0/bpmn"
+          id="Definitions_2" targetNamespace="http://bpmn.io/schema/bpmn">
+        <bpmn:process id="LoanApproval" isExecutable="true">
+          <bpmn:callActivity id="callWithoutATenant" calledElement="RiskAssessment"/>
+          <bpmn:callActivity id="callOurOwnTenant" calledElement="RiskAssessment" camunda:calledElementTenantId="loan-approval"/>
+          <bpmn:callActivity id="callAnotherModule" calledElement="Invoicing" camunda:calledElementTenantId="billing"/>
+        </bpmn:process>
+        <bpmn:process id="AnotherProcess" isExecutable="true">
+          <bpmn:callActivity id="notOfThisProcess" calledElement="Invoicing" camunda:calledElementTenantId="billing"/>
+        </bpmn:process>
+      </bpmn:definitions>
+      """;
+
+  /**
    * The core's answer: everything of this module works on the aggregate of
    * 'LoanApproval' except 'Payment', which has one of its own.
    */
@@ -212,6 +232,37 @@ public class Camunda7CallActivitiesTest {
             .mapToLong(properties -> properties.getCamundaProperties().size())
             .sum(),
         "the note is written where it is missing, not once per preparation");
+
+  }
+
+  @Test
+  @DisplayName("A call activity naming another tenant is the one which leaves the workflow module")
+  public void anotherTenantLeavesTheWorkflowModule() {
+
+    final var model = Bpmn
+        .readModelFromStream(new ByteArrayInputStream(TENANTS.getBytes(UTF_8)));
+
+    assertEquals(
+        java.util.Map.of("callAnotherModule", "billing"),
+        Camunda7CallActivities.callActivitiesLeavingTheWorkflowModule(model, "LoanApproval", MODULE),
+        "only camunda:calledElementTenantId can address a process of another workflow module: "
+            + "the engine resolves every other called element in the tenant of the calling "
+            + "instance, which is this module");
+
+  }
+
+  @Test
+  @DisplayName("A workflow module using no tenant hears about every tenant a call activity names")
+  public void withoutATenantOfItsOwnEveryNamedTenantIsForeign() {
+
+    final var model = Bpmn
+        .readModelFromStream(new ByteArrayInputStream(TENANTS.getBytes(UTF_8)));
+
+    assertEquals(
+        java.util.Map.of("callAnotherModule", "billing", "callOurOwnTenant", MODULE),
+        Camunda7CallActivities.callActivitiesLeavingTheWorkflowModule(model, "LoanApproval", null),
+        "under 'use-prefix' this module is deployed to no tenant, so a call activity naming "
+            + "one leaves it whichever one it names");
 
   }
 

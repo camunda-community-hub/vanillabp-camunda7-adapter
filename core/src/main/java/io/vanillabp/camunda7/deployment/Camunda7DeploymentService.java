@@ -826,6 +826,12 @@ public class Camunda7DeploymentService implements AdapterDeploymentService<BpmnM
     // wireTheVersionsHeldUnder, where no model of this boot passes by
     warnAboutUnservedWorkflowEndedHandlers(workflowModuleId, bpmnProcessId);
 
+    // Everything VanillaBP scopes is scoped per workflow module, a BPMN error code among
+    // it. A call activity which sends this engine into another tenant calls a process of
+    // another module, and the error that process raises then carries the other module's
+    // prefix while the boundary event here waits for this one's
+    warnAboutCallActivitiesLeavingTheWorkflowModule(workflowModuleId, bpmnProcessId, scopedBpmnProcessId, model);
+
     wireBpmsInitiatedStarts(workflowModuleId, bpmnProcessId, scopedBpmnProcessId, model);
 
     log.info(
@@ -1825,6 +1831,58 @@ public class Camunda7DeploymentService implements AdapterDeploymentService<BpmnM
                 path,
                 origins.get(path),
                 verdict));
+
+  }
+
+  /**
+   * Says where a call activity of this model calls a process of ANOTHER workflow module, and
+   * what that costs a BPMN error on its way back.
+   * <p>
+   * A warning and not a refusal: such a call runs, and a called process which raises no BPMN
+   * error is a model somebody may well have meant. What cannot be left silent is the error,
+   * because the code is composed from the module of the process which raises it and the
+   * catcher looks for the module of the process which waits - two different prefixes, and
+   * the engine answers with an incident in the called workflow rather than with a word about
+   * either.
+   * <p>
+   * The code is not bent to fit instead. A code which travels between modules would have to
+   * be composed from the CALLER's module, which is a second rule for the same identifier,
+   * and both processes would carry a name neither of them asked for. Saying it at the boot,
+   * where somebody can still model the error differently, costs nothing and hides nothing.
+   *
+   * @param workflowModuleId The workflow module ID
+   * @param bpmnProcessId The PLAIN BPMN process ID
+   * @param scopedBpmnProcessId The BPMN process ID as the model spells it now
+   * @param model The model this boot deploys
+   */
+  private void warnAboutCallActivitiesLeavingTheWorkflowModule(
+      final String workflowModuleId,
+      final String bpmnProcessId,
+      final String scopedBpmnProcessId,
+      final BpmnModelInstance model) {
+
+    io.vanillabp.camunda7.wiring.Camunda7CallActivities
+        .callActivitiesLeavingTheWorkflowModule(model, scopedBpmnProcessId, tenantIdOf(workflowModuleId))
+        .forEach((
+            callActivityId,
+            tenantId) -> log
+                .warn(
+                    """
+                        Camunda7[{}]: call activity '{}' of BPMN process '{}' (workflow module '{}') \
+                        names the tenant '{}', so the process it calls belongs to another workflow \
+                        module. A BPMN error raised in that process carries the prefix of ITS \
+                        workflow module, and an error boundary event on this call activity waits \
+                        for the prefix of this one - the error finds no catcher and the called \
+                        workflow fails with an incident, which is the first thing anybody hears \
+                        about it. Two ways out: let the called process end normally and report the \
+                        outcome in a variable this process branches on, or move the called process \
+                        into this workflow module, where an error code means the same on both \
+                        sides.""",
+                    adapterId,
+                    callActivityId,
+                    bpmnProcessId,
+                    workflowModuleId,
+                    tenantId));
 
   }
 

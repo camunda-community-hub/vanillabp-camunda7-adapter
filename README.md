@@ -1179,6 +1179,15 @@ and one load of the workflow aggregate per start of a workflow. The listener run
 engine's own transaction, so that load hits the persistence context the start already uses,
 and the first task of the workflow reads the same aggregate a moment later anyway.
 
+There is no number to measure here, and that is worth saying because a remote BPMS has one.
+An adapter which writes the listener INTO the model before deploying it makes every start
+event of every deployed process grow, and somebody can count the bytes. This adapter
+attaches the listener to the element the engine PARSED, so the deployed bytes stay the
+modeller's own, the engine creates no job for it, and no query answers differently because
+of it. What a start does becomes visible in the workflow aggregate and nowhere else, which
+`Camunda7ForeignStartIT` reads. A gap with a reason is not a gap, and this paragraph is the
+reason there is no cost test beside that one.
+
 Where a workflow service declares a `@WorkflowEnded` method, the adapter attaches an END
 execution listener to the PROCESS scope, again inside the engine's transaction. Camunda 7
 tells the two kinds apart: an execution carrying a delete reason was canceled or deleted

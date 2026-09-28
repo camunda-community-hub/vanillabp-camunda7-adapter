@@ -17,6 +17,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.transaction.support.TransactionTemplate;
 
+import io.vanillabp.integration.test.utils.CapturedOutput;
 import io.vanillabp.integration.test.utils.SuppressOutputExtension;
 
 /**
@@ -36,7 +37,9 @@ import io.vanillabp.integration.test.utils.SuppressOutputExtension;
  * <li>message correlation with the PLAIN message name against the prefixed
  * subscription;</li>
  * <li>the cancellation of a task: the handler subscribing to {@code CANCELED} has to hear
- * it here as well, and it is the one delivery whose absence looks like nothing happening.</li>
+ * it here as well, and it is the one delivery whose absence looks like nothing happening;</li>
+ * <li>what the start REPORTS: this mode uses no tenant, so a message naming one would send
+ * whoever reads it looking for a scope the engine does not have.</li>
  * </ul>
  */
 @SpringBootTest(classes = TestApplication.class, properties = {
@@ -155,6 +158,40 @@ public class Camunda7NameClashAvoidanceIT {
             .map(SyncTestAggregate::getTaskId)
             .orElse(null) != null,
         "the workflow to reach the asynchronous task behind the gateway");
+
+  }
+
+  @Test
+  @DisplayName("the start reports no tenant and names the prefixed process the engine was given")
+  public void theStartReportsWhatTheEngineWasGiven(
+      final CapturedOutput output) throws Exception {
+
+    final var alreadyLogged = output.getAll().length();
+
+    final var aggregateId = transactionTemplate.execute(status -> {
+      final var aggregate = new SyncTestAggregate();
+      aggregate.setCustomerName("ACME");
+      aggregate.setApproved(true);
+      return syncWorkflowService.startSyncProcess(aggregate).getId();
+    });
+
+    awaitUntil(
+        () -> output
+            .getAll()
+            .substring(alreadyLogged)
+            .contains("business key '%s'".formatted(aggregateId)),
+        "the start of the workflow of aggregate '%s' to be reported".formatted(aggregateId));
+
+    final var reported = output.getAll().substring(alreadyLogged);
+    assertTrue(
+        reported
+            .contains(
+                ("started workflow 'SyncProcess' of workflow module '%s' (deployed as '%sSyncProcess', "
+                    + "tenant '<none>', business key '%s')")
+                    .formatted(MODULE_ID, PREFIX, aggregateId)),
+        () -> "the start has to report the tenant the engine really got and the process id it was "
+            + "really given: "
+            + reported);
 
   }
 

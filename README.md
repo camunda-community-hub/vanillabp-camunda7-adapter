@@ -1482,9 +1482,10 @@ from the embedded engine: `RepositoryService` (every deployed version incl. its 
 `HistoryService` (instance timeline, incidents). Both are cheap local queries - there is
 neither an eventual-consistency lag nor an application-version boundary.
 
-- The workflow is addressed by **business key** (aggregate ID) + **tenant** (workflow module);
-  the adapter-native process definition id is Camunda's own (`MyProcess:1:8a9c…`), so the exact
-  version an instance runs on is reported.
+- The workflow is addressed by **business key** (aggregate ID) plus the scope its workflow
+  module is deployed in - a tenant named after the module under `by-adapter`, no tenant at all
+  under the other two modes. The adapter-native process definition id is Camunda's own
+  (`MyProcess:1:8a9c…`), so the exact version an instance runs on is reported.
 - `getProcessDefinitions` additionally reports the definitions the process' **call activities**
   would call next (latest deployed version of the called process id in the same tenant);
   call activities addressing their process by expression are skipped (only known at runtime).

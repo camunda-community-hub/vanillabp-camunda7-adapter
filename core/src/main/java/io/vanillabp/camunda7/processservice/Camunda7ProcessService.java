@@ -887,7 +887,8 @@ public class Camunda7ProcessService<A> implements MigratableProcessService<A> {
    * synchronously: the async-before continuation parks the instance in the job executor,
    * so no {@code @WorkflowTask} wiring is required for the start to succeed.
    *
-   * @param workflowModuleId The workflow module ID (used as the Camunda tenant ID)
+   * @param workflowModuleId The workflow module ID, which names the Camunda tenant under
+   *        {@code by-adapter} and prefixes the process id under {@code use-prefix}
    * @param bpmnProcessId The BPMN process ID to start
    * @param workflowAggregateId The workflow-aggregate ID (used as the business key)
    * @return The started process instance
@@ -906,7 +907,8 @@ public class Camunda7ProcessService<A> implements MigratableProcessService<A> {
    * process variables - CONTEXT INFORMATION FOR OPERATORS only (see
    * {@link #aggregateSync}); nothing reads them back.
    *
-   * @param workflowModuleId The workflow module ID (the Camunda tenant ID)
+   * @param workflowModuleId The workflow module ID, which names the Camunda tenant under
+   *        {@code by-adapter} and prefixes the process id under {@code use-prefix}
    * @param bpmnProcessId The BPMN process ID to start
    * @param workflowAggregateId The workflow-aggregate ID (the business key)
    * @param aggregate The workflow aggregate or <code>null</code> if unavailable
@@ -923,8 +925,9 @@ public class Camunda7ProcessService<A> implements MigratableProcessService<A> {
     final var businessKey = String.valueOf(workflowAggregateId);
 
     final var tenantId = tenantIdOf(workflowModuleId);
+    final var scopedProcessId = scopedProcessId(workflowModuleId, bpmnProcessId);
     var builder = runtimeService
-        .createProcessInstanceByKey(scopedProcessId(workflowModuleId, bpmnProcessId));
+        .createProcessInstanceByKey(scopedProcessId);
     builder = tenantId != null
         ? builder.processDefinitionTenantId(tenantId)
         : builder.processDefinitionWithoutTenantId();
@@ -947,7 +950,7 @@ public class Camunda7ProcessService<A> implements MigratableProcessService<A> {
               + "workflow module of that process is not deployed by this application, or it is "
               + "deployed under another name-clash-avoidance mode than the one this adapter reads.")
               .formatted(
-                  scopedProcessId(workflowModuleId, bpmnProcessId),
+                  scopedProcessId,
                   workflowModuleId,
                   tenantId == null
                       ? " without a tenant"
@@ -956,11 +959,22 @@ public class Camunda7ProcessService<A> implements MigratableProcessService<A> {
                   adapterId), e);
     }
 
+    // what the engine was really given, not what the caller asked for: the tenant is null
+    // unless the mode of this module is 'by-adapter', and the process id carries the
+    // module's prefix under 'use-prefix'. A module id in the tenant's place sends the next
+    // reader looking for a scope the engine does not have
     log.info(
-        "Camunda7[{}]: started workflow '{}' (tenant '{}', business key '{}') as process instance '{}'",
+        "Camunda7[{}]: started workflow '{}' of workflow module '{}' ({}tenant '{}', business key "
+            + "'{}') as process instance '{}'",
         adapterId,
         bpmnProcessId,
         workflowModuleId,
+        scopedProcessId.equals(bpmnProcessId)
+            ? ""
+            : "deployed as '%s', ".formatted(scopedProcessId),
+        tenantId != null
+            ? tenantId
+            : "<none>",
         businessKey,
         processInstance.getId());
 

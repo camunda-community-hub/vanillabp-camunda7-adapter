@@ -81,7 +81,8 @@ public class Camunda7WorkflowViewer {
    * followed by the definitions its call activities WOULD call next (latest
    * deployed version, {@code usedByElements} naming the call-activity elements).
    *
-   * @param workflowModuleId The workflow module ID (the Camunda tenant ID)
+   * @param workflowModuleId The workflow module the workflow belongs to. The tenant is a
+   *          parameter of its own: a module has one only under {@code by-adapter}
    * @param bpmnProcessId The BPMN process ID of the primary process
    * @param tenantId The Camunda tenant the module is deployed under, or
    *          <code>null</code> where this application uses none
@@ -142,7 +143,8 @@ public class Camunda7WorkflowViewer {
   /**
    * The execution history of the addressed (sub-)workflow.
    *
-   * @param workflowModuleId The workflow module ID (the Camunda tenant ID)
+   * @param workflowModuleId The workflow module the workflow belongs to. The tenant is a
+   *          parameter of its own: a module has one only under {@code by-adapter}
    * @param bpmnProcessId The BPMN process ID of the primary process
    * @param tenantId The Camunda tenant the module is deployed under, or
    *          <code>null</code> where this application uses none
@@ -295,12 +297,15 @@ public class Camunda7WorkflowViewer {
     if (!rootInstanceId.equals(primaryInstance.getId())) {
       log.warn(
           "Camunda7[{}]: the history context '{}' does not belong to the workflow of aggregate "
-              + "'{}' (BPMN process '{}', tenant '{}') - ignoring it",
+              + "'{}' (BPMN process '{}' of workflow module '{}', tenant '{}') - ignoring it",
           adapterId,
           historyContext,
           workflowAggregateId,
           bpmnProcessId,
-          workflowModuleId);
+          workflowModuleId,
+          tenantId != null
+              ? tenantId
+              : "<none>");
       return null;
     }
     return calledInstance;
@@ -360,11 +365,14 @@ public class Camunda7WorkflowViewer {
           .singleResult();
       if (latest == null) {
         log.debug(
-            "Camunda7[{}]: no deployed definition of the called process '{}' (tenant '{}') - "
-                + "the call activities {} are not reported",
+            "Camunda7[{}]: no deployed definition of the called process '{}' of workflow module "
+                + "'{}' (tenant '{}') - the call activities {} are not reported",
             adapterId,
             calledProcessId,
             workflowModuleId,
+            tenantId != null
+                ? tenantId
+                : "<none>",
             elementIds);
         return;
       }

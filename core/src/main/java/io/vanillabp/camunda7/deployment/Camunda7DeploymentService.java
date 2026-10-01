@@ -844,6 +844,11 @@ public class Camunda7DeploymentService implements AdapterDeploymentService<BpmnM
 
     wireBpmsInitiatedStarts(workflowModuleId, bpmnProcessId, scopedBpmnProcessId, model);
 
+    // A user task nothing serves is a model which runs, and the notification the application
+    // drew into it is the one thing missing. Said once per process while the model is wired,
+    // where every other finding about this model is said
+    nameTheUserTasksNothingServes(workflowModuleId, bpmnProcessId, scopedBpmnProcessId, model);
+
     log.info(
         "Camunda7[{}]: wired {} task(s) of BPMN process '{}' (file '{}', workflow module '{}')",
         adapterId,
@@ -2250,6 +2255,81 @@ public class Camunda7DeploymentService implements AdapterDeploymentService<BpmnM
             bpmnProcessId,
             workflowModuleId,
             adapterId);
+
+  }
+
+  /**
+   * Names the user tasks of one process which no <code>&#64;WorkflowTask</code> method serves.
+   * <p>
+   * Nothing is refused and nothing is warned about. This engine creates the user task, it
+   * appears in a task list, somebody finishes it and the workflow runs on, which is why the core
+   * hands a user task over as an OPTIONAL spec. The one thing missing is the notification, and a
+   * model whose user tasks are worked through a task list alone is a model which is meant that
+   * way. That is where this stops being the same case as the Camunda 8 adapter's: there a user
+   * task a job worker serves leaves the workflow standing, and the boot ends over it.
+   * <p>
+   * Only for a process a <code>&#64;WorkflowService</code> class of this application claims. The
+   * core answers the name of the workflow aggregate's id for such a process and refuses to
+   * answer for one nobody claimed, which is the same question the Camunda 8 adapter asks for the
+   * same split. Where nobody claims the process, no method of this application was meant to
+   * serve its tasks and there is nothing to say.
+   *
+   * @param workflowModuleId The workflow module
+   * @param bpmnProcessId The PLAIN BPMN process id
+   * @param scopedBpmnProcessId The process id as the engine knows it, which is what the model
+   *          carries
+   * @param model The model this boot deploys
+   */
+  private void nameTheUserTasksNothingServes(
+      final String workflowModuleId,
+      final String bpmnProcessId,
+      final String scopedBpmnProcessId,
+      final BpmnModelInstance model) {
+
+    if (!theApplicationClaims(workflowModuleId, bpmnProcessId)) {
+      return;
+    }
+    final var unserved = io.vanillabp.camunda7.wiring.Camunda7UnservedUserTasks
+        .of(
+            model,
+            scopedBpmnProcessId,
+            key -> workflowTaskInvoker.workflowTaskHandlerExists(workflowModuleId, bpmnProcessId, key));
+    if (unserved.isEmpty()) {
+      return;
+    }
+    log.info(
+        "Camunda7[{}]: {}",
+        adapterId,
+        io.vanillabp.camunda7.wiring.Camunda7UnservedUserTasks
+            .report(unserved, bpmnProcessId, workflowModuleId));
+
+  }
+
+  /**
+   * Whether a <code>&#64;WorkflowService</code> class of this application claims the given BPMN
+   * process. Asked of the core, which knows the workflow aggregate of a claimed process and
+   * nothing about an unclaimed one.
+   *
+   * @param workflowModuleId The workflow module
+   * @param bpmnProcessId The PLAIN BPMN process id
+   * @return Whether the application stands in for the process
+   */
+  private boolean theApplicationClaims(
+      final String workflowModuleId,
+      final String bpmnProcessId) {
+
+    try {
+      return workflowTaskWiring.resolveWorkflowAggregateIdName(workflowModuleId, bpmnProcessId) != null;
+    } catch (final RuntimeException e) {
+      log.debug(
+          "Camunda7[{}]: no @WorkflowService class of this application claims BPMN process '{}' of "
+              + "workflow module '{}'",
+          adapterId,
+          bpmnProcessId,
+          workflowModuleId,
+          e);
+      return false;
+    }
 
   }
 

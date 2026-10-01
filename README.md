@@ -556,6 +556,16 @@ never completes the task: `ProcessService#completeUserTask` maps to
 checks the task is still there, phase two acts after the commit. `awarenessOfUserTask`
 locates a task by its task ID plus a business-key check and the same scope check.
 
+A user task which no method serves is named while the module boots, once per BPMN process, at
+INFO, and only for a process one of your `@WorkflowService` classes claims. Nothing is refused:
+the engine creates the task, a task list shows it and whoever finishes it moves the workflow on,
+which is why the core hands a user task over as an optional spec. The one thing a model like that
+loses is the notification, and version 1 lost it without a word. The line names each element, its
+form key or that it has none, and the method which would serve it
+(`Camunda7UnservedUserTasksTest`). Where a task list is all those tasks need, there is nothing to
+do about it. The Camunda 8 adapter refuses a user task a job worker serves in a claimed process,
+and this engine has no such shape: every user task here is the engine's own.
+
 **What the awareness probes answer for:** the election
 contract of `MigratableProcessService` says an adapter answers only for the scope
 it is ASKED about, and a Camunda 7 business key is the workflow-aggregate id,

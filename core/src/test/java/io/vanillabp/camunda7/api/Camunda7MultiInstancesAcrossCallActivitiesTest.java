@@ -20,6 +20,12 @@ import io.vanillabp.integration.test.utils.SuppressOutputExtension;
  * models of these tests are split over files the way an application splits them: one file
  * per process which is called. Both halves of that sentence are measured here, because
  * one of them used to be wrong and the other one was never asked.
+ * <p>
+ * Whether the walk may leave is a question about the workflow aggregate, and the answer
+ * comes from two places: the note the deployment wrote onto a call activity whose called
+ * process the model spells out, and the core itself for one which names that process in an
+ * expression. The cases of both are here, and so is the case of a caller which cannot reach
+ * the core.
  */
 @ExtendWith(SuppressOutputExtension.class)
 public class Camunda7MultiInstancesAcrossCallActivitiesTest {
@@ -160,6 +166,91 @@ public class Camunda7MultiInstancesAcrossCallActivitiesTest {
           "Items",
           AnEngineRunningCalledProcesses.ITEMS.getFirst(),
           AnEngineRunningCalledProcesses.ITEMS.size());
+
+    }
+
+  }
+
+  @Test
+  @DisplayName("The chain crosses a call activity which names the called process in an expression")
+  public void theChainCrossesACallActivityNamedByAnExpression() {
+
+    try (var engine = AnEngineRunningCalledProcesses
+        .started(
+            "mi-called-by-expression",
+            "ExpressionCaller",
+            Map
+                .of(
+                    "orders",
+                    AnEngineRunningCalledProcesses.ORDERS,
+                    "processToCall",
+                    "ApprovalProcess"))) {
+
+      final var scopes = Camunda7MultiInstances
+          .of(engine.processEngine(), engine.executionWaitingAt("Approve"), engine.taskRegistry());
+
+      assertEquals(
+          List.of("ExpressionBatch"),
+          List.copyOf(scopes.keySet()),
+          "the deployed model said nothing about this call activity, so the core was asked while "
+              + "the workflow ran");
+      assertScope(
+          scopes,
+          "ExpressionBatch",
+          AnEngineRunningCalledProcesses.ORDERS.getFirst(),
+          AnEngineRunningCalledProcesses.ORDERS.size());
+
+    }
+
+  }
+
+  @Test
+  @DisplayName("Without the registry the chain ends at a call activity named by an expression")
+  public void withoutTheRegistryTheChainEndsAtACallActivityNamedByAnExpression() {
+
+    try (var engine = AnEngineRunningCalledProcesses
+        .started(
+            "mi-called-by-expression-unasked",
+            "ExpressionCaller",
+            Map
+                .of(
+                    "orders",
+                    AnEngineRunningCalledProcesses.ORDERS,
+                    "processToCall",
+                    "ApprovalProcess"))) {
+
+      assertTrue(
+          Camunda7MultiInstances
+              .of(engine.processEngine(), engine.executionWaitingAt("Approve"))
+              .isEmpty(),
+          "nothing in the model answers for this call activity, so a caller which cannot reach "
+              + "the core gets no level rather than a guessed one");
+
+    }
+
+  }
+
+  @Test
+  @DisplayName("A process named by an expression which has its own aggregate reports nothing")
+  public void aProcessNamedByAnExpressionWithAnAggregateOfItsOwnReportsNothing() {
+
+    try (var engine = AnEngineRunningCalledProcesses
+        .started(
+            "mi-foreign-by-expression",
+            "ForeignByExpressionCaller",
+            Map
+                .of(
+                    "orders",
+                    AnEngineRunningCalledProcesses.ORDERS,
+                    "processToCall",
+                    AnEngineRunningCalledProcesses.PROCESS_WITH_AN_AGGREGATE_OF_ITS_OWN))) {
+
+      assertTrue(
+          Camunda7MultiInstances
+              .of(engine.processEngine(), engine.executionWaitingAt("Pack"), engine.taskRegistry())
+              .isEmpty(),
+          "how the model named the called process does not change what the answer is: a business "
+              + "case of its own hears nothing about the iteration which called it");
 
     }
 

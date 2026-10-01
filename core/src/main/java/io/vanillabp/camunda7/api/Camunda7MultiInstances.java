@@ -14,6 +14,7 @@ import org.camunda.bpm.model.xml.ModelInstance;
 import org.camunda.bpm.model.xml.instance.ModelElementInstance;
 
 import io.vanillabp.camunda7.wiring.Camunda7CallActivities;
+import io.vanillabp.camunda7.wiring.Camunda7TaskRegistry;
 import io.vanillabp.integration.adapter.spi.workflowtask.MultiInstanceValue;
 
 /**
@@ -43,6 +44,11 @@ import io.vanillabp.integration.adapter.spi.workflowtask.MultiInstanceValue;
  * deployed and {@link Camunda7CallActivities} writes onto the call activity. A process
  * with an aggregate of its own is a business case of its own and hears nothing about the
  * iteration which called it.
+ * <p>
+ * A call activity which names the process to call in an expression carries no such answer,
+ * because the model does not say which process will be called. The core is asked for it
+ * while the workflow runs, which needs the registry of this engine: the overloads taking
+ * one cross such a call activity, the overloads without one end there.
  *
  * <h2>What it does not promise</h2>
  *
@@ -50,11 +56,6 @@ import io.vanillabp.integration.adapter.spi.workflowtask.MultiInstanceValue;
  * answers an empty map, which is the same answer a task that never was in a multi-instance
  * activity gives. The two cannot be told apart here, and a caller which has to tell them
  * apart asks the engine's history instead.
- * <p>
- * Nothing about a call activity which names the process to call in an expression. The
- * process behind it is known while the workflow runs and not while it is deployed, so
- * nobody could be asked about the aggregate, and the walk ends there like it ends at a
- * foreign aggregate.
  *
  * <p>
  * The promises above are held by <code>Camunda7MultiInstancesTest</code>.
@@ -107,10 +108,33 @@ public final class Camunda7MultiInstances {
   public static Map<String, MultiInstanceValue> of(
       final DelegateExecution execution) {
 
+    return of(execution, null);
+
+  }
+
+  /**
+   * The same scopes, with the registry of the engine this execution runs in at hand.
+   * <p>
+   * The walk needs it for one call activity: the one which names the process it calls in an
+   * expression. Nothing was written onto such a call activity while the model was deployed,
+   * because the model does not say which process will be called, so the question whether
+   * the called process continues the caller's business case is asked through the registry
+   * while the workflow runs. Without the registry the walk ends there, which is the answer
+   * this adapter gave before it could ask.
+   *
+   * @param execution The execution, or <code>null</code>
+   * @param taskRegistry The registry of this engine, or <code>null</code>
+   * @return The scopes, keyed by BPMN element id and outermost first, never
+   *         <code>null</code>
+   */
+  public static Map<String, MultiInstanceValue> of(
+      final DelegateExecution execution,
+      final Camunda7TaskRegistry taskRegistry) {
+
     if (execution == null) {
       return Map.of();
     }
-    return collect(execution);
+    return collect(execution, taskRegistry);
 
   }
 
@@ -128,6 +152,27 @@ public final class Camunda7MultiInstances {
       final ProcessEngine engine,
       final String executionId) {
 
+    return of(engine, executionId, null);
+
+  }
+
+  /**
+   * The same scopes of an execution named by its id, with the registry of that engine at
+   * hand - see {@link #of(DelegateExecution, Camunda7TaskRegistry)} for what the registry
+   * buys. A caller outside this adapter reaches the registry through
+   * {@code Camunda7EngineFacts}.
+   *
+   * @param engine The engine holding the execution
+   * @param executionId The execution, or <code>null</code>
+   * @param taskRegistry The registry of this engine, or <code>null</code>
+   * @return The scopes, keyed by BPMN element id and outermost first, never
+   *         <code>null</code>
+   */
+  public static Map<String, MultiInstanceValue> of(
+      final ProcessEngine engine,
+      final String executionId,
+      final Camunda7TaskRegistry taskRegistry) {
+
     if ((engine == null) || (executionId == null)) {
       return Map.of();
     }
@@ -139,13 +184,14 @@ public final class Camunda7MultiInstances {
               .findExecutionById(executionId);
           return execution == null
               ? Map.<String, MultiInstanceValue>of()
-              : collect(execution);
+              : collect(execution, taskRegistry);
         });
 
   }
 
   private static Map<String, MultiInstanceValue> collect(
-      final DelegateExecution execution) {
+      final DelegateExecution execution,
+      final Camunda7TaskRegistry taskRegistry) {
 
     // the walk collects innermost first - the promise above is outermost first
     final var innermostFirst = new LinkedHashMap<String, MultiInstanceValue>();
@@ -157,7 +203,7 @@ public final class Camunda7MultiInstances {
       // level (the defect this walk carried from version 1 on)
       multiInstanceOf(modelOf(current), current)
           .ifPresent(scope -> innermostFirst.put(scope.elementId(), scope.value()));
-      current = nextOf(current);
+      current = nextOf(current, taskRegistry);
     }
 
     final var outermostFirst = new LinkedHashMap<String, MultiInstanceValue>();
@@ -176,9 +222,15 @@ public final class Camunda7MultiInstances {
    * it. Nothing of that iteration is lost: the engine keeps it in the executions of the
    * calling process, where a model which wants it in the called process reads it the way
    * it reads any other variable.
+   * <p>
+   * Where the model spells the called process out, that answer was written onto the call
+   * activity while the model was deployed and it stands. Where the model names the process
+   * in an expression there was nothing to write it onto, so the core is asked now, through
+   * the registry of this engine. Without a registry the walk ends there.
    */
   private static DelegateExecution nextOf(
-      final DelegateExecution execution) {
+      final DelegateExecution execution,
+      final Camunda7TaskRegistry taskRegistry) {
 
     if (execution.getParentId() != null) {
       return ((ExecutionEntity) execution).getParent();
@@ -187,8 +239,17 @@ public final class Camunda7MultiInstances {
     if (callingExecution == null) {
       return null;
     }
+    final var callActivity = callingExecution.getBpmnModelElementInstance();
+    if (Camunda7CallActivities.continuesTheCallersWorkflowAggregate(callActivity)) {
+      return callingExecution;
+    }
+    if (Camunda7CallActivities.theModelSaysWhichProcessIsCalled(callActivity)) {
+      // the deployment could answer and its answer was no, which the walk keeps even where
+      // the declarations of the application have changed since
+      return null;
+    }
     return Camunda7CallActivities
-        .continuesTheCallersWorkflowAggregate(callingExecution.getBpmnModelElementInstance())
+        .continuesTheCallersWorkflowAggregate(execution, callingExecution, taskRegistry)
             ? callingExecution
             : null;
 

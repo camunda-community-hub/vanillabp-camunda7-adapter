@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" id="Definitions_MiCallByExpressionChild" targetNamespace="http://bpmn.io/schema/bpmn">
+  <!-- the called process of MiCallExprCaller, in a file of its own the way an application
+       splits them. It iterates over nothing itself, so every level its task reports comes
+       from the caller. -->
+  <bpmn:process id="MiCallExprChild" isExecutable="true">
+    <bpmn:startEvent id="MCEC_Start">
+      <bpmn:outgoing>MCEC_f1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:sequenceFlow id="MCEC_f1" sourceRef="MCEC_Start" targetRef="MCEC_Task" />
+    <bpmn:serviceTask id="MCEC_Task" camunda:delegateExpression="${reportTheIterationOfTheCaller}">
+      <bpmn:incoming>MCEC_f1</bpmn:incoming>
+      <bpmn:outgoing>MCEC_f2</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="MCEC_f2" sourceRef="MCEC_Task" targetRef="MCEC_End" />
+    <bpmn:endEvent id="MCEC_End">
+      <bpmn:incoming>MCEC_f2</bpmn:incoming>
+    </bpmn:endEvent>
+  </bpmn:process>
+</bpmn:definitions>

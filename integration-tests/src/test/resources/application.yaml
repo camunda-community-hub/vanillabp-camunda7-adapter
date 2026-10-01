@@ -80,6 +80,14 @@ vanillabp:
           allow-full-sync-with-bpms: true
           declared-aggregate-values:
             - '*'
+        MiCallExprCaller:
+          allow-full-sync-with-bpms: true
+          declared-aggregate-values:
+            - '*'
+        MiCallExprChild:
+          allow-full-sync-with-bpms: true
+          declared-aggregate-values:
+            - '*'
         ModelledListenerProcess:
           allow-full-sync-with-bpms: true
           declared-aggregate-values:

@@ -314,6 +314,7 @@ none of it is a mechanism another BPMS shares.
 |---------------------------------------------------|----------------------------------------------------------------------------------------------|
 | `Camunda7MultiInstances.of(execution)`            | the multi-instance scopes an execution runs in, keyed by BPMN element and outermost first    |
 | `Camunda7MultiInstances.of(engine, executionId)`  | the same, for a caller holding only a user task's execution id                               |
+| `Camunda7MultiInstances.of(..., registry)`        | either of the two, crossing a call activity which names its called process in an expression  |
 | `Camunda7TaskDefinitions.of(formKey, elementId)`  | what a user task is called: the form key, and the element id where there is none             |
 | `Camunda7TaskDefinitions.formKeyOf(...)`          | the form key AS WRITTEN, read from the model, from a parsed task or from the engine          |
 | `Camunda7Executions.rootProcessInstanceIdOf(...)` | the root of a workflow, an instance nobody called being its own root                         |
@@ -359,6 +360,16 @@ aggregate, which the deployment writes onto the call activity as a `camunda:prop
 `vanillabp:sameWorkflowAggregate` (decision 22 in [`DECISIONS.md`](./DECISIONS.md)). A process with
 an aggregate of its own is a business case of its own and hears nothing about the iteration which
 called it.
+
+A call activity which names the process to call in an expression has nothing to carry that note,
+because the model does not say which process will be called. The walk asks the core for it while
+the workflow runs, through `Camunda7TaskRegistry`, which is where the start listener of a called
+process asks the same question. So the overloads of `Camunda7MultiInstances` taking the registry
+cross such a call activity and the ones without it end there. Where the model spells the called
+process out, the answer written while it was deployed stands and nobody asks again, which is what
+the workflows standing in an older version of a process need.
+`Camunda7MultiInstanceByExpressionIT` runs one model naming the same called process both ways
+against the engine, and `Camunda7MultiInstancesAcrossCallActivitiesTest` holds the shapes.
 
 One level cannot be answered at all, and the deployment says so rather than letting a handler find
 out. The item of an iteration is the variable named by `camunda:elementVariable`, so a

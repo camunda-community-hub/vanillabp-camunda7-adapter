@@ -162,7 +162,7 @@ public class Camunda7BpmsInitiatedStartListener implements ExecutionListener {
     // the name of the calling workflow, where this instance continues its business case.
     // The model of a call activity naming its called process in an expression cannot say it
     final var inheritedBusinessKey = ownBusinessKey == null
-        ? theNameOfTheCallingWorkflow(execution, workflowModuleId, bpmnProcessId)
+        ? theNameOfTheCallingWorkflow(execution)
         : null;
     final var businessKey = ownBusinessKey != null
         ? ownBusinessKey
@@ -232,23 +232,19 @@ public class Camunda7BpmsInitiatedStartListener implements ExecutionListener {
    * The name of the workflow whose call activity started this instance, where the called
    * process works on the workflow aggregate of that workflow.
    * <p>
-   * The question is the one {@link Camunda7CallActivities} asks while a model is prepared.
-   * It is asked again here because a call activity naming the process to call in an
-   * expression names it while the workflow runs and not while the model is deployed. The
-   * core answers it from the declarations of the workflow services, which it read while
-   * the application started, so asking it again costs a lookup.
+   * The question is the one {@link Camunda7CallActivities} asks while a model is prepared,
+   * and it is asked through the same method here, so the two mechanisms which inherit from
+   * a caller read one answer. It is asked again because a call activity naming the process
+   * to call in an expression names it while the workflow runs and not while the model is
+   * deployed.
    *
    * @param execution The execution a start event of the called process stands in
-   * @param workflowModuleId The workflow module of the called process
-   * @param bpmnProcessId The plain BPMN process id of the called process
    * @return The caller's business key, or <code>null</code> where this instance was not
    *         called, where the caller goes by no name either, or where the two processes
    *         have a workflow aggregate each
    */
   private String theNameOfTheCallingWorkflow(
-      final DelegateExecution execution,
-      final String workflowModuleId,
-      final String bpmnProcessId) {
+      final DelegateExecution execution) {
 
     final var callingExecution = theExecutionWhichCalledThisOne(execution);
     if (callingExecution == null) {
@@ -260,22 +256,7 @@ public class Camunda7BpmsInitiatedStartListener implements ExecutionListener {
       // is reported as the start it is
       return null;
     }
-    final var callingDefinition = execution
-        .getProcessEngineServices()
-        .getRepositoryService()
-        .getProcessDefinition(callingExecution.getProcessDefinitionId());
-    if (callingDefinition == null) {
-      return null;
-    }
-    final var callingModuleId = taskRegistry
-        .resolveWorkflowModuleId(callingExecution.getTenantId(), callingDefinition.getKey());
-    if (!workflowModuleId.equals(callingModuleId)) {
-      // a workflow aggregate is shared within one workflow module, so a caller from
-      // another module (or one nobody registered) is no caller to inherit a name from
-      return null;
-    }
-    final var callingProcessId = taskRegistry.plainBpmnProcessId(callingModuleId, callingDefinition.getKey());
-    return taskRegistry.workflowsShareTheWorkflowAggregate(workflowModuleId, callingProcessId, bpmnProcessId)
+    return Camunda7CallActivities.continuesTheCallersWorkflowAggregate(execution, callingExecution, taskRegistry)
         ? callersName
         : null;
 

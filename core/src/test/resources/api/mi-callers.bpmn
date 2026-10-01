@@ -52,6 +52,41 @@
     <bpmn:endEvent id="OwnLoopCallerEnd" />
   </bpmn:process>
 
+  <!-- the called process named by an EXPRESSION: the deployment reads a string nobody can
+       resolve yet, so nothing is written onto this call activity and the walk has to ask
+       the core while the workflow runs -->
+  <bpmn:process id="ExpressionCaller" isExecutable="true">
+    <bpmn:startEvent id="ExpressionCallerStart" />
+    <bpmn:sequenceFlow id="ExpressionCallerStartFlow" sourceRef="ExpressionCallerStart" targetRef="ExpressionBatch" />
+    <bpmn:subProcess id="ExpressionBatch">
+      <bpmn:multiInstanceLoopCharacteristics isSequential="true" camunda:collection="orders" camunda:elementVariable="order" />
+      <bpmn:startEvent id="ExpressionBatchStart" />
+      <bpmn:sequenceFlow id="ExpressionBatchStartFlow" sourceRef="ExpressionBatchStart" targetRef="HandleByExpression" />
+      <bpmn:callActivity id="HandleByExpression" calledElement="${processToCall}" />
+      <bpmn:sequenceFlow id="HandleByExpressionFlow" sourceRef="HandleByExpression" targetRef="ExpressionBatchEnd" />
+      <bpmn:endEvent id="ExpressionBatchEnd" />
+    </bpmn:subProcess>
+    <bpmn:sequenceFlow id="ExpressionBatchFlow" sourceRef="ExpressionBatch" targetRef="ExpressionCallerEnd" />
+    <bpmn:endEvent id="ExpressionCallerEnd" />
+  </bpmn:process>
+
+  <!-- the same naming, reaching a process with an aggregate of its own: the core says no
+       and the walk ends there, exactly as it does for a statically named one -->
+  <bpmn:process id="ForeignByExpressionCaller" isExecutable="true">
+    <bpmn:startEvent id="ForeignByExpressionCallerStart" />
+    <bpmn:sequenceFlow id="ForeignByExpressionCallerStartFlow" sourceRef="ForeignByExpressionCallerStart" targetRef="ForeignByExpressionBatch" />
+    <bpmn:subProcess id="ForeignByExpressionBatch">
+      <bpmn:multiInstanceLoopCharacteristics isSequential="true" camunda:collection="orders" camunda:elementVariable="order" />
+      <bpmn:startEvent id="ForeignByExpressionBatchStart" />
+      <bpmn:sequenceFlow id="ForeignByExpressionBatchStartFlow" sourceRef="ForeignByExpressionBatchStart" targetRef="ShipByExpression" />
+      <bpmn:callActivity id="ShipByExpression" calledElement="${processToCall}" />
+      <bpmn:sequenceFlow id="ShipByExpressionFlow" sourceRef="ShipByExpression" targetRef="ForeignByExpressionBatchEnd" />
+      <bpmn:endEvent id="ForeignByExpressionBatchEnd" />
+    </bpmn:subProcess>
+    <bpmn:sequenceFlow id="ForeignByExpressionBatchFlow" sourceRef="ForeignByExpressionBatch" targetRef="ForeignByExpressionCallerEnd" />
+    <bpmn:endEvent id="ForeignByExpressionCallerEnd" />
+  </bpmn:process>
+
   <!-- a called process working on a workflow aggregate of its own -->
   <bpmn:process id="ForeignAggregateCaller" isExecutable="true">
     <bpmn:startEvent id="ForeignAggregateCallerStart" />

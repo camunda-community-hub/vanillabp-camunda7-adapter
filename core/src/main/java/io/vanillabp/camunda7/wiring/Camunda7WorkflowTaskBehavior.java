@@ -9,6 +9,7 @@ import org.camunda.bpm.engine.impl.pvm.delegate.ActivityExecution;
 
 import io.vanillabp.integration.adapter.spi.workflowtask.MultiInstanceValue;
 import io.vanillabp.integration.adapter.spi.workflowtask.TaskInvocationContext;
+import io.vanillabp.integration.adapter.spi.workflowtask.TaskKind;
 import io.vanillabp.integration.adapter.spi.workflowtask.WorkflowTaskInvoker;
 import io.vanillabp.integration.adapter.spi.workflowtask.WorkflowTaskOutcome;
 
@@ -356,6 +357,18 @@ public class Camunda7WorkflowTaskBehavior extends AbstractBpmnActivityBehavior {
       // the execution's ID identifies the open task instance - used by
       // ProcessService#completeTask to signal the parked execution
       return execution.getId();
+
+    }
+
+    @Override
+    public TaskKind getTaskKind() {
+
+      // an execution is the work the engine pushes to the application, so this context
+      // is only ever built for a task. A user task of this engine travels through a
+      // context of its own (Camunda7UserTaskEventListener) and names a row of
+      // ACT_RU_TASK, which is not an execution ID. So nothing in the model has to be
+      // read to know the kind
+      return TaskKind.TASK;
 
     }
 

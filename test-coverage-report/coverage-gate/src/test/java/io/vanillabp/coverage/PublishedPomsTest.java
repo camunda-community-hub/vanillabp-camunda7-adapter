@@ -10,14 +10,22 @@ import io.vanillabp.integration.test.utils.PublishedPoms;
 import io.vanillabp.integration.test.utils.SuppressOutputExtension;
 
 /**
- * A tool which only translates our source stays out of the classpath of the applications
- * using our artifacts.
+ * What the POMs of this repository hand an application, asserted on the files the build
+ * publishes. Two things are asked of them, and the build which writes them sees neither.
  * <p>
- * Lombok and the processors of Spring Boot and Quarkus are read while javac runs and have
- * nothing left to do once the class file exists. An application asked for a workflow
- * engine, not for them, and every jar it did not ask for is one more thing to scan, to
- * ship and to answer a CVE report about. The scope which says that is {@code provided}:
- * it puts the jar on our own compile path and hands it to nobody.
+ * The first is that a tool which only translates our source stays out of the classpath of
+ * the applications using our artifacts. Lombok and the processors of Spring Boot and
+ * Quarkus are read while javac runs and have nothing left to do once the class file
+ * exists. An application asked for a workflow engine, not for them, and every jar it did
+ * not ask for is one more thing to scan, to ship and to answer a CVE report about. The
+ * scope which says that is {@code provided}: it puts the jar on our own compile path and
+ * hands it to nobody.
+ * <p>
+ * The second is that a version in such a file is a version and not the name of a
+ * property. Our build resolves a name because the POM holding the value is in the
+ * reactor. A consumer reads the published file and resolves our parent as the newest
+ * build of the snapshot, never as the build the child went out with, so the name is all
+ * it gets the day that parent stops defining the property.
  * <p>
  * What the check knows sits in {@link PublishedPoms} of the platform's module
  * 'test-utils'. Every repository of VanillaBP can make this mistake and they all make it
@@ -57,6 +65,16 @@ public class PublishedPomsTest {
     PublishedPoms
         .ofTheRepositoryUnderTest(PublishedPoms.THE_SOURCE_POM)
         .handAnApplicationNoToolOfTheBuild(TOOLS_OF_THIS_BUILD);
+
+  }
+
+  @Test
+  @DisplayName("no POM of this repository owes a consumer a version it does not carry")
+  public void noPomOwesAConsumerAValue() {
+
+    PublishedPoms
+        .ofTheRepositoryUnderTest(PublishedPoms.THE_SOURCE_POM)
+        .handAnApplicationNoPropertyInsteadOfAValue();
 
   }
 

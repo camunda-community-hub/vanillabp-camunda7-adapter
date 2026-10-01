@@ -131,6 +131,32 @@
         <artifactId>camunda-engine-spring-6</artifactId>
         <version>${camunda.version}</version>
       </dependency>
+      <!-- Managed here and declared without a version in the three modules which use
+           them, so that no POM we publish names '${camunda.version}' where a consumer
+           reads a version. Our own build resolved that name because this file is in the
+           reactor, while a consumer reads the published child and resolves this file as
+           the newest build of the snapshot, never as the build the child went out with.
+           The property and the versions using it now stand in one file, so our own build
+           is what breaks if the property ever leaves, instead of a consumer breaking
+           later. See handAnApplicationNoPropertyInsteadOfAValue in PublishedPoms of the
+           platform's test-utils. The entries carry the version and nothing else: a scope
+           written here would apply to the transitive paths too, and the test scope these
+           three have in two modules belongs at the declaration. -->
+      <dependency>
+        <groupId>org.camunda.bpm.springboot</groupId>
+        <artifactId>camunda-bpm-spring-boot-starter-webapp</artifactId>
+        <version>${camunda.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.camunda.bpm</groupId>
+        <artifactId>camunda-engine-plugin-spin</artifactId>
+        <version>${camunda.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.camunda.spin</groupId>
+        <artifactId>camunda-spin-dataformat-json-jackson</artifactId>
+        <version>${camunda.version}</version>
+      </dependency>
       <!-- 'provided' here and again at every declaration below: Lombok translates the
            source and has no work left once the class file exists, so no application using
            our artifacts may find it on its runtime classpath. Writing 'optional' here did

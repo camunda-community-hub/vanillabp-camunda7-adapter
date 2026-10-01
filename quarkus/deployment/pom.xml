@@ -76,13 +76,11 @@
     <dependency>
       <groupId>org.camunda.bpm</groupId>
       <artifactId>camunda-engine-plugin-spin</artifactId>
-      <version>${camunda.version}</version>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.camunda.spin</groupId>
       <artifactId>camunda-spin-dataformat-json-jackson</artifactId>
-      <version>${camunda.version}</version>
       <scope>test</scope>
     </dependency>
   </dependencies>

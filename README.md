@@ -1303,6 +1303,29 @@ and that the order the handlers run in is not stable. Why the report is made all
 A version the engine still holds carries its compensation as plain element ids
 among the others, because the shaped message belongs to the model somebody can still redraw.
 
+### A compensation runs in one transaction
+
+The same measurement answers a second question, and the answer is a warning of its own. Every
+service-like task of a model gets `asyncBefore` here and therefore a job and a transaction of its
+own, and a compensation handler is the one place where the engine does not follow: it starts the
+handler outside the normal flow, where no job is created. All the handlers of a throw event
+therefore run in the transaction of that event.
+
+Measured on 2026-10-01 against the pinned engine 7.24.0, with a throw event compensating two
+finished service tasks. Both handlers ran in the same command context, the engine's own unit of
+work, and one commit covered the two of them. The two activities they compensated ran in a
+transaction each, so the flags do work where the engine makes a job of an activity. And a handler
+which threw sent the other one back to work: the engine rolled the whole compensation back,
+counted one retry off the single job and ran both handlers again on the next attempt.
+
+So the deployment warns once per compensation throw event, naming the event and the handlers it
+starts, and asks for a handler which may run twice and for work the engine cannot roll back to stay
+out of it. A warning and not a refusal: the model is right, and no flag of this adapter changes what
+the engine does. `Camunda7CompensationTransactionReportTest` holds the message,
+`Camunda7CompensationTokensTest` the measurement, and the
+[Deviations page](https://github.com/vanillabp/camunda7-adapter/wiki/Deviations#a-compensation-runs-in-one-transaction)
+lists it among the gaps.
+
 ### A process id which is only declared
 
 A workflow module may name a BPMN process id no file of it carries any more, which is how a

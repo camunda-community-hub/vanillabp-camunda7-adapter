@@ -36,6 +36,15 @@ import io.vanillabp.integration.test.utils.SuppressOutputExtension;
  * normal flow, where no job is created. One job exists at a time, and with the job executor
  * running both handlers ran on one thread.
  * <p>
+ * Which transaction they share was read on 2026-10-01, against the same pinned engine 7.24.0,
+ * because the deployment now says so and a sentence about a transaction has to be measured as
+ * one. Both handlers ran in the same command context, the engine's own unit of work, and ONE
+ * commit covered the two of them, while the two activities they compensated ran in a
+ * transaction each. A handler which throws therefore takes the other one with it: the engine
+ * rolls the whole compensation back, counts one retry off the single job and runs both
+ * handlers again on the next attempt. That is what the warning of
+ * {@code Camunda7CompensationTransactionReportTest} asks a reader to plan for.
+ * <p>
  * Why the adapter reports compensation to the core all the same is the decision this test
  * belongs to: the check asks whether the process can hold more than one token, and both
  * compensating executions exist from the moment the throw event runs. A handler which WAITS,
@@ -145,6 +154,80 @@ public class Camunda7CompensationTokensTest {
           BOTH_HANDLERS, Set.copyOf(CompensationRecorder.handlersInTheOrderTheyWereEntered()));
       assertEquals(1, CompensationRecorder.mostHandlersInsideAtOnce());
       assertEquals(1, CompensationRecorder.threadsTheHandlersRanOn().stream().distinct().count());
+
+    }
+
+  }
+
+  @Test
+  @DisplayName("Both compensation handlers run in the one transaction of the throw event")
+  public void bothHandlersShareOneTransaction() {
+
+    CompensationRecorder.reset();
+    try (var engine = AnEngineRunningCompensation.asThisAdapterDeploysIt("compensation-tx", false)) {
+
+      engine.start();
+      for (var round = 0; round < 20; round++) {
+        final var jobs = engine.jobs();
+        if (jobs.isEmpty()) {
+          break;
+        }
+        engine.executeJob(jobs.getFirst().getId());
+      }
+
+      // the two activities which are compensated later DO get a transaction each, so the
+      // flags the adapter writes work where the engine makes a job of an activity
+      assertEquals(
+          2,
+          CompensationRecorder.transactionsTheCompensatedActivitiesRanIn().stream().distinct().count(),
+          "the compensated activities ran in a transaction each");
+      // and the handlers of the very same model do not
+      assertEquals(2, CompensationRecorder.transactionsTheHandlersRanIn().size());
+      assertEquals(
+          1,
+          CompensationRecorder.transactionsTheHandlersRanIn().stream().distinct().count(),
+          "both handlers ran in the same transaction");
+      assertEquals(
+          1,
+          CompensationRecorder.commitsCoveringAHandler(),
+          "one commit covered both handlers, so nothing of the first one was written before "
+              + "the second one had run");
+      assertEquals(0, engine.runningWorkflows());
+
+    }
+
+  }
+
+  @Test
+  @DisplayName("A handler which fails makes the engine run every handler again")
+  public void aFailingHandlerSendsTheOtherOneBackToWork() {
+
+    CompensationRecorder.reset();
+    CompensationRecorder.makeTheHandlerEnteredSecondFailOnce();
+    try (var engine = AnEngineRunningCompensation.asThisAdapterDeploysIt("compensation-retry", false)) {
+
+      engine.start();
+      var failures = 0;
+      for (var round = 0; round < 20; round++) {
+        final var jobs = engine.jobs();
+        if (jobs.isEmpty()) {
+          break;
+        }
+        try {
+          engine.executeJob(jobs.getFirst().getId());
+        } catch (final RuntimeException e) {
+          failures++;
+        }
+      }
+
+      assertEquals(1, failures, "one job of the workflow failed, the one holding the compensation");
+      // the handler which had already returned is entered a second time: its work was in the
+      // transaction the failure rolled back, so the engine asks for it again
+      assertEquals(
+          4,
+          CompensationRecorder.handlersInTheOrderTheyWereEntered().size(),
+          "both handlers ran twice, although only one of them failed");
+      assertEquals(0, engine.runningWorkflows(), "the retry carried the workflow to its end");
 
     }
 

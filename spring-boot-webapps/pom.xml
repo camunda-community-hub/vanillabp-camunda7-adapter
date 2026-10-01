@@ -42,7 +42,6 @@
     <dependency>
       <groupId>org.camunda.bpm.springboot</groupId>
       <artifactId>camunda-bpm-spring-boot-starter-webapp</artifactId>
-      <version>${camunda.version}</version>
     </dependency>
     <dependency>
       <groupId>org.projectlombok</groupId>

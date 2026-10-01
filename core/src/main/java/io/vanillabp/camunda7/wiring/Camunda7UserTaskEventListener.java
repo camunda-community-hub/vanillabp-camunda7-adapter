@@ -5,6 +5,7 @@ import org.camunda.bpm.engine.delegate.TaskListener;
 import org.camunda.bpm.engine.impl.persistence.entity.ExecutionEntity;
 
 import io.vanillabp.integration.adapter.spi.workflowtask.TaskInvocationContext;
+import io.vanillabp.integration.adapter.spi.workflowtask.TaskKind;
 import io.vanillabp.integration.adapter.spi.workflowtask.WorkflowTaskInvoker;
 import io.vanillabp.integration.adapter.spi.workflowtask.WorkflowTaskOutcome;
 import io.vanillabp.spi.service.TaskEvent;
@@ -250,6 +251,16 @@ public class Camunda7UserTaskEventListener implements TaskListener {
       // the engine's task ID (ACT_RU_TASK) - used by
       // ProcessService#completeUserTask/#cancelUserTask
       return delegateTask.getId();
+
+    }
+
+    @Override
+    public TaskKind getTaskKind() {
+
+      // this context exists only for a user-task event, so nothing has to be read to
+      // know the kind. The id above comes out of ACT_RU_TASK, and completeTask would
+      // look for an execution under it and find none
+      return TaskKind.USER_TASK;
 
     }
 

@@ -49,6 +49,11 @@ import io.vanillabp.integration.test.utils.delivery.TaskDeliveryLogReader.Delive
  * invocation context: the element id of the BPMN element and the engine's own id of the
  * process instance. This is the only setup of the adapter which writes a record at all, so
  * it is the only place those two fields can be read back.
+ * <p>
+ * The kind of task a record names is read back through the message a caller gets rather
+ * than through the column: somebody asking for a user task under the id of a task is told
+ * what the id really is. That message exists only where the record carries the kind, so it
+ * is the proof that this adapter reported it.
  */
 @SpringBootTest(classes = {
     TestApplication.class, Camunda7RepeatedDeliveryIT.NamedDataSourceConfiguration.class
@@ -259,6 +264,46 @@ public class Camunda7RepeatedDeliveryIT {
         processInstance.getId(),
         record.workflowId(),
         "the engine's own id of the running instance");
+
+  }
+
+  @Test
+  @DisplayName("The record says the id is a task, so a completion asking for a user task is told")
+  public void theRecordSaysWhichKindOfTaskTheIdIs() {
+
+    final var aggregateId = transactionTemplate
+        .execute(status -> taskRepository.save(new TaskTestAggregate()).getId());
+
+    separateDataSourceEngine
+        .getRuntimeService()
+        .createProcessInstanceByKey("AsyncProcess")
+        .processDefinitionTenantId(MODULE_ID)
+        .businessKey(String.valueOf(aggregateId))
+        .execute();
+    AwaitPhaseTwo
+        .untilAvailable(
+            () -> recordOf(String.valueOf(aggregateId)),
+            "the delivery of the asynchronous task to be recorded");
+    final var taskId = parkedTaskOf(aggregateId);
+
+    // the mistake this is about: the id is an execution of the engine, and
+    // completeUserTask asks for a row of ACT_RU_TASK. No engine holds a user task under
+    // that id, so every adapter answers that it knows no such user task
+    final var refused = org.junit.jupiter.api.Assertions
+        .assertThrows(
+            io.vanillabp.spi.process.TaskNotFoundException.class,
+            () -> transactionTemplate
+                .executeWithoutResult(status -> taskWorkflowService
+                    .completeUserTask(taskRepository.findById(aggregateId).orElseThrow(), taskId)));
+
+    assertTrue(
+        refused.getMessage().contains("VanillaBP wrote down that '%s' is the id of a task".formatted(taskId)),
+        "the record of this adapter's delivery carries the kind, so the message names it: "
+            + refused.getMessage());
+    assertTrue(
+        refused.getMessage().contains("The method which asks about a task is completeTask"),
+        "and it names the method which asks for that kind of id: "
+            + refused.getMessage());
 
   }
 

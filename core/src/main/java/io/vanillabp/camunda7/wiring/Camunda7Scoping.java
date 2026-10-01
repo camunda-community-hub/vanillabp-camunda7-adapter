@@ -27,7 +27,7 @@ import lombok.extern.slf4j.Slf4j;
  * <tr><td>{@code bpmn:message name}</td><td>yes</td><td>message correlation resolves by name across definitions</td></tr>
  * <tr><td>{@code bpmn:signal name}, {@code bpmn:escalation escalationCode}</td><td>yes</td><td>broadcast by name</td></tr>
  * <tr><td>{@code bpmn:error errorCode}</td><td>yes</td><td>completeness with the other adapters - the application may raise it via {@code ProcessService#cancelTask}</td></tr>
- * <tr><td>{@code camunda:decisionRef} of a business rule task</td><td>yes</td><td>it addresses a decision the module deploys, whose id was renamed the same way (see {@code DmnDecisionIds})</td></tr>
+ * <tr><td>{@code camunda:decisionRef} of a business rule task</td><td>yes</td><td>it addresses a decision the module deploys, whose id was renamed the same way (see {@code DmnDecisionIds}). An expression gets the prefix in front of it, like a called element</td></tr>
  * <tr><td>task definitions ({@code camunda:expression}, {@code camunda:delegateExpression}, {@code camunda:formKey})</td><td><b>no</b></td><td>they are PROCESS-LOCAL in Camunda 7: the expression is evaluated inside the process by VanillaBP's EL resolver, nothing subscribes to them engine-wide. Camunda 8 job types are the opposite case and ARE prefixed.</td></tr>
  * </table>
  * <p>
@@ -159,17 +159,17 @@ public final class Camunda7Scoping {
         });
 
     // a business rule task addresses a decision BY ID, and the decisions this module
-    // deploys were renamed the same way while their files were read. An id given as an
-    // expression is left exactly as the application wrote it, which is NOT what happens to
-    // the called element of a call activity: that one gets the prefix written in front of
-    // the expression. So a decision named by an expression resolves to the plain id while
-    // the decision this module deployed carries the prefix, and the engine finds nothing
+    // deploys were renamed the same way while their files were read. An expression gets the
+    // prefix written in front of it, exactly like the called element above: Camunda 7 reads
+    // this attribute as one expression too, so '${whichDecision}' becomes
+    // 'loan-approval__${whichDecision}' and the engine looks up the prefixed id of whatever
+    // the expression yields. That is the id the decision of this module is deployed under
     model
         .getModelElementsByType(BusinessRuleTask.class)
         .forEach(businessRuleTask -> {
           final var decisionRef = businessRuleTask.getCamundaDecisionRef();
-          if ((decisionRef == null) || decisionRef.isBlank() || decisionRef.contains("${")) {
-            return;
+          if ((decisionRef == null) || decisionRef.isBlank()) {
+            return; // nothing is addressed, so there is nothing to rewrite
           }
           businessRuleTask.setCamundaDecisionRef(
               scoping.scopedIdentifier(workflowModuleId, decisionRef, adapterId));

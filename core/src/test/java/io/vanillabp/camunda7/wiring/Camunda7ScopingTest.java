@@ -208,7 +208,7 @@ public class Camunda7ScopingTest {
   }
 
   @Test
-  @DisplayName("a decision addressed by an expression keeps it: the application owns that string")
+  @DisplayName("a decision addressed by an expression keeps the expression, prefixed as literal text")
   public void aDecisionByExpressionStaysEvaluable() {
 
     final var model = model();
@@ -217,8 +217,11 @@ public class Camunda7ScopingTest {
 
     Camunda7Scoping.apply(model, MODULE, ADAPTER_ID, new RecordingScoping(NameClashAvoidance.USE_PREFIX));
 
+    // the decision this module deploys carries the prefix, so the expression has to resolve
+    // to the prefixed id as well. Camunda7DecisionByExpressionTest runs that against the
+    // engine, which finds nothing without the prefix
     assertEquals(
-        "${whichDecision}",
+        "loan-approval__${whichDecision}",
         first(model, org.camunda.bpm.model.bpmn.instance.BusinessRuleTask.class).getCamundaDecisionRef());
 
   }

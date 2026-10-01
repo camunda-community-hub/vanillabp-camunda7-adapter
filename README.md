@@ -854,13 +854,14 @@ process and decision together. A business rule task binding its decision to the 
 Under `use-prefix` the decision ids are rewritten like the process ids, and the
 `camunda:decisionRef` of the business rule tasks is rewritten with them, so both sides name
 the same string (`Camunda7ScopingTest#aBusinessRuleTaskFindsItsRenamedDecision`). A
-`decisionRef` given as an expression is left exactly as the application wrote it. A call
-activity's `calledElement` is NOT: there the prefix is written in front of the expression,
-because Camunda 7 evaluates that attribute as one expression and the prefixed id is the one
-the engine holds (`Camunda7ScopingTest#callActivityByExpressionStaysEvaluable`). What this
-mode cannot do is follow a reference to a decision the module does not deploy: that one is
-renamed here and not in the engine. Deploy the decision with the module, or keep the tenant
-isolation of `by-adapter`.
+`decisionRef` given as an expression gets the prefix written in front of it, the same as a
+call activity's `calledElement`: Camunda 7 reads both attributes as one expression, so
+`${whichDecision}` reaches the engine as `loan-approval__${whichDecision}` and the prefixed
+id of whatever the expression yields is looked up.
+`Camunda7DecisionByExpressionTest` runs such a model against an engine, with and without the
+prefix. What this mode cannot do is follow a reference to a decision the module does not
+deploy: that one is renamed here and not in the engine. Deploy the decision with the module,
+or keep the tenant isolation of `by-adapter`.
 
 ## Keeping workflow modules apart
 
@@ -868,8 +869,9 @@ The [name-clash-avoidance mode](https://github.com/vanillabp/adapter-platform-in
 decides how a workflow module's identifiers are scoped. `by-adapter` deploys into a
 Camunda tenant named after the workflow module (`tenant-id` overrides the name, for the whole
 adapter or for one workflow module), which is the Version-1 behaviour; `use-prefix` deploys
-without a tenant and the adapter rewrites process ids, `camunda:calledElement` references,
-message and signal names, escalation and error codes; `none` scopes nothing.
+without a tenant and the adapter rewrites process ids, `camunda:calledElement` and
+`camunda:decisionRef` references, message and signal names, escalation and error codes;
+`none` scopes nothing.
 
 Two decisions worth recording:
 

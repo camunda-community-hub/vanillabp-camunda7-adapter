@@ -5,6 +5,7 @@ import java.util.Map;
 
 import org.camunda.bpm.engine.delegate.DelegateExecution;
 import org.camunda.bpm.engine.delegate.ExecutionListener;
+import org.camunda.bpm.engine.impl.persistence.entity.ExecutionEntity;
 import org.camunda.bpm.engine.impl.pvm.runtime.PvmExecutionImpl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,6 +32,18 @@ import io.vanillabp.spi.service.BpmsStartTrigger;
  * is built by the application, and an instance carrying a key nothing carries is refused,
  * because VanillaBP names a workflow and nobody else. All of that is decision 28 in the
  * repository's DECISIONS.md, which supersedes decision 24 there.
+ * <p>
+ * A called process is the one start which brings no key and is nobody's foreign start. This
+ * engine hands a called process no business key, so
+ * {@link Camunda7CallActivities} writes the propagation into the model of a call activity
+ * whose called process works on the aggregate of its caller. A call activity which names
+ * the process to call in an EXPRESSION leaves nothing to write it onto, because nobody
+ * knows while the model is deployed which process will be called. Such an instance arrives
+ * here without a key, and this listener answers the question the model could not. It finds
+ * the call activity which started the instance in the execution tree and asks the core
+ * whether the two processes work on one workflow aggregate. Where they do, the instance is
+ * given the caller's name. The same model then behaves on this engine the way it behaves on
+ * a BPMS which copies the caller's values by itself.
  * <p>
  * One thing stays invisible, with open eyes: a key somebody chose which happens to be the
  * id of an existing workflow aggregate attaches that instance to it without a word. Nothing
@@ -113,9 +126,11 @@ public class Camunda7BpmsInitiatedStartListener implements ExecutionListener {
   public void notify(
       final DelegateExecution execution) {
 
-    final var businessKey = (execution.getProcessBusinessKey() == null) || execution.getProcessBusinessKey().isBlank()
-        ? null
-        : execution.getProcessBusinessKey();
+    final var ownBusinessKey = (execution.getProcessBusinessKey() == null) || execution
+        .getProcessBusinessKey()
+        .isBlank()
+            ? null
+            : execution.getProcessBusinessKey();
 
     final var processDefinitionKey = execution.getProcessEngineServices()
         .getRepositoryService()
@@ -144,6 +159,15 @@ public class Camunda7BpmsInitiatedStartListener implements ExecutionListener {
       return;
     }
 
+    // the name of the calling workflow, where this instance continues its business case.
+    // The model of a call activity naming its called process in an expression cannot say it
+    final var inheritedBusinessKey = ownBusinessKey == null
+        ? theNameOfTheCallingWorkflow(execution, workflowModuleId, bpmnProcessId)
+        : null;
+    final var businessKey = ownBusinessKey != null
+        ? ownBusinessKey
+        : inheritedBusinessKey;
+
     final var signalName = taskRegistry
         .signalNameOfStartEvent(workflowModuleId, processDefinitionKey, execution.getCurrentActivityId());
     final var processVersion = taskRegistry.versionOfDefinition(execution.getProcessDefinitionId());
@@ -152,6 +176,22 @@ public class Camunda7BpmsInitiatedStartListener implements ExecutionListener {
             workflowModuleId,
             bpmnProcessId,
             contextOf(execution, signalName, processVersion, businessKey));
+
+    if (inheritedBusinessKey != null) {
+      // the called process continues the business case of its caller, so it goes by the
+      // same name - written here because the deployed model had nothing to carry it
+      ((PvmExecutionImpl) execution).setProcessBusinessKey(inheritedBusinessKey);
+      log
+          .debug(
+              "Camunda7: '{}' of workflow module '{}' (instance '{}') was called by a call activity "
+                  + "naming it in an expression and works on the workflow aggregate of its caller, so "
+                  + "it goes by the caller's name '{}'",
+              bpmnProcessId,
+              workflowModuleId,
+              execution.getProcessInstanceId(),
+              inheritedBusinessKey);
+      return;
+    }
 
     if (businessKey != null) {
       // the instance already carries the name of a workflow aggregate which exists - the
@@ -185,6 +225,76 @@ public class Camunda7BpmsInitiatedStartListener implements ExecutionListener {
             execution.getProcessInstanceId(),
             execution.getCurrentActivityId(),
             result.workflowAggregateId());
+
+  }
+
+  /**
+   * The name of the workflow whose call activity started this instance, where the called
+   * process works on the workflow aggregate of that workflow.
+   * <p>
+   * The question is the one {@link Camunda7CallActivities} asks while a model is prepared.
+   * It is asked again here because a call activity naming the process to call in an
+   * expression names it while the workflow runs and not while the model is deployed. The
+   * core answers it from the declarations of the workflow services, which it read while
+   * the application started, so asking it again costs a lookup.
+   *
+   * @param execution The execution a start event of the called process stands in
+   * @param workflowModuleId The workflow module of the called process
+   * @param bpmnProcessId The plain BPMN process id of the called process
+   * @return The caller's business key, or <code>null</code> where this instance was not
+   *         called, where the caller goes by no name either, or where the two processes
+   *         have a workflow aggregate each
+   */
+  private String theNameOfTheCallingWorkflow(
+      final DelegateExecution execution,
+      final String workflowModuleId,
+      final String bpmnProcessId) {
+
+    final var callingExecution = theExecutionWhichCalledThisOne(execution);
+    if (callingExecution == null) {
+      return null;
+    }
+    final var callersName = callingExecution.getProcessBusinessKey();
+    if ((callersName == null) || callersName.isBlank()) {
+      // the caller goes by no name either, so there is nothing to inherit and this start
+      // is reported as the start it is
+      return null;
+    }
+    final var callingDefinition = execution
+        .getProcessEngineServices()
+        .getRepositoryService()
+        .getProcessDefinition(callingExecution.getProcessDefinitionId());
+    if (callingDefinition == null) {
+      return null;
+    }
+    final var callingModuleId = taskRegistry
+        .resolveWorkflowModuleId(callingExecution.getTenantId(), callingDefinition.getKey());
+    if (!workflowModuleId.equals(callingModuleId)) {
+      // a workflow aggregate is shared within one workflow module, so a caller from
+      // another module (or one nobody registered) is no caller to inherit a name from
+      return null;
+    }
+    final var callingProcessId = taskRegistry.plainBpmnProcessId(callingModuleId, callingDefinition.getKey());
+    return taskRegistry.workflowsShareTheWorkflowAggregate(workflowModuleId, callingProcessId, bpmnProcessId)
+        ? callersName
+        : null;
+
+  }
+
+  /**
+   * The execution of the call activity which started this instance, or <code>null</code>
+   * where no call activity did. The engine keeps it on the process instance rather than on
+   * the execution a start event stands in, so the scopes of this process are walked up
+   * first.
+   */
+  private static DelegateExecution theExecutionWhichCalledThisOne(
+      final DelegateExecution execution) {
+
+    var current = execution;
+    while (current.getParentId() != null) {
+      current = ((ExecutionEntity) current).getParent();
+    }
+    return current.getSuperExecution();
 
   }
 
@@ -223,9 +333,10 @@ public class Camunda7BpmsInitiatedStartListener implements ExecutionListener {
 
       @Override
       public String getBusinessKey() {
-        // the name this instance already goes by, which on Camunda 7 is a workflow
-        // aggregate's id and nothing else. The core reads it and decides from it what
-        // this start is
+        // the name this instance goes by, which on Camunda 7 is a workflow aggregate's id
+        // and nothing else: the one it arrived with, or the one its caller goes by where
+        // the called process continues that business case. The core reads it and decides
+        // from it what this start is
         return businessKey;
       }
 

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" id="Definitions_CallByExpressionChild" targetNamespace="http://bpmn.io/schema/bpmn">
+  <!-- the called process of CallByExpressionCaller: it works on the aggregate of its
+       caller, so its task is handed that aggregate and writes into it. -->
+  <bpmn:process id="CallByExpressionChild" isExecutable="true">
+    <bpmn:startEvent id="CBEC_Start">
+      <bpmn:outgoing>CBEC_f1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:sequenceFlow id="CBEC_f1" sourceRef="CBEC_Start" targetRef="CBEC_Task" />
+    <bpmn:serviceTask id="CBEC_Task" camunda:delegateExpression="${theTaskOfTheCalledProcess}">
+      <bpmn:incoming>CBEC_f1</bpmn:incoming>
+      <bpmn:outgoing>CBEC_f2</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="CBEC_f2" sourceRef="CBEC_Task" targetRef="CBEC_End" />
+    <bpmn:endEvent id="CBEC_End">
+      <bpmn:incoming>CBEC_f2</bpmn:incoming>
+    </bpmn:endEvent>
+  </bpmn:process>
+</bpmn:definitions>

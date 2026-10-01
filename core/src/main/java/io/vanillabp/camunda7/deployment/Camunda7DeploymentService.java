@@ -445,6 +445,11 @@ public class Camunda7DeploymentService implements AdapterDeploymentService<BpmnM
     io.vanillabp.camunda7.wiring.SuspendedProcessDefinitions.reportIfTheSwitchIsSet(adapterId);
     if (taskRegistry != null) {
       taskRegistry.setProcessVersions(processVersions);
+      // A call activity naming the process to call in an expression cannot be given the
+      // business key while its model is deployed, because nobody knows then which process
+      // is called. The start listener of the called process therefore asks the core the
+      // same question Camunda7CallActivities asks here, and asks it through the registry
+      taskRegistry.setWorkflowAggregateSharing(workflowTaskWiring::workflowsShareTheWorkflowAggregate);
       // every inbound delivery reports which adapter it came from
       taskRegistry.setAdapterId(adapterId);
       // the EL resolver builds the task behavior and needs both to raise a BPMN error

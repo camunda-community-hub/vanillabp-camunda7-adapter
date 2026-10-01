@@ -195,6 +195,69 @@ public class Camunda7TaskRegistry {
   }
 
   /**
+   * The one question about a pair of BPMN processes which is needed again after the
+   * application has started: do they work on the same workflow aggregate.
+   */
+  public interface WorkflowAggregateSharing {
+
+    /**
+     * Whether two BPMN processes of one workflow module work on the same workflow
+     * aggregate.
+     *
+     * @param workflowModuleId The workflow module id
+     * @param bpmnProcessId The BPMN process id
+     * @param otherBpmnProcessId The BPMN process id to compare it with
+     * @return Whether both of them serve the same workflow aggregate
+     */
+    boolean workflowsShareTheWorkflowAggregate(
+        String workflowModuleId,
+        String bpmnProcessId,
+        String otherBpmnProcessId);
+
+  }
+
+  private WorkflowAggregateSharing workflowAggregateSharing;
+
+  /**
+   * Hands over who answers whether two BPMN processes work on the same workflow
+   * aggregate. That is the core, which reads it from the declarations of the workflow
+   * services while the application starts.
+   *
+   * @param workflowAggregateSharing Who answers the question
+   */
+  public void setWorkflowAggregateSharing(
+      final WorkflowAggregateSharing workflowAggregateSharing) {
+
+    this.workflowAggregateSharing = workflowAggregateSharing;
+
+  }
+
+  /**
+   * Whether two BPMN processes of one workflow module work on the same workflow
+   * aggregate, which means that a call between them continues one business case.
+   * <p>
+   * {@link Camunda7CallActivities} asks the same question
+   * while a model is prepared and writes the answer into the model. A call activity
+   * naming the process to call in an EXPRESSION leaves nothing to write it onto, so the
+   * start listener of the called process asks again while the workflow runs.
+   *
+   * @param workflowModuleId The workflow module id
+   * @param bpmnProcessId The BPMN process id
+   * @param otherBpmnProcessId The BPMN process id to compare it with
+   * @return Whether both of them serve the same workflow aggregate;
+   *         <code>false</code> where nobody handed over an answer (tests)
+   */
+  public boolean workflowsShareTheWorkflowAggregate(
+      final String workflowModuleId,
+      final String bpmnProcessId,
+      final String otherBpmnProcessId) {
+
+    return (workflowAggregateSharing != null) && workflowAggregateSharing
+        .workflowsShareTheWorkflowAggregate(workflowModuleId, bpmnProcessId, otherBpmnProcessId);
+
+  }
+
+  /**
    * Which workflow module a process definition key belongs to - the way back when
    * there is no tenant to ask (prefixed identifiers, see decision 3 in the
    * repository's DECISIONS.md).

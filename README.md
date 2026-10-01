@@ -1172,6 +1172,19 @@ carries no key, somebody started it past VanillaBP: the application's
 name into the business key, and one INFO line says so. Where it carries a key no workflow
 aggregate has, the start is refused, because VanillaBP names a workflow and nobody else.
 
+A called process brings no key and is nobody's foreign start. This engine hands a called
+process no business key, so the deployment writes
+`camunda:in businessKey="#{execution.processBusinessKey}"` onto a call activity whose called
+process works on the aggregate of its caller. A call activity which names the process to
+call in an expression has nothing to write it onto, because the model does not say which
+process will be called. The listener answers it instead. It finds the call activity which
+started the instance in the execution tree and asks the core whether the two processes work on
+one workflow aggregate. Where they do, the called process goes by the caller's name. Where they
+do not, nothing is inherited and the called process gets the aggregate of its own it is entitled
+to. The same model therefore reaches the same aggregate here as on a BPMS which copies the
+caller's values by itself. `Camunda7CallByExpressionIT` runs both ways of naming the called process against the
+engine, and `Camunda7CalledProcessStartTest` holds the cases the listener tells apart.
+
 An event subprocess is left out of this. Its start event fires inside a workflow which is
 already running and already has its aggregate, so nothing is started there. Only
 the start events the process itself holds count, in the deployment which tells the core

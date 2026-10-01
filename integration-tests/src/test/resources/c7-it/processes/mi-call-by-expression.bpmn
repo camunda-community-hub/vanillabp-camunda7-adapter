@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" id="Definitions_MiCallByExpression" targetNamespace="http://bpmn.io/schema/bpmn">
+  <!-- the caller of the test about the iteration a process called by an EXPRESSION runs
+       in. Two multi-instance subprocesses in a row, both calling the same process on the
+       same workflow aggregate, and each of them names it the other way: the first one
+       through '${processToCall}', which no deployment can resolve, the second one by its
+       id. So one model holds the two namings and the test reads both answers out of one
+       string. Sequential on purpose, so that string is an exact one. -->
+  <bpmn:process id="MiCallExprCaller" isExecutable="true">
+    <bpmn:startEvent id="MCE_Start">
+      <bpmn:outgoing>MCE_f1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:sequenceFlow id="MCE_f1" sourceRef="MCE_Start" targetRef="MCE_Group" />
+    <bpmn:subProcess id="MCE_Group">
+      <bpmn:incoming>MCE_f1</bpmn:incoming>
+      <bpmn:outgoing>MCE_f2</bpmn:outgoing>
+      <bpmn:multiInstanceLoopCharacteristics isSequential="true" camunda:collection="${groups}" camunda:elementVariable="group" />
+      <bpmn:startEvent id="MCE_GroupStart">
+        <bpmn:outgoing>MCE_gf1</bpmn:outgoing>
+      </bpmn:startEvent>
+      <bpmn:sequenceFlow id="MCE_gf1" sourceRef="MCE_GroupStart" targetRef="MCE_Call" />
+      <!-- multi-instance itself, so the chain the called process is told about is two
+           levels deep and the inner one belongs to the call activity -->
+      <bpmn:callActivity id="MCE_Call" calledElement="${processToCall}">
+        <bpmn:incoming>MCE_gf1</bpmn:incoming>
+        <bpmn:outgoing>MCE_gf2</bpmn:outgoing>
+        <bpmn:multiInstanceLoopCharacteristics isSequential="true" camunda:collection="${positions}" camunda:elementVariable="position" />
+      </bpmn:callActivity>
+      <bpmn:sequenceFlow id="MCE_gf2" sourceRef="MCE_Call" targetRef="MCE_GroupEnd" />
+      <bpmn:endEvent id="MCE_GroupEnd">
+        <bpmn:incoming>MCE_gf2</bpmn:incoming>
+      </bpmn:endEvent>
+    </bpmn:subProcess>
+    <bpmn:sequenceFlow id="MCE_f2" sourceRef="MCE_Group" targetRef="MCE_Round" />
+    <bpmn:subProcess id="MCE_Round">
+      <bpmn:incoming>MCE_f2</bpmn:incoming>
+      <bpmn:outgoing>MCE_f3</bpmn:outgoing>
+      <bpmn:multiInstanceLoopCharacteristics isSequential="true" camunda:collection="${rounds}" camunda:elementVariable="round" />
+      <bpmn:startEvent id="MCE_RoundStart">
+        <bpmn:outgoing>MCE_rf1</bpmn:outgoing>
+      </bpmn:startEvent>
+      <bpmn:sequenceFlow id="MCE_rf1" sourceRef="MCE_RoundStart" targetRef="MCE_CallById" />
+      <bpmn:callActivity id="MCE_CallById" calledElement="MiCallExprChild">
+        <bpmn:incoming>MCE_rf1</bpmn:incoming>
+        <bpmn:outgoing>MCE_rf2</bpmn:outgoing>
+      </bpmn:callActivity>
+      <bpmn:sequenceFlow id="MCE_rf2" sourceRef="MCE_CallById" targetRef="MCE_RoundEnd" />
+      <bpmn:endEvent id="MCE_RoundEnd">
+        <bpmn:incoming>MCE_rf2</bpmn:incoming>
+      </bpmn:endEvent>
+    </bpmn:subProcess>
+    <bpmn:sequenceFlow id="MCE_f3" sourceRef="MCE_Round" targetRef="MCE_End" />
+    <bpmn:endEvent id="MCE_End">
+      <bpmn:incoming>MCE_f3</bpmn:incoming>
+    </bpmn:endEvent>
+  </bpmn:process>
+</bpmn:definitions>

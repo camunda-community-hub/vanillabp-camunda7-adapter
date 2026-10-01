@@ -362,3 +362,19 @@ It applies whichever way the method is wired to the task, by `@WorkflowTask(task
 or by `@WorkflowTask(id = ...)`. The reverse pairing stays silent: a *Delegate expression* serves a
 method without `@TaskId` just as well, because the behavior leaves the activity when the handler
 returns.
+
+### A user task without a `@WorkflowTask` method is named at boot
+
+Version 1 said nothing about a user task which no method serves, and version 2 says one line about
+it: once per BPMN process, at INFO, while the workflow module boots, and only for a process one of
+your `@WorkflowService` classes claims. The line names each element, its form key or that it has
+none, and the method which would serve it.
+
+Nothing is refused and nothing changes about how such a model runs. The engine creates the user
+task, a task list shows it and whoever finishes it moves the workflow on. The line exists for the
+other case: a notification somebody drew into the model and never wired, which used to be
+invisible until a workflow reached the task and nothing happened.
+
+Where your user tasks are worked through Camunda's Tasklist alone, the line is the whole story and
+there is nothing to do about it. The Camunda 8 adapter ends the boot over a user task a job worker
+serves, and this engine has no such shape: every user task here is the engine's own.

@@ -1,6 +1,8 @@
 package io.vanillabp.camunda7.api;
 
 import java.util.List;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -35,6 +37,24 @@ public final class CompensationRecorder {
 
   private static final List<Integer> siblings = new CopyOnWriteArrayList<>();
 
+  /**
+   * The transaction each handler ran in, as the identity of the command context the engine
+   * opened for it. One command context is one transaction here: the engine builds it per
+   * command it executes, and a job is one such command.
+   */
+  private static final List<Integer> handlerTransactions = new CopyOnWriteArrayList<>();
+
+  /** The same for the two activities which are compensated later. */
+  private static final List<Integer> compensatedTransactions = new CopyOnWriteArrayList<>();
+
+  /** The transactions a handler already put a commit watch on, so each is watched once. */
+  private static final Set<Integer> watchedTransactions = ConcurrentHashMap.newKeySet();
+
+  private static final AtomicInteger commitsCoveringAHandler = new AtomicInteger();
+
+  /** Whether the handler entered second is to fail, once. */
+  private static final java.util.concurrent.atomic.AtomicBoolean oneHandlerStillHasToFail = new java.util.concurrent.atomic.AtomicBoolean();
+
   private static volatile CountDownLatch bothHandlersEntered = new CountDownLatch(2);
 
   private CompensationRecorder() {
@@ -50,6 +70,11 @@ public final class CompensationRecorder {
     entered.clear();
     threads.clear();
     siblings.clear();
+    handlerTransactions.clear();
+    compensatedTransactions.clear();
+    watchedTransactions.clear();
+    commitsCoveringAHandler.set(0);
+    oneHandlerStillHasToFail.set(false);
     bothHandlersEntered = new CountDownLatch(2);
 
   }
@@ -78,6 +103,58 @@ public final class CompensationRecorder {
   }
 
   /**
+   * Lets the handler which is entered SECOND throw once, so what a failing handler costs the
+   * other one can be read. Which handler that is follows the order the engine picks, which is
+   * not stable, and the measurement does not depend on it.
+   */
+  static void makeTheHandlerEnteredSecondFailOnce() {
+
+    oneHandlerStillHasToFail.set(true);
+
+  }
+
+  /**
+   * @return One entry per handler, naming the transaction it ran in
+   */
+  static List<Integer> transactionsTheHandlersRanIn() {
+
+    return List.copyOf(handlerTransactions);
+
+  }
+
+  /**
+   * @return One entry per compensated activity, naming the transaction it ran in
+   */
+  static List<Integer> transactionsTheCompensatedActivitiesRanIn() {
+
+    return List.copyOf(compensatedTransactions);
+
+  }
+
+  /**
+   * @return How many transactions holding a handler committed
+   */
+  static int commitsCoveringAHandler() {
+
+    return commitsCoveringAHandler.get();
+
+  }
+
+  /**
+   * The transaction the engine runs the current delegate in. The command context is the
+   * engine's own unit of work: it carries the transaction, and the engine opens one per
+   * command, which for a job is the execution of that job.
+   *
+   * @return An identity which is equal for two delegates sharing a transaction
+   */
+  private static int transactionOfTheMoment() {
+
+    return System
+        .identityHashCode(org.camunda.bpm.engine.impl.context.Context.getCommandContext());
+
+  }
+
+  /**
    * @return The names of the threads the handlers ran on, in the order they were entered
    */
   static List<String> threadsTheHandlersRanOn() {
@@ -96,6 +173,8 @@ public final class CompensationRecorder {
     public void execute(
         final DelegateExecution execution) {
 
+      compensatedTransactions.add(transactionOfTheMoment());
+
     }
 
   }
@@ -111,9 +190,24 @@ public final class CompensationRecorder {
         final DelegateExecution execution) throws Exception {
 
       entered.add(execution.getCurrentActivityId());
+      final var transaction = transactionOfTheMoment();
+      handlerTransactions.add(transaction);
+      if (watchedTransactions.add(transaction)) {
+        // counted once per transaction, so two handlers inside one transaction answer with
+        // one commit rather than with two
+        org.camunda.bpm.engine.impl.context.Context
+            .getCommandContext()
+            .getTransactionContext()
+            .addTransactionListener(
+                org.camunda.bpm.engine.impl.cfg.TransactionState.COMMITTED,
+                committed -> commitsCoveringAHandler.incrementAndGet());
+      }
       final var parent = ((org.camunda.bpm.engine.impl.persistence.entity.ExecutionEntity) execution).getParent();
       siblings.add(parent == null ? -1 : parent.getExecutions().size());
       threads.add(Thread.currentThread().getName());
+      if ((entered.size() % 2 == 0) && oneHandlerStillHasToFail.compareAndSet(true, false)) {
+        throw new IllegalStateException("this handler could not undo its work");
+      }
       final var inside = insideAHandler.incrementAndGet();
       mostHandlersInsideAtOnce.accumulateAndGet(inside, Math::max);
       final var latch = bothHandlersEntered;

@@ -10,6 +10,7 @@ import org.camunda.bpm.model.bpmn.Bpmn;
 import org.h2.jdbcx.JdbcDataSource;
 
 import io.vanillabp.camunda7.wiring.Camunda7CallActivities;
+import io.vanillabp.camunda7.wiring.Camunda7TaskRegistry;
 import io.vanillabp.integration.adapter.spi.workflowtask.BpmnTaskSpec;
 import io.vanillabp.integration.adapter.spi.workflowtask.WorkflowTaskWiring;
 
@@ -84,6 +85,14 @@ final class AnEngineRunningCalledProcesses implements AutoCloseable {
 
   private final ProcessEngine processEngine;
 
+  /**
+   * The registry of this engine, filled the way the deployment fills it and told the same
+   * answer about the workflow aggregate the core gives above. The walk needs it for a call
+   * activity which names the process it calls in an expression, where no answer was written
+   * into the model.
+   */
+  private final Camunda7TaskRegistry taskRegistry = new Camunda7TaskRegistry();
+
   private AnEngineRunningCalledProcesses(
       final String databaseName) {
 
@@ -106,9 +115,16 @@ final class AnEngineRunningCalledProcesses implements AutoCloseable {
           // what the deployment does with a call activity, so the note about the
           // workflow aggregate is on the models this engine runs
           Camunda7CallActivities.prepareCallActivities(model, WORKFLOW_MODULE, CORE);
+          model
+              .getModelElementsByType(org.camunda.bpm.model.bpmn.instance.Process.class)
+              .forEach(process -> taskRegistry.registerProcess(WORKFLOW_MODULE, process.getId(), process.getId()));
           deployment.addModelInstance(resource, model);
         });
     deployment.deploy();
+
+    taskRegistry
+        .setWorkflowAggregateSharing(
+            CORE::workflowsShareTheWorkflowAggregate);
 
   }
 
@@ -132,6 +148,12 @@ final class AnEngineRunningCalledProcesses implements AutoCloseable {
   ProcessEngine processEngine() {
 
     return processEngine;
+
+  }
+
+  Camunda7TaskRegistry taskRegistry() {
+
+    return taskRegistry;
 
   }
 

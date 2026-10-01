@@ -28,6 +28,14 @@ vanillabp:
           allow-full-sync-with-bpms: true
           declared-aggregate-values:
             - '*'
+        CallByExpressionCaller:
+          allow-full-sync-with-bpms: true
+          declared-aggregate-values:
+            - '*'
+        CallByExpressionChild:
+          allow-full-sync-with-bpms: true
+          declared-aggregate-values:
+            - '*'
         DeclaredRuntimeNew:
           allow-full-sync-with-bpms: true
           declared-aggregate-values:
@@ -69,6 +77,14 @@ vanillabp:
           declared-aggregate-values:
             - '*'
         LossyFormat:
+          allow-full-sync-with-bpms: true
+          declared-aggregate-values:
+            - '*'
+        MiCallExprCaller:
+          allow-full-sync-with-bpms: true
+          declared-aggregate-values:
+            - '*'
+        MiCallExprChild:
           allow-full-sync-with-bpms: true
           declared-aggregate-values:
             - '*'

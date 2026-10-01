@@ -445,6 +445,11 @@ public class Camunda7DeploymentService implements AdapterDeploymentService<BpmnM
     io.vanillabp.camunda7.wiring.SuspendedProcessDefinitions.reportIfTheSwitchIsSet(adapterId);
     if (taskRegistry != null) {
       taskRegistry.setProcessVersions(processVersions);
+      // A call activity naming the process to call in an expression cannot be given the
+      // business key while its model is deployed, because nobody knows then which process
+      // is called. The start listener of the called process therefore asks the core the
+      // same question Camunda7CallActivities asks here, and asks it through the registry
+      taskRegistry.setWorkflowAggregateSharing(workflowTaskWiring::workflowsShareTheWorkflowAggregate);
       // every inbound delivery reports which adapter it came from
       taskRegistry.setAdapterId(adapterId);
       // the EL resolver builds the task behavior and needs both to raise a BPMN error
@@ -797,11 +802,16 @@ public class Camunda7DeploymentService implements AdapterDeploymentService<BpmnM
     // compensation is the same second token drawn differently, and it needs its shape: a
     // throw event which compensates two finished activities starts both handlers, and the
     // developer has to read WHICH event starts WHICH handlers
+    final var compensation = Camunda7ConcurrentTokens.compensationOf(model, scopedBpmnProcessId);
     workflowTaskWiring
         .reportCompensation(
             workflowModuleId,
             bpmnProcessId,
-            Camunda7ConcurrentTokens.compensationOf(model, scopedBpmnProcessId));
+            compensation);
+
+    // and all those handlers run in ONE transaction, which is the one promise of decision 5
+    // this engine does not keep
+    warnAboutCompensationSharingOneTransaction(workflowModuleId, bpmnProcessId, compensation);
 
     // What the expressions of this model read, which two checks ask the core about. The
     // model is parsed for them once: both questions are about the same paths
@@ -833,6 +843,11 @@ public class Camunda7DeploymentService implements AdapterDeploymentService<BpmnM
     warnAboutCallActivitiesLeavingTheWorkflowModule(workflowModuleId, bpmnProcessId, scopedBpmnProcessId, model);
 
     wireBpmsInitiatedStarts(workflowModuleId, bpmnProcessId, scopedBpmnProcessId, model);
+
+    // A user task nothing serves is a model which runs, and the notification the application
+    // drew into it is the one thing missing. Said once per process while the model is wired,
+    // where every other finding about this model is said
+    nameTheUserTasksNothingServes(workflowModuleId, bpmnProcessId, scopedBpmnProcessId, model);
 
     log.info(
         "Camunda7[{}]: wired {} task(s) of BPMN process '{}' (file '{}', workflow module '{}')",
@@ -1835,6 +1850,57 @@ public class Camunda7DeploymentService implements AdapterDeploymentService<BpmnM
   }
 
   /**
+   * Says that the compensation handlers of a throw event share one transaction with that
+   * event, which is not what this adapter promises for a service-like task.
+   * <p>
+   * The parse listener writes <code>asyncBefore</code> on every service-like task, the
+   * handlers included, and the engine ignores it there: it starts a compensation handler
+   * outside the normal flow, where no job is created. Measured on 2026-10-01 against the
+   * pinned engine 7.24.0 by {@code Camunda7CompensationTokensTest}: both handlers of one
+   * throw event ran in the same command context, one commit covered both of them, and the
+   * two activities they compensated had a transaction each. A handler which fails rolls the
+   * whole compensation back, so the handlers which had already returned run again.
+   * <p>
+   * A hint and not a refusal. This is what the engine does with a correct model, not a
+   * mistake somebody made, and there is no flag which changes it. What somebody can change
+   * is the handler, which is why the message asks for one that may run twice. Decision 5 in
+   * the repository's DECISIONS.md names the promise, and the exception beside it.
+   *
+   * @param workflowModuleId The workflow module ID
+   * @param bpmnProcessId The PLAIN BPMN process ID
+   * @param compensation The throw events of this model with the handlers they start
+   */
+  private void warnAboutCompensationSharingOneTransaction(
+      final String workflowModuleId,
+      final String bpmnProcessId,
+      final List<io.vanillabp.integration.adapter.spi.workflowtask.CompensationSpec> compensation) {
+
+    compensation
+        .stream()
+        .filter(thrown -> !thrown.handlerIds().isEmpty())
+        .forEach(thrown -> log
+            .warn(
+                """
+                    Camunda7[{}]: the compensation throw event '{}' of BPMN process '{}' (workflow \
+                    module '{}') starts {} compensation handler(s) ('{}'), and this engine runs all \
+                    of them in the transaction of the throw event. A service-like task otherwise \
+                    gets a job and therefore a transaction of its own here, and this adapter writes \
+                    the flags for it, but the engine starts a compensation handler outside the normal \
+                    flow, where it makes no job of it. So those handlers and their side effects share \
+                    one transaction, and a handler which fails rolls back what the handlers before it \
+                    wrote and sends them back to work on the next attempt. Write a compensation handler so that running it twice does no harm, and \
+                    keep work this engine cannot roll back, a call to another system above all, out \
+                    of it.""",
+                adapterId,
+                thrown.throwEventId(),
+                bpmnProcessId,
+                workflowModuleId,
+                thrown.handlerIds().size(),
+                String.join("', '", thrown.handlerIds())));
+
+  }
+
+  /**
    * Says where a call activity of this model calls a process of ANOTHER workflow module, and
    * what that costs a BPMN error on its way back.
    * <p>
@@ -2189,6 +2255,81 @@ public class Camunda7DeploymentService implements AdapterDeploymentService<BpmnM
             bpmnProcessId,
             workflowModuleId,
             adapterId);
+
+  }
+
+  /**
+   * Names the user tasks of one process which no <code>&#64;WorkflowTask</code> method serves.
+   * <p>
+   * Nothing is refused and nothing is warned about. This engine creates the user task, it
+   * appears in a task list, somebody finishes it and the workflow runs on, which is why the core
+   * hands a user task over as an OPTIONAL spec. The one thing missing is the notification, and a
+   * model whose user tasks are worked through a task list alone is a model which is meant that
+   * way. That is where this stops being the same case as the Camunda 8 adapter's: there a user
+   * task a job worker serves leaves the workflow standing, and the boot ends over it.
+   * <p>
+   * Only for a process a <code>&#64;WorkflowService</code> class of this application claims. The
+   * core answers the name of the workflow aggregate's id for such a process and refuses to
+   * answer for one nobody claimed, which is the same question the Camunda 8 adapter asks for the
+   * same split. Where nobody claims the process, no method of this application was meant to
+   * serve its tasks and there is nothing to say.
+   *
+   * @param workflowModuleId The workflow module
+   * @param bpmnProcessId The PLAIN BPMN process id
+   * @param scopedBpmnProcessId The process id as the engine knows it, which is what the model
+   *          carries
+   * @param model The model this boot deploys
+   */
+  private void nameTheUserTasksNothingServes(
+      final String workflowModuleId,
+      final String bpmnProcessId,
+      final String scopedBpmnProcessId,
+      final BpmnModelInstance model) {
+
+    if (!theApplicationClaims(workflowModuleId, bpmnProcessId)) {
+      return;
+    }
+    final var unserved = io.vanillabp.camunda7.wiring.Camunda7UnservedUserTasks
+        .of(
+            model,
+            scopedBpmnProcessId,
+            key -> workflowTaskInvoker.workflowTaskHandlerExists(workflowModuleId, bpmnProcessId, key));
+    if (unserved.isEmpty()) {
+      return;
+    }
+    log.info(
+        "Camunda7[{}]: {}",
+        adapterId,
+        io.vanillabp.camunda7.wiring.Camunda7UnservedUserTasks
+            .report(unserved, bpmnProcessId, workflowModuleId));
+
+  }
+
+  /**
+   * Whether a <code>&#64;WorkflowService</code> class of this application claims the given BPMN
+   * process. Asked of the core, which knows the workflow aggregate of a claimed process and
+   * nothing about an unclaimed one.
+   *
+   * @param workflowModuleId The workflow module
+   * @param bpmnProcessId The PLAIN BPMN process id
+   * @return Whether the application stands in for the process
+   */
+  private boolean theApplicationClaims(
+      final String workflowModuleId,
+      final String bpmnProcessId) {
+
+    try {
+      return workflowTaskWiring.resolveWorkflowAggregateIdName(workflowModuleId, bpmnProcessId) != null;
+    } catch (final RuntimeException e) {
+      log.debug(
+          "Camunda7[{}]: no @WorkflowService class of this application claims BPMN process '{}' of "
+              + "workflow module '{}'",
+          adapterId,
+          bpmnProcessId,
+          workflowModuleId,
+          e);
+      return false;
+    }
 
   }
 

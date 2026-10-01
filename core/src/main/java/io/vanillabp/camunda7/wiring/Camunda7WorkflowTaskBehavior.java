@@ -257,8 +257,11 @@ public class Camunda7WorkflowTaskBehavior extends AbstractBpmnActivityBehavior {
     private final io.vanillabp.spi.service.TaskEvent.Event taskEvent;
 
     /**
-     * Answers the version of the execution's process definition. May be
-     * <code>null</code>: no version is reported then, which matches every method.
+     * What this context asks about the engine it was built in: the version of the
+     * execution's process definition, the adapter holding it, and whether a called process
+     * continues the business case of its caller. May be <code>null</code> (tests): no
+     * version is reported then, which matches every method, and the multi-instance walk
+     * ends at a call activity naming its called process in an expression.
      */
     private final Camunda7TaskRegistry taskRegistry;
 
@@ -413,7 +416,9 @@ public class Camunda7WorkflowTaskBehavior extends AbstractBpmnActivityBehavior {
     public Map<String, MultiInstanceValue> getMultiInstances() {
 
       if (multiInstances == null) {
-        multiInstances = io.vanillabp.camunda7.api.Camunda7MultiInstances.of(execution);
+        // with the registry: it answers for a call activity which names the process it
+        // calls in an expression, which the deployed model could say nothing about
+        multiInstances = io.vanillabp.camunda7.api.Camunda7MultiInstances.of(execution, taskRegistry);
       }
       return multiInstances;
 

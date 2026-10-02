@@ -651,8 +651,12 @@ caller's aggregate gets a `camunda:property` named `vanillabp:sameWorkflowAggreg
 to the business key of decision 5 and read by `Camunda7MultiInstances`. Two things follow from
 that. An older version of a process which the engine still runs keeps the answer it was deployed
 with, which is what the workflows still standing in it need. And a call activity which names the
-process to call in an expression carries no note, because nobody could be asked before it runs, so
-the walk ends there the way it ends at a foreign aggregate.
+process to call in an expression carries no note, because the model does not say which process will
+be called. The core is asked for it while the workflow runs, through the `Camunda7TaskRegistry` the
+deployment service hands that one answer to, which is where the start listener of a called process
+asks the same question (decisions 32 and 34). It is asked ONLY there. Where the model spells the
+called process out, the answer of the deployment stands, and a workflow standing in an older
+version keeps the answer that version was deployed with.
 
 The values themselves are never copied anywhere. The engine holds them in the executions of the
 calling process, and a called process which is not told about them can still read what the model
@@ -957,3 +961,302 @@ would make the check quiet about the case which actually loses a write.
 
 The wording of the core's message follows the measurement: it says the handlers can be open at the
 same time, not that they run in parallel.
+
+### 30. A call activity leaving the workflow module is reported, and the error code stays as it is
+
+Everything VanillaBP scopes is scoped per workflow module, a BPMN error code among it. The code a
+`TaskException` raises is composed from the module of the process whose task raised it, and the
+codes written in a model are rewritten with the module whose file declares them. So when a call
+activity calls a process of ANOTHER workflow module, the called process raises its code under its
+own module's prefix, the error boundary event of the call activity waits for the caller's, and the
+error finds no catcher.
+
+Such a call is possible, through exactly one attribute and only on this BPMS.
+
+Under `use-prefix` a static `camunda:calledElement` is rewritten with the CALLING module's prefix
+while the model is prepared, so it can only ever name a process of that module. Under `by-adapter`
+there is no prefix, and this engine resolves a called element in the tenant of the calling instance,
+which is the calling module's tenant. `camunda:calledElementTenantId` overrides that tenant, and
+that is the one door out.
+
+A called element given as an expression is the application's own string and can name anything. No
+deployment can resolve it, so nothing is said about one.
+
+On Camunda 8 the door does not exist: `zeebe:calledElement` carries a process id and nothing else,
+so the cluster always resolves it in the tenant of the calling instance. That adapter says so where
+its code is composed, and reports nothing.
+
+What happens about it is a warning from the deployment, per call activity naming a foreign tenant.
+It names the call activity, the tenant, why the error finds no catcher, and the two ways out: let
+the called process end normally and report its outcome in a variable the caller branches on, or
+move that process into this workflow module. `Camunda7CrossModuleCallActivityTest` holds the
+message.
+
+A warning and not a refusal, because such a call runs. A called process which raises no BPMN error
+is a model somebody may well have meant, and ending the boot over it would take a working
+application down for a defect it may not have.
+
+The code is not composed from the CALLER's module instead. That would be a second rule for one
+identifier, decided by which call activity a workflow happened to come through, and both processes
+would then carry a name neither of them wrote. The developer who modelled the error is the one who
+can answer it, and the boot is where they read about it.
+
+### 31. A handler is held against the iterations around its own task, not against the whole process
+
+When a model is deployed, this adapter refuses a `@WorkflowTask` method which reads the item of a
+multi-instance element the model hands none over for. It used to read the elements without an item
+PROCESS-WIDE and then ask the core, per task, which of them a method wants. Camunda 8 has always
+read the chain of iterations enclosing the task instead. The two adapters therefore gave different
+answers to one question, and this entry picks one.
+
+The chain wins. A handler is handed the item of the rounds its own element runs in and of nothing
+else, so an element in another branch of the same process cannot reach it whatever that element
+names. Refusing over such a pair ends the boot of an application which does nothing wrong, and the
+message would name an element the developer cannot connect to the task. The process-wide reading
+was the wider net, and everything it caught beyond the chain was a false catch.
+
+So `Camunda7MultiInstanceItems.elementsWithoutAnItem` is gone, and
+`refuseHandlersWantingAnItemTheModelHasNot` walks the chain of each task through
+`elementsWithoutAnItemAround`. That is the same method the version catalog already used for a
+version the engine still holds, so a task is now read one way in both directions.
+
+What is not refused any more is a method which declares `@MultiInstanceElement` for an element it
+never iterates in. It gets `null` at runtime, and neither adapter says a word about it. That is a
+different defect. The element may well name its item, and finding it takes the core comparing what
+a method asks for against the chain the adapter read, which is a roadmap row of its own.
+
+The shape of a compensation finding for a held version was the other half of the same question:
+whether a version a BPMS only still holds should report its compensation in the shape the deployed
+model reports it in, which is "this throw event starts these handlers", rather than flat among the
+other elements that can put a second token into a workflow.
+
+It stays flat, in both adapters. The shaped report exists because a developer reads which throw
+event starts which handlers and then redraws the model; nobody can redraw a version the BPMS
+already holds, and what is left to say about it is that its workflows can hold more than one token,
+which the flat list says. Carrying the shape would take a second method on `ProcessVersionCatalog`,
+and that method would buy a sentence nobody acts on. Both adapters say so where the flat list is
+assembled.
+
+### 32. A called process named by an expression is asked about while it runs
+
+Camunda 7 hands a called process no business key, and the business key is where this adapter keeps
+the workflow aggregate's id. Decision 5 closes that gap in the model: the deployment writes
+`camunda:in businessKey="#{execution.processBusinessKey}"` onto a call activity whose called
+process works on the aggregate of its caller, and nowhere else, because a process with an
+aggregate of its own must not be handed the caller's identity.
+
+A call activity which names the process to call in an expression has nothing for that answer to be
+written onto. The model does not say which process will be called, so the deployment cannot tell
+the two cases apart, and such a call activity used to be left alone. Measured against the engine,
+that model did not run. The called process reached the application with no name. The core read that
+as a start past VanillaBP and refused it with "no `@WorkflowStartedByBpms` method builds a workflow
+aggregate for it", which is the wrong advice: writing that method would build a second workflow
+aggregate and the called process would then run beside its caller's business case instead of in it.
+The outbox retried the refusal fifty times and the workflow never moved. The same model runs on
+Camunda 8, where the aggregate's id is an ordinary process variable the cluster copies into the
+called instance, so one model behaved differently on two engines.
+
+The answer now comes while the workflow runs. The start listener of the called process reads the
+call activity which started the instance out of the execution tree, asks the core whether caller
+and called process work on one workflow aggregate, and writes the caller's name into the instance
+where they do. Where they do not, nothing is inherited and the start stays the start it looks like.
+
+Three other ways were open and none of them holds.
+
+Writing the business key unconditionally is the cheap one, and it trades a loud failure for a
+quiet wrong answer. A called process with an aggregate of its own would then be handed the
+caller's id, and a lookup of that id in the called process' own persistence either finds nothing
+and refuses, or finds a row of the same id and attaches the instance to business data it has
+nothing to do with. Decision 28 already names that last case as the one thing Camunda 7 cannot
+catch; creating it on purpose is another matter.
+
+Re-evaluating the model's own expression inside an injected business-key expression keeps
+everything in the model, and it evaluates the application's expression twice, breaks on a
+`calledElement` which mixes literal text with an expression, and has to be rewritten again by the
+scoping of decision 3. Too much cleverness for one attribute.
+
+Leaving the behaviour alone and writing the difference into both READMEs was the third. It makes
+the portability of a model a promise only one engine keeps, and this is a model an application
+writes on purpose, so the difference would be the first thing a reader of both adapters finds.
+
+What this costs is one question per start of a called process which arrives without a name, and
+the core answers it from a map it filled while the application started. The adapter asks through
+`Camunda7TaskRegistry`, which the deployment service hands the core's answer to the way it already
+hands over the process versions, so nothing new reaches the listener.
+
+Decision 22 keeps the answer about a shared workflow aggregate in the deployed model, because the
+multi-instance walk is reached from an execution and the core was not at hand there. That is why a
+statically named call activity carries its note, and the note is what `Camunda7MultiInstances`
+reads. The start listener is built with the core and can ask, so the business key crosses a call
+activity the model names in an expression. The walk was still ending there when this was decided,
+which was a difference between the two mechanisms rather than one between the two engines, and
+decision 34 closed it by handing the walk the same registry.
+
+`Camunda7CallByExpressionIT` runs the same called process reached both ways against the engine, and
+`Camunda7CalledProcessStartTest` holds the four cases the listener tells apart.
+
+### 33. A decision named by an expression gets the prefix in front of the expression
+
+Under `use-prefix` the decisions of a workflow module are deployed under prefixed ids, and the
+`camunda:decisionRef` of the business rule tasks calling them is prefixed with them. A `decisionRef`
+written as an expression was left exactly as the application wrote it, because the model does not
+say which decision a run will pick. It now gets the prefix written in front of it, the same as the
+`camunda:calledElement` of a call activity. Camunda 7 reads the attribute as one expression: the
+text in front stays text and the engine looks up the prefixed id of whatever the expression yields.
+
+Measured against the engine before anything was changed. `Camunda7DecisionByExpressionTest` deploys
+one model twice, once scoped and once not, with the decision of the module beside it and the parse
+listener of this adapter in the engine, so the business rule task runs in a job of its own the way
+it does in an application. Without a prefix the run reaches the decision and the task writes its
+result. Under `use-prefix` the job failed with "no decision definition deployed with key
+'creditRating' and tenant-id 'null': decisionDefinition is null". The engine retries such a job and
+leaves an incident, so the workflow stops at that task and the application sees a model which never
+gets past it. Nothing warned about it while the module was deployed, because the wiring check leaves
+a business rule task with a `decisionRef` alone on purpose: the engine serves it, not the
+application.
+
+Reporting the case at deployment instead was the other way, and it was not taken. It would refuse a
+model this mode could carry, and the engine carries it: the composed expression is measured above.
+It would also make `use-prefix` the one mode in which a decision cannot be picked at runtime, while
+Camunda 8 does the same thing with the same model (decision 55 of the Camunda 8 adapter writes the
+prefix into the `decisionId` of a `zeebe:calledDecision`). Both adapters now answer the same for the
+same file, and that is what a portable model needs.
+
+What the application loses is a reference out of its own module: the expression always resolves
+inside the prefix of the module whose model carries the task. That is the limit `use-prefix` already
+had for a decision named by a literal, and the README says so in its `Decision tables` section.
+A module which has to reach a decision somebody else deployed stays with `by-adapter`.
+
+This follows decision 3, which says the identifiers the engine resolves across definitions are
+scoped, and decision 5, which says the adapter only changes a model in ways its author can predict.
+The prefix in front of an expression is the same change the author already sees on a call activity.
+
+### 34. The multi-instance chain crosses a call activity named by an expression
+
+Decision 22 keeps the answer about a shared workflow aggregate in the deployed model, and for a
+call activity which names the process to call in an expression there was nothing to write it onto,
+so the walk ended at such a call activity the way it ends at a foreign aggregate. Decision 32 made
+the business key cross it, by asking the core while the workflow runs: the deployment service hands
+the one answer to `Camunda7TaskRegistry`, where the start listener of the called process reads it.
+The walk could have asked the same way and did not, so one model reported the iteration of its
+caller on Camunda 8 and reported none here. `Camunda7MultiInstanceByExpressionIT` measured that
+before anything was changed. In one model and one run, the four calls of a call activity named by
+an expression reported `nothing` and the one call of a call activity named by its id reported its
+level.
+
+This entry closes it. The walk asks the core through the same registry, and it asks only where the
+deployment could not answer. Where the model spells the called process out, the note written while
+that model was deployed stands and nobody asks again. So a workflow standing in an older version
+of a process still gets the answer that version was deployed with, whatever the declarations of the
+application say today, which is the part of decision 22 this leaves alone. Both mechanisms read one
+method for it, `Camunda7CallActivities.continuesTheCallersWorkflowAggregate` for a pair of running
+executions, so the business key and the iteration cannot give one pair of processes two answers.
+
+The caller's chain could have been written into the called instance as a process variable instead,
+the way the Camunda 8 adapter writes `vanillabpMiParents` as an input mapping. That needs no core
+while the workflow runs and it would answer for every reader of the walk. It also copies the core's
+answer into a place an application can read and overwrite, and Camunda 8 pays for that with three
+test cases about a model which writes that variable itself. The core's answer is the one source of
+this truth, so it is asked rather than copied.
+
+Two readers of the walk still end at such a call activity, because they hold no registry. One is
+any caller of `Camunda7MultiInstances.of(execution)` or `of(engine, executionId)` outside this
+adapter, where the overloads taking a registry are the ones to use. The other is the Camunda 7
+adapter of the business cockpit, which reads the walk for the details of a user task and has the
+registry at hand through `Camunda7EngineFacts`. Passing it there is one argument in one call, and it
+belongs to that repository rather than to this one.
+
+### 35. A compensation runs in one transaction, and the deployment says so
+
+Decision 5 lets this adapter write `asyncBefore` and `asyncAfter` on every service-like task, which
+is what gives each of them a job and therefore a transaction of its own. A compensation handler is
+the one place where the engine does not follow. It starts such a handler outside the normal flow,
+where no job is created, so all the handlers of a throw event run in the transaction of that event.
+The promise stands everywhere else. This is the exception beside it, and the deployment names it.
+
+Measured on 2026-10-01 against the pinned engine 7.24.0 by `Camunda7CompensationTokensTest`, with a
+throw event compensating two finished service tasks. Both handlers ran in the same command context,
+which is the engine's own unit of work, and one commit covered the two of them. The two activities
+they compensated ran in a transaction each, so the flags do work where the engine makes a job of an
+activity. And a handler which threw sent the other one back to work: the engine rolled the whole
+compensation back, counted one retry off the single job and ran both handlers again on the next
+attempt. Decision 29 had read the jobs and the thread on 2026-09-27 and those numbers did not move;
+the command context, the commit and the retry are new.
+
+A warning and not a refusal. The model is right and no flag of this adapter changes what the engine
+does, so ending the boot would stop an application which did nothing wrong. What a reader can
+change is the handler, which is why the message asks for one that may run twice and for work the
+engine cannot roll back to stay out of it. It names the throw event and the handlers it starts,
+because the cost grows with their number: five handlers and their side effects in one transaction
+means the work of the first four is only as safe as the fifth.
+
+Making up for it inside the adapter is not what this decision answers. The flag the adapter writes
+at parse time IS the seam this engine offers, and the engine ignores it there, so anything beyond
+that would be VanillaBP running the compensation instead of the engine. Whether it should is a
+question of its own, it has a roadmap row of its own, and this decision only says what the engine
+does and what the deployment says about it.
+
+Camunda 8 hands out a job per handler, so the same model is expected to run in a transaction per
+handler there. That is read off the model reading of the Camunda 8 adapter and not measured on a
+cluster, and only a run against a cluster would settle it.
+
+### 36. A user task nothing serves is named in a claimed process, and nothing is refused
+
+A user task of this engine runs without a `@WorkflowTask` method. The engine creates the task, it
+stands in a task list, somebody finishes it and the workflow moves on. That is why the core hands a
+user task over as an OPTIONAL spec, and `validateTaskWiring` filters those out before it asks for a
+method. Nobody used to say a word about it, so an application which drew a notification into its
+model and forgot the method found out in production, if at all.
+
+From now on the deployment names such a task. Once per BPMN process, at INFO, while the model is
+wired, and only for a process a `@WorkflowService` class of this application claims. The message
+names each element, the name the modeller wrote on it, its form key or that it carries none, and the
+method which would serve it. It ends by saying that a model whose user tasks are worked through a
+task list alone needs no change.
+
+This is not the refusal Camunda 8 has. Decision 53 of the Camunda 8 adapter refuses a user task a
+job worker serves in a claimed process. The reason it gives is what the shape costs: the cluster
+hands out a job, nothing fetches it and the workflow stands at the element with no incident and
+nothing in any log. Camunda 7 has no such shape. Every user task here is the engine's own, and the
+application is the only thing which can be missing.
+
+So the rule is the same where the two can be the same, and it stops where the engine stops. What is
+taken over is the split: a process this application claims is a process it stands in for, and a
+process nobody claims is somebody else's model which reached this engine because of the file it sits
+in. What is not taken over is the level. A refusal would end the boot of an application whose model
+is right, which would be stricter than the core, whose own field says a handler is optional. A WARN
+would be the same claim in a quieter voice, on every boot, for a model nobody has to change. The
+third option, a report which only speaks where the process is claimed, says the one thing which may
+be news without asking anybody to act on it.
+
+Refusing it, the way Camunda 8 refuses its own case, was rejected: it would refuse the plain
+Camunda 7 model of version 1 and of every application which works its user tasks through Camunda's
+Tasklist. There is nothing to fix in such a model, and a flag to switch the refusal off would be a
+flag for the normal case.
+
+A WARN instead of an INFO says that something needs attention. Here the model may be exactly what
+the modeller meant, and a warning on every boot for a correct model is how a log teaches people to
+skip warnings.
+
+Saying it for an unclaimed process too is what the Camunda 8 adapter does, and it has a reason
+there: the workflow of an unclaimed process really does stand at the element. Here nothing stands,
+and no method of this application was ever meant to serve those tasks. The core already names the
+unclaimed processes of a workflow module once, which is where that belongs.
+
+The check could also sit in the core, which holds `optional` and knows which method serves which
+spec, and it could then name the unserved optional specs of a claimed process once for all adapters.
+Two things speak against that for this release. The way out differs per BPMS, and the message is
+only worth reading where it is concrete: here it is a form key, on the Process-Engine-API an external
+form reference, on Camunda 8 a form definition of a Camunda-managed task. The core also sees only
+the specs an adapter chose to hand over, and a Process-Engine-API user task without an external form
+reference never becomes a spec at all, so the core could not name the case which loses the most. A
+report in the core would change the Camunda 8 adapter's boot output as well, which this entry does
+not touch.
+
+What this leaves open is the Camunda 8 adapter, which stays silent about the same case for a
+Camunda-managed user task whose external form reference no method names. Three adapters then say two
+different things about one situation. Closing that is either one more story for that adapter or the
+core-side report above, and whoever takes it should start from this entry.
+
+`Camunda7UnservedUserTasksTest` holds the message, the element without a form key, both keys a
+method may be wired by, the silence about an unclaimed process and that the line is an INFO.

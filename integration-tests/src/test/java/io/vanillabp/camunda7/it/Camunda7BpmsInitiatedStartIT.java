@@ -17,12 +17,14 @@ import org.springframework.test.annotation.DirtiesContext;
 import io.vanillabp.integration.test.utils.SuppressOutputExtension;
 
 /**
- * End-to-end test of a workflow the engine starts on its own against a
- * real embedded Camunda 7 engine: a timer start event fires, VanillaBP builds the
- * workflow aggregate from the trigger, stores its ID as the instance's business key
- * and the task following the start event finds the aggregate through exactly that
- * key. Nothing of this involves application code beyond the BPMN model and the
- * <code>&#64;WorkflowTask</code> method.
+ * End-to-end test of a workflow the engine starts on its own, against a real embedded
+ * Camunda 7 engine. A timer start event fires, the application's
+ * <code>&#64;WorkflowStartedByBpms</code> method builds the workflow aggregate, and the
+ * adapter stores its ID as the instance's business key. The task following the start event
+ * then finds the aggregate under exactly that key.
+ * <p>
+ * The application has to serve such a start: a process the engine starts by itself does not
+ * boot without that method.
  */
 @SpringBootTest(classes = TestApplication.class, properties = {
     // own database: contexts are cached and live in parallel - a foreign engine

@@ -132,6 +132,35 @@ a start event for. A `@WorkflowEnded` method kept for the old id is
 checked in the same place. Both are warnings and neither stops a start: they read models nobody
 can change any more.
 
+### What the outbox costs where version 1 used your transaction
+
+Camunda 7 runs inside your application, so version 1 could do its engine work in the transaction of
+the caller, and for most operations it did. Version 2 schedules every operation which progresses a
+workflow through the phase-two outbox, which is decision 2 of this repository. What that costs is
+written once for every adapter, in the platform's
+[upgrade notes](https://github.com/vanillabp/adapter-platform-integration/blob/main/UPGRADE.md#what-the-upgrade-costs-under-load).
+What is special here is which of your calls pay it.
+
+A workflow start pays nothing new. Version 1 wrote a job of the engine inside your transaction and
+let the job executor run it, so the start already cost a row in your transaction and a transaction
+after it. Version 2 writes an outbox entry where that job was. The row lands in another table and
+the call leaves on another thread.
+
+Answering a message is where the cost appears, and so is completing or cancelling a task. Version
+1 called the engine while your transaction was open, so your commit covered the engine's work.
+Version 2 writes an entry for it and calls the engine after your commit, in a transaction of its
+own.
+
+The job executor stays where it was. Service tasks are still asynchronous before and after, as
+version 1 made them, so your handlers still arrive on job executor threads and the engine's own
+transaction count per task is unchanged. The dispatch threads of the outbox are new beside it, and
+both draw on the database your workflow aggregates live in.
+
+An application which had raised `camunda.bpm.job-execution.max-pool-size` should look at
+`vanillabp.outbox.dispatch-threads` as well. Camunda's Spring Boot starter starts the job executor
+with three threads and grows it to ten, and that pool used to carry VanillaBP's starts along with
+the engine's own work. Four dispatch threads carry them now.
+
 ### The wakeup job executor has a new key and is no longer experimental
 
 Version 1 had an experimental job executor behind `camunda.bpm.job-execution.wakeup`. The key is

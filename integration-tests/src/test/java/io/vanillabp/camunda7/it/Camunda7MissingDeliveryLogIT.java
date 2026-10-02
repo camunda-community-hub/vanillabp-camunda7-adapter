@@ -18,7 +18,7 @@ import io.vanillabp.integration.test.utils.SuppressOutputExtension;
  * <ul>
  * <li>an adapter id on a datasource of its own is named by the guiding message;</li>
  * <li>an application whose adapter ids all share the application's datasource hears
- * nothing, because there is nothing a record could add there.</li>
+ * nothing, because no delivery of theirs is deduplicated.</li>
  * </ul>
  * Both applications are booted WITHOUT the platform's JDBC delivery log, which is the
  * situation the message is about; everything else about them is the same.

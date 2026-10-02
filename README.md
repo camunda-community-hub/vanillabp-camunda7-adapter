@@ -167,7 +167,7 @@ deployed to the embedded engine of every prioritized adapter.
   adapter id answers `deliversTasksAtLeastOnce()` with `true` and names each delivery by
   the id of the job at hand, and the core answers the repetition from its delivery log
   instead of running the `@WorkflowTask` method a second time (see
-  [decision 6](./DECISIONS.md#6-a-task-handler-runs-inside-the-engines-own-job-transaction)).
+  [decision 6](./DECISIONS.md#6-a-task-handler-runs-inside-the-engines-own-job-transaction---the-delivery-record-part-superseded-by-decision-39)).
 
 The four bullets have their tests: `Camunda7StartWorkflowIT` for the deployment and the
 two-phase start, `Camunda7JobExecutorLifecycleIT` and its Quarkus twin for the executor
@@ -813,10 +813,12 @@ not deployed - all of them fail where the application made the call.
 A check which finds the task gone throws `io.vanillabp.spi.process.TaskNotFoundException`,
 the type the SPI documents for a task no BPMS knows any more, and the type the platform
 raises when its own probe found out. Which of the two answers is decided by whether a
-delivery record exists, which only the own-datasource mode writes, and an application
-cannot see that - so it must not decide what an application can catch.
+delivery record exists, and an application cannot see that - so it must not decide what
+an application can catch.
 `Camunda7RepeatedDeliveryIT#aStaleCompletionRaisesTheGuidingException` drives it against
-an engine on its own datasource, the one setup where the record exists.
+an engine on its own datasource, and
+`Camunda7UserTaskDeliveryRecordIT#aUserTaskDeliveryIsRecordedAndSharpensAWrongCompletion`
+against the shared one, where a record is written as well (decision 39).
 
 Every phase two is idempotent, because the outbox dispatches at-least-once: a start
 skips an instance which already carries the business key, completing or cancelling

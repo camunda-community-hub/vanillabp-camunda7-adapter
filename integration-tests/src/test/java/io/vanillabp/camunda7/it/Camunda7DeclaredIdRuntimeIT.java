@@ -2,7 +2,6 @@ package io.vanillabp.camunda7.it;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Optional;
 import java.util.function.Supplier;
@@ -75,20 +74,19 @@ public class Camunda7DeclaredIdRuntimeIT {
   @DisplayName("A timer start of the declared-only id reaches @WorkflowStartedByBpms, and the end is reported")
   public void aTimerStartOfTheDeclaredIdIsAFullWorkflow() throws Exception {
 
-    final var beforeTheBoot = Instant.now();
     final var application = boot("decl-after", "v2");
     try {
       final var repository = application.getBean(DeclaredRuntimeRepository.class);
 
       // the engine's timer keeps firing for the OLD id (the new model has no timer
-      // start), and the aggregate's id IS the trigger time - so an aggregate created
-      // after this boot proves the start ran through @WorkflowStartedByBpms of the
-      // renamed application
+      // start), and each generation writes its own name into the aggregate's id. So an
+      // aggregate carrying this generation's name proves the start ran through
+      // @WorkflowStartedByBpms of the renamed application
       awaitUntil(
           application,
-          () -> aTimerWorkflowOfThisGeneration(repository, beforeTheBoot).isPresent(),
+          () -> aTimerWorkflowOfThisGeneration(repository).isPresent(),
           "the engine's timer to start a workflow under the declared-only id");
-      final var started = aTimerWorkflowOfThisGeneration(repository, beforeTheBoot).orElseThrow();
+      final var started = aTimerWorkflowOfThisGeneration(repository).orElseThrow();
 
       awaitUntil(
           application,
@@ -132,8 +130,7 @@ public class Camunda7DeclaredIdRuntimeIT {
    * @WorkflowStartedByBpms method of each generation writes its own name into the id.
    */
   private static Optional<DeclaredRuntimeAggregate> aTimerWorkflowOfThisGeneration(
-      final DeclaredRuntimeRepository repository,
-      final Instant beforeTheBoot) {
+      final DeclaredRuntimeRepository repository) {
 
     return repository
         .findAll()

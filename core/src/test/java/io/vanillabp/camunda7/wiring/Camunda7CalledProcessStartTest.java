@@ -175,7 +175,7 @@ public class Camunda7CalledProcessStartTest {
 
     assertNull(
         theNameReportedToTheCore(invoker),
-        "nothing is inherited, so the core builds the workflow aggregate of this process");
+        "nothing is inherited, so the core asks the application to build the workflow aggregate of this process");
     verify(calledInstance).setProcessBusinessKey("its-own-aggregate");
     verify(calledInstance, never()).setProcessBusinessKey(CALLERS_NAME);
 

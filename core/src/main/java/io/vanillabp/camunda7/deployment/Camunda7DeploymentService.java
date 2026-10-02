@@ -814,7 +814,7 @@ public class Camunda7DeploymentService implements AdapterDeploymentService<BpmnM
     warnAboutCompensationSharingOneTransaction(workflowModuleId, bpmnProcessId, compensation);
 
     // What the expressions of this model read, which two checks ask the core about. The
-    // model is parsed for them once: both questions are about the same paths
+    // paths are collected once: both questions are about the same paths
     final var expressionOrigins = io.vanillabp.camunda7.sync.Camunda7ExpressionIdentifiers
         .of(model, scopedBpmnProcessId);
 
@@ -828,6 +828,19 @@ public class Camunda7DeploymentService implements AdapterDeploymentService<BpmnM
     // the application holds, because a value the engine has no type for travels through
     // the configured serialization format
     warnAboutTypesTheFormatCannotCarry(workflowModuleId, bpmnProcessId, expressionOrigins);
+
+    // The third question about the same expressions, and the only one whose answer must
+    // not depend on the BPMS: what does an expression reading more than the name of one
+    // variable cost the application next year? So the adapter reports what it read and
+    // the core judges it. The expressions go over as the model has them, not as the
+    // paths above: a keyword and a function call are part of what the core judges, and
+    // the path collection drops both
+    workflowTaskWiring
+        .reportModelExpressions(
+            workflowModuleId,
+            bpmnProcessId,
+            io.vanillabp.camunda7.sync.Camunda7ExpressionIdentifiers
+                .expressionsOf(model, scopedBpmnProcessId));
 
     // This engine reports the end of a workflow, so a @WorkflowEnded
     // method staying silent means the adapter was not wired - which used to be

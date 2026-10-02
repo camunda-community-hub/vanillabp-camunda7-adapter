@@ -1,5 +1,7 @@
 package io.vanillabp.camunda7.it;
 
+import java.util.stream.Collectors;
+
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -160,7 +162,13 @@ public class Camunda7UnsharedExpressionCheckIT {
   public void whatWorksAndWhatCannotBeJudgedStayQuiet(
       final CapturedOutput output) {
 
-    final var log = bootLog(output);
+    // only the lines of THIS check. The same models are read by the check which says what
+    // an expression costs the application, and that one quotes every expression it found,
+    // method calls included, see Camunda7ModelExpressionsIT
+    final var log = bootLog(output)
+        .lines()
+        .filter(line -> line.contains("of element '"))
+        .collect(Collectors.joining("\n"));
 
     // a fully shared path
     Assertions

@@ -1260,3 +1260,63 @@ core-side report above, and whoever takes it should start from this entry.
 
 `Camunda7UnservedUserTasksTest` holds the message, the element without a form key, both keys a
 method may be wired by, the silence about an unclaimed process and that the line is an INFO.
+
+### 37. The expressions of a model are reported for the model being deployed, not for the versions the engine still holds
+
+The core is told the expressions of a process while that process is wired, so what it hears is the
+model this application version brings. The engine keeps the older versions, workflows are still
+running on them, and those models are not read for this.
+
+The way to read them is there. `Camunda7ProcessVersions` walks the models the engine holds for
+`concurrentTokenElementsOfVersion`, and the same walk would answer this question. So the question
+here is what such a message would be worth.
+
+An old model says nothing new. An expression which reads a path reads the same path in every
+version which carries it, and the message names the element, the place and the expression. What
+differs is that nobody can act on an old model. A model in the engine cannot be edited, the
+deployed one is where a developer writes the plain getter the message asks for, and the workflows
+on the old version run out on their own. A warning about them would ask for work nobody can do.
+
+There is a second reason, and it is the count. The message ends with how many of the expressions of
+this process name a variable and nothing else, which is what tells a developer how far their model
+is. Counting the held versions as well would count the same expression once per version, and the
+number would stop meaning what it says.
+
+`ConcurrentTokenCheck` asks about held versions for a reason this check has not got. A parallel
+gateway the newest model dropped keeps forking every workflow which started before it, so the
+finding only exists in the old version. An expression is not like that. It is read where the model
+carries it, and the model carrying it is the one being deployed.
+
+Whoever wants the held versions in the message needs a piece of work of its own, and the place to
+hook it is `Camunda7ProcessVersions`.
+
+### 38. A user task reports the multi-instance levels a service task in its place reports
+
+Camunda 7 notifies a `@WorkflowTask` method about a user task from a task listener, and a task
+listener is handed a `DelegateTask` rather than an execution. The multi-instance walk of decisions
+22 and 34 needs an execution, so the context built for a user task answered the SPI default of
+`TaskInvocationContext#getMultiInstances`, which is an empty map. Every other kind of task reported
+its levels, and the same model reports them on Camunda 8, so one model answered two ways again.
+
+Measured against the pinned engine 7.24.0 before anything was changed. A `DelegateTask` hands out
+the execution its task waits on, that execution is an `ExecutionEntity`, and the walk reports the
+enclosing multi-instance subprocess as well as a multi-instance user task's own round from it. It
+answers while the task is created and while it is cancelled.
+`Camunda7MultiInstancesAtAUserTaskTest` holds both.
+
+What the gap cost was worse than an empty map. A named `@MultiInstanceElement("...")` parameter
+does not become `null` where the level is missing: the core refuses the call, the task listener
+fails, and the engine rolls the transaction which creates the user task back. Measured by
+`Camunda7MultiInstanceByExpressionIT#aUserTaskIsToldTheIterationItRunsIn` against the unchanged
+adapter, the workflow never got past its start and the outbox kept retrying the refusal,
+twenty-five times in that one run. A `@MultiInstanceElement(resolverBean = ...)` parameter is the
+silent half of it, because an empty map is a map the resolver can read.
+
+So the user-task context asks the walk the way the service-like context asks it, with the registry
+of its engine. The registry is what crosses a call activity naming the called process in an
+expression (decision 34), and the user-task context now carries it instead of the adapter id and
+the datasource flag it used to be given, which it reads off the registry.
+
+Nothing of decision 22 or 34 changes. The walk is the same walk, the question about the workflow
+aggregate is the same question, and the third reader of it now holds the registry which the other
+reader in this repository already held.

@@ -122,6 +122,10 @@ from a branch. A red check is a finding about your change. Read the log, which t
 as a test report when the build fails, and fix what it says rather than pushing again to see
 whether it goes away.
 
+`main` carries a ruleset, and it requires two green checks before a merge: `publish`, which is the
+build of that workflow, and `orphaned-javadoc-check`, which is the *Checks* workflow running the
+script named above. While one of them is red, GitHub does not offer the merge.
+
 ## License
 
 VanillaBP is published under the [Apache License, Version 2.0](./LICENSE), and by contributing you

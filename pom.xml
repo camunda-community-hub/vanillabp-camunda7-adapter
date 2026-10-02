@@ -72,6 +72,9 @@
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <!-- our snapshots go out through a plain 'mvn deploy', see the deploy plugin below.
+         A module which is not published sets this to true in its own properties. -->
+    <maven.deploy.skip>false</maven.deploy.skip>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
     <maven.compiler.release>21</maven.compiler.release>
     <version.java>21</version.java>
@@ -210,7 +213,16 @@
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-deploy-plugin</artifactId>
           <configuration>
-            <skip>false</skip>
+            <!-- The value, not a literal 'false': a test-only module sets
+                 'maven.deploy.skip' to true in its own properties, and a literal here would
+                 override it, because plugin configuration beats a property. Measured on
+                 2026-10-02: a literal 'false' published 'quarkus/integration-tests', which
+                 says in its own properties that it is not published, and ended the deploy
+                 with "did not assign a main file to the project but it has attachments" on
+                 'integration-tests', which compiles no main sources and therefore packs no
+                 jar. The property cannot be left alone either, because the parent writes its
+                 'true' as configuration and beats the property the same way. -->
+            <skip>${maven.deploy.skip}</skip>
           </configuration>
         </plugin>
         <plugin>

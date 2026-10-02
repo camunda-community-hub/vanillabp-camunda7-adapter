@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:camunda="http://camunda.org/schema/1.0/bpmn"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  id="Definitions_ModelExpressions" targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:process id="ModelExpressionsProcess" isExecutable="true">
+    <bpmn:startEvent id="ME_Start"/>
+    <!-- a gateway WITH a default flow: the two sequence-flow placements of the sync check
+         are one place for the core, and this is the one the other test model has not got -->
+    <bpmn:exclusiveGateway id="ME_Gateway" default="ME_else"/>
+    <bpmn:sequenceFlow id="ME_express" sourceRef="ME_Gateway" targetRef="ME_Ship">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">#{order.shipping.express}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="ME_else" sourceRef="ME_Gateway" targetRef="ME_Ship"/>
+    <!-- a delegate expression names a wired task, so it is none of this report's business -->
+    <bpmn:serviceTask id="ME_Ship" camunda:delegateExpression="${shipTask}"/>
+    <!-- a timer written as a plain duration carries no expression at all -->
+    <bpmn:intermediateCatchEvent id="ME_Fixed">
+      <bpmn:timerEventDefinition>
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT1H</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:intermediateCatchEvent>
+    <!-- a cycle built from two expressions and some text around them -->
+    <bpmn:intermediateCatchEvent id="ME_Cycle">
+      <bpmn:timerEventDefinition>
+        <bpmn:timeCycle xsi:type="bpmn:tFormalExpression">R3/${firstRun}/PT${pauseHours}H</bpmn:timeCycle>
+      </bpmn:timerEventDefinition>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:intermediateCatchEvent id="ME_Await">
+      <bpmn:conditionalEventDefinition>
+        <bpmn:condition xsi:type="bpmn:tFormalExpression">${not approved}</bpmn:condition>
+      </bpmn:conditionalEventDefinition>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:subProcess id="ME_Items">
+      <bpmn:multiInstanceLoopCharacteristics isSequential="false" camunda:collection="${order.items}"
+                                             camunda:elementVariable="item">
+        <bpmn:completionCondition xsi:type="bpmn:tFormalExpression">${order.items.size() &gt; 3}</bpmn:completionCondition>
+      </bpmn:multiInstanceLoopCharacteristics>
+      <bpmn:startEvent id="ME_Items_s"/>
+    </bpmn:subProcess>
+    <bpmn:subProcess id="ME_Rounds">
+      <bpmn:multiInstanceLoopCharacteristics isSequential="true">
+        <bpmn:loopCardinality xsi:type="bpmn:tFormalExpression">${rounds}</bpmn:loopCardinality>
+      </bpmn:multiInstanceLoopCharacteristics>
+      <bpmn:startEvent id="ME_Rounds_s"/>
+    </bpmn:subProcess>
+    <bpmn:endEvent id="ME_End"/>
+  </bpmn:process>
+  <bpmn:process id="NoExpressionsProcess" isExecutable="true">
+    <bpmn:startEvent id="NE_Start"/>
+    <bpmn:serviceTask id="NE_Work" camunda:delegateExpression="${workTask}"/>
+    <bpmn:intermediateCatchEvent id="NE_Wait">
+      <bpmn:timerEventDefinition>
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT15M</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:endEvent id="NE_End"/>
+  </bpmn:process>
+</bpmn:definitions>

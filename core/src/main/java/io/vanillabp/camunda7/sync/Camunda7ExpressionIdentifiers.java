@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
+import java.util.stream.Stream;
 
 import org.camunda.bpm.model.bpmn.BpmnModelInstance;
 import org.camunda.bpm.model.bpmn.instance.CompletionCondition;
@@ -19,11 +20,12 @@ import org.camunda.bpm.model.bpmn.instance.SequenceFlow;
 import org.camunda.bpm.model.bpmn.instance.TimerEventDefinition;
 import org.camunda.bpm.model.xml.instance.ModelElementInstance;
 
+import io.vanillabp.integration.adapter.spi.expressions.ExpressionPlace;
+import io.vanillabp.integration.adapter.spi.expressions.ModelExpression;
+
 /**
- * Reads the attribute PATHS the expressions of a BPMN process rely on - the input of the
- * startup check: a path whose segment is not shared with the BPMS always evaluates to
- * <code>null</code>, and what Camunda 7 does with that null depends on where the
- * expression sits, which is why every path is reported with its {@link Placement}.
+ * Where Camunda 7 lets a BPMN model read the workflow's data, and what those places say.
+ * Two startup checks ask about the same elements, so one walk over the model answers both.
  * <p>
  * What is read: the conditions of sequence flows, the conditions of conditional events
  * (an intermediate catching event, a boundary event, the start event of an event
@@ -34,15 +36,26 @@ import org.camunda.bpm.model.xml.instance.ModelElementInstance;
  * resolver serves) or is an input mapping, where a missing value shows up as an incident
  * rather than as a silent decision.
  * <p>
- * The extraction is conservative about what it calls a path. It collects
- * <code>${...}</code> and <code>#{...}</code> expressions and skips what is clearly not a
- * variable read: EL keywords, function calls and namespace prefixes. A path ENDS where a
- * method call or an indexed access begins, so <code>order.status.name()</code> is read as
+ * {@link #of(BpmnModelInstance, String)} answers the first check with the attribute PATHS
+ * those expressions rely on: a path whose segment is not shared with the BPMS always
+ * evaluates to <code>null</code>, and what Camunda 7 does with that null depends on where
+ * the expression sits, which is why every path is reported with its {@link Placement}.
+ * <p>
+ * It is conservative about what it calls a path. It collects <code>${...}</code> and
+ * <code>#{...}</code> expressions and skips what is clearly not a variable read: EL
+ * keywords, function calls and namespace prefixes. A path ENDS where a method call or an
+ * indexed access begins, so <code>order.status.name()</code> is read as
  * <code>order.status</code> and <code>order.items[0].price</code> as
  * <code>order.items</code>: what such a call resolves to depends on the runtime class the
  * engine's serialization produced, and the check judges declared types only. An
  * expression it cannot make sense of contributes nothing, because a wrong warning about a
  * model which works is worse than a missing one.
+ * <p>
+ * {@link #expressionsOf(BpmnModelInstance, String)} answers the second check with the
+ * expressions THEMSELVES, because that one judges the form of what the modeller wrote and
+ * a keyword or a function call is part of that form. So nothing is dropped and nothing is
+ * shortened there: what goes over is the text between <code>${</code> or <code>#{</code>
+ * and the closing brace, which is what JUEL evaluates.
  */
 public final class Camunda7ExpressionIdentifiers {
 
@@ -141,16 +154,14 @@ public final class Camunda7ExpressionIdentifiers {
       final String scopedBpmnProcessId) {
 
     final var paths = new LinkedHashMap<String, Origin>();
-    final var process = model.getModelElementById(scopedBpmnProcessId);
-    if (!(process instanceof Process)) {
-      return paths;
-    }
-    collect(model, Condition.class, process, paths);
-    collect(model, CompletionCondition.class, process, paths);
-    collect(model, ConditionExpression.class, process, paths);
-    collect(model, TimerEventDefinition.class, process, paths);
-    collect(model, LoopCardinality.class, process, paths);
-    collect(model, MultiInstanceLoopCharacteristics.class, process, paths);
+    forEachExpressionText(
+        model,
+        scopedBpmnProcessId,
+        (
+            elementId,
+            placement,
+            text) -> pathsOf(text)
+                .forEach(path -> paths.putIfAbsent(path, new Origin(elementId, text.trim(), placement))));
     return paths;
 
   }
@@ -169,25 +180,128 @@ public final class Camunda7ExpressionIdentifiers {
   }
 
   /**
-   * Collects from the elements of one type, reading the texts a model puts an expression
-   * into.
+   * The expressions of one BPMN process as the core is told about them, each with the
+   * element it sits in, the place inside that element and the text JUEL evaluates.
+   * <p>
+   * Every <code>${...}</code> and <code>#{...}</code> block is one reported expression,
+   * so an attribute holding two of them is reported twice and an attribute holding a
+   * plain value, such as a timer written as <code>PT1H</code>, is reported not at all.
+   * That split is what makes the core's verdict read the modeller's intent: a text like
+   * <code>due-${order.id}</code> is two things glued together, and judging the whole of
+   * it would call a path a computation.
+   * <p>
+   * Nothing is dropped and nothing is shortened here, unlike
+   * {@link #of(BpmnModelInstance, String)}: a keyword, a function call and an index are
+   * part of what the core judges.
+   *
+   * @param model The deployed model
+   * @param scopedBpmnProcessId The process ID as the engine knows it
+   * @return The expressions in the order they were found, empty where the model carries
+   *         none
    */
-  private static void collect(
+  public static List<ModelExpression> expressionsOf(
       final BpmnModelInstance model,
-      final Class<? extends ModelElementInstance> type,
-      final ModelElementInstance process,
-      final Map<String, Origin> paths) {
+      final String scopedBpmnProcessId) {
 
-    model
-        .getModelElementsByType(model.getModel().getType(type))
-        .stream()
-        .filter(element -> belongsTo(element, process))
-        .forEach(element -> {
-          final var elementId = elementIdOf(element);
-          final var placement = placementOf(element);
-          textsOf(element).forEach(text -> pathsOf(text)
-              .forEach(path -> paths.putIfAbsent(path, new Origin(elementId, text.trim(), placement))));
+    final var expressions = new ArrayList<ModelExpression>();
+    forEachExpressionText(
+        model,
+        scopedBpmnProcessId,
+        (
+            elementId,
+            placement,
+            text) -> {
+          final var blocks = EXPRESSION.matcher(text);
+          while (blocks.find()) {
+            expressions
+                .add(new ModelExpression(elementId, placeOf(placement), blocks.group(), blocks.group(1)));
+          }
         });
+    return List.copyOf(expressions);
+
+  }
+
+  /**
+   * The place the core knows for one of this adapter's placements.
+   * <p>
+   * The two sequence-flow placements become one place. Whether the gateway declares a
+   * default flow decides what the ENGINE does with a null, which is the other check's
+   * question; what an expression costs the application is the same either way.
+   *
+   * @param placement Where in the model the expression sits
+   * @return The place as the core names it
+   */
+  private static ExpressionPlace placeOf(
+      final Placement placement) {
+
+    return switch (placement) {
+      case CONDITIONAL_EVENT -> ExpressionPlace.CONDITIONAL_EVENT_CONDITION;
+      case MULTI_INSTANCE_COMPLETION_CONDITION -> ExpressionPlace.MULTI_INSTANCE_COMPLETION_CONDITION;
+      case SEQUENCE_FLOW_CONDITION, SEQUENCE_FLOW_CONDITION_WITHOUT_DEFAULT_FLOW ->
+        ExpressionPlace.SEQUENCE_FLOW_CONDITION;
+      case TIMER -> ExpressionPlace.TIMER;
+      case MULTI_INSTANCE_CARDINALITY -> ExpressionPlace.MULTI_INSTANCE_CARDINALITY;
+      case MULTI_INSTANCE_COLLECTION -> ExpressionPlace.MULTI_INSTANCE_COLLECTION;
+    };
+
+  }
+
+  /**
+   * What one of the collected elements carries - the element's ID, where in the model it
+   * sits and one text which may hold an expression.
+   */
+  @FunctionalInterface
+  private interface ExpressionTexts {
+
+    /**
+     * Hands over one text of one element.
+     *
+     * @param elementId The ID of the BPMN element carrying it
+     * @param placement Where in the model that element sits
+     * @param text The attribute value or element text, possibly without any expression
+     */
+    void accept(
+        String elementId,
+        Placement placement,
+        String text);
+
+  }
+
+  /**
+   * Walks the elements of one BPMN process which may carry an expression and hands every
+   * text of them over.
+   * <p>
+   * The order the types are walked in is what lets {@link #of(BpmnModelInstance, String)}
+   * keep the quietest placement of a path: the conditional event and the completion
+   * condition come first, because a timer reading the same path raises an incident the
+   * developer cannot miss anyway.
+   */
+  private static void forEachExpressionText(
+      final BpmnModelInstance model,
+      final String scopedBpmnProcessId,
+      final ExpressionTexts texts) {
+
+    final var process = model.getModelElementById(scopedBpmnProcessId);
+    if (!(process instanceof Process)) {
+      return;
+    }
+    Stream
+        .<Class<? extends ModelElementInstance>>of(
+            Condition.class,
+            CompletionCondition.class,
+            ConditionExpression.class,
+            TimerEventDefinition.class,
+            LoopCardinality.class,
+            MultiInstanceLoopCharacteristics.class)
+        .forEach(type -> model
+            .getModelElementsByType(model.getModel().getType(type))
+            .stream()
+            .filter(element -> belongsTo(element, process))
+            .forEach(element -> {
+              final var elementId = elementIdOf(element);
+              final var placement = placementOf(element);
+              textsOf(element).forEach(text -> texts.accept(elementId, placement, text));
+            }));
 
   }
 

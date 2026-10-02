@@ -35,6 +35,11 @@ import io.vanillabp.integration.test.utils.SuppressOutputExtension;
  * The model deploys one process whose expressions stop in five different places, plus three
  * which read what is shared and have to stay unmentioned. Nothing of it ever runs: every
  * branch parks in a timer, and what is measured is the deployment.
+ * <p>
+ * The same boot answers the second question about the same expressions, which is what an
+ * expression reading more than the name of one variable costs the application. That one is
+ * asserted here as well rather than in a boot of its own, because the expensive part of this
+ * test is the boot.
  */
 @ExtendWith(SuppressOutputExtension.class)
 @SuppressOutputExtension.SuppressBackgroundOutput
@@ -104,6 +109,40 @@ public class Camunda7UnsharedExpressionCheckTest {
         .assertFalse(
             everything.contains("of element 'XC_yes_shared'"),
             () -> "an expression reading a shared attribute must not be reported: "
+                + everything);
+
+    // the second check over the same expressions, on this platform too: what an expression
+    // reading more than the name of one variable costs the application. The adapter reports
+    // what it read, the core judges it, and '${order.customer.vip}' is a path whichever
+    // attribute it reads
+    Assertions
+        .assertTrue(
+            everything.contains("'${order.customer.vip}' at 'XC_yes_shared' (the condition of a sequence flow)"),
+            () -> "expected the expression, the element and the place but got: "
+                + everything);
+    Assertions
+        .assertTrue(
+            everything.contains("'${order.hiddenItems}' at 'XC_Items' (the collection of a multi-instance element)"),
+            () -> "expected the collection of the multi-instance element but got: "
+                + everything);
+    Assertions
+        .assertTrue(
+            everything.contains("0 of the 6 expressions of this process name a variable and nothing else."),
+            () -> "expected the count of 'ExprCheckProcess' - did the model change? Got: "
+                + everything);
+    Assertions
+        .assertTrue(
+            everything
+                .contains(
+                    "vanillabp.workflow-modules.c7-test.workflows.ExprCheckProcess.accept-expressions-in-the-model"),
+            () -> "expected the key which accepts the expressions of this process but got: "
+                + everything);
+    // a timer written as a plain duration is no expression, so neither parked element is
+    // named by that check
+    Assertions
+        .assertFalse(
+            everything.contains("at 'XC_Park'"),
+            () -> "'PT1H' is a value, not an expression: "
                 + everything);
 
   }

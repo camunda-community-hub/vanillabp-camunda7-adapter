@@ -4,7 +4,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.camunda.bpm.model.bpmn.Bpmn;
 import org.camunda.bpm.model.bpmn.BpmnModelInstance;
@@ -13,12 +15,14 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import io.vanillabp.camunda7.sync.Camunda7ExpressionIdentifiers.Placement;
+import io.vanillabp.integration.adapter.spi.expressions.ModelExpression;
 import io.vanillabp.integration.test.utils.SuppressOutputExtension;
 
 /**
- * Which attribute paths the startup check has to ask the core about - the paths a
- * model's conditions, timers and multi-instance collections read, each with the
- * placement deciding what the engine does with a null.
+ * What the two startup checks are told about the expressions of a model. One of them gets
+ * the attribute paths a model's conditions, timers and multi-instance collections read,
+ * each with the placement deciding what the engine does with a null. The other gets the
+ * expressions themselves, with the place the core names and the text JUEL evaluates.
  */
 @ExtendWith(SuppressOutputExtension.class)
 public class Camunda7ExpressionIdentifiersTest {
@@ -146,6 +150,98 @@ public class Camunda7ExpressionIdentifiersTest {
     assertEquals(Set.of(), Camunda7ExpressionIdentifiers.pathsOf(null));
     // '#{...}' is an expression as well
     assertEquals(Set.of("approved"), Camunda7ExpressionIdentifiers.pathsOf("#{approved}"));
+
+  }
+
+  /**
+   * One reported expression in one line, so an assertion can read the four things the
+   * core is told at once.
+   *
+   * @param expression What the adapter reports
+   * @return Element, place, the expression as the model has it and the body JUEL
+   *         evaluates
+   */
+  private static String reported(
+      final ModelExpression expression) {
+
+    return "%s | %s | %s | %s"
+        .formatted(
+            expression.elementId(),
+            expression.place(),
+            expression.expression(),
+            expression.body());
+
+  }
+
+  @Test
+  @DisplayName("Every expression of the model is reported with its element, its place and its body")
+  public void everyExpressionIsReported() {
+
+    final var expressions = Camunda7ExpressionIdentifiers
+        .expressionsOf(model("ModelExpressionsProcess.bpmn"), "ModelExpressionsProcess");
+
+    assertEquals(
+        Set
+            .of(
+                "ME_Await | CONDITIONAL_EVENT_CONDITION | ${not approved} | not approved",
+                "ME_Items | MULTI_INSTANCE_COMPLETION_CONDITION | ${order.items.size() > 3} | order.items.size() > 3",
+                // the two sequence-flow placements of the sync check are one place here,
+                // and '#{...}' is an expression just like '${...}'
+                "ME_express | SEQUENCE_FLOW_CONDITION | #{order.shipping.express} | order.shipping.express",
+                "ME_Cycle | TIMER | ${firstRun} | firstRun",
+                "ME_Cycle | TIMER | ${pauseHours} | pauseHours",
+                "ME_Rounds | MULTI_INSTANCE_CARDINALITY | ${rounds} | rounds",
+                "ME_Items | MULTI_INSTANCE_COLLECTION | ${order.items} | order.items"),
+        expressions
+            .stream()
+            .map(Camunda7ExpressionIdentifiersTest::reported)
+            .collect(Collectors.toSet()));
+    // nothing is reported twice, so the count the core's message states is the model's
+    assertEquals(7, expressions.size(), expressions.toString());
+
+    // a timer written as a plain duration carries no expression, and a delegate
+    // expression names a wired task rather than reading the workflow's data
+    assertTrue(
+        expressions
+            .stream()
+            .noneMatch(expression -> "ME_Fixed".equals(expression.elementId())),
+        expressions.toString());
+    assertTrue(
+        expressions
+            .stream()
+            .noneMatch(expression -> expression.expression().contains("shipTask")),
+        expressions.toString());
+
+  }
+
+  @Test
+  @DisplayName("An attribute holding two expressions reports both, in the order it writes them")
+  public void twoExpressionsInOneAttribute() {
+
+    final var bodies = Camunda7ExpressionIdentifiers
+        .expressionsOf(model("ModelExpressionsProcess.bpmn"), "ModelExpressionsProcess")
+        .stream()
+        .filter(expression -> "ME_Cycle".equals(expression.elementId()))
+        .map(ModelExpression::body)
+        .toList();
+
+    // 'R3/${firstRun}/PT${pauseHours}H' is two expressions with text around them. Judged
+    // as one text it would read as a computation, which is the wrong half of the finding
+    assertEquals(List.of("firstRun", "pauseHours"), bodies);
+
+  }
+
+  @Test
+  @DisplayName("A model without an expression reports nothing, and so does an unknown process")
+  public void nothingToReport() {
+
+    assertEquals(
+        List.of(),
+        Camunda7ExpressionIdentifiers
+            .expressionsOf(model("ModelExpressionsProcess.bpmn"), "NoExpressionsProcess"));
+    assertEquals(
+        List.of(),
+        Camunda7ExpressionIdentifiers.expressionsOf(model("ModelExpressionsProcess.bpmn"), "NoSuchProcess"));
 
   }
 

@@ -371,6 +371,13 @@ the workflows standing in an older version of a process need.
 `Camunda7MultiInstanceByExpressionIT` runs one model naming the same called process both ways
 against the engine, and `Camunda7MultiInstancesAcrossCallActivitiesTest` holds the shapes.
 
+Both contexts of this adapter answer the walk, the one of a service-like task and the one of a user
+task. A user task is notified from a task listener, which the engine hands a `DelegateTask` and not
+an execution, so the levels were missing there while every other kind of task reported them.
+`DelegateTask#getExecution` is the execution the task waits on, measured by
+`Camunda7MultiInstancesAtAUserTaskTest` while a task is created and while it is cancelled, so the
+listener starts the walk where the service-like side starts it and both contexts carry the registry.
+
 One level cannot be answered at all, and the deployment says so rather than letting a handler find
 out. The item of an iteration is the variable named by `camunda:elementVariable`, so a
 multi-instance element whose model names none, a cardinality-based one above all, has no item to

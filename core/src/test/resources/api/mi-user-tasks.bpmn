@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+    xmlns:camunda="http://camunda.org/schema/1.0/bpmn"
+    id="Definitions_MiUserTasks" targetNamespace="http://vanillabp.io/test">
+
+  <bpmn:process id="MiUserTaskProcess" isExecutable="true">
+    <bpmn:startEvent id="MiUserTaskProcessStart" />
+    <bpmn:sequenceFlow id="MiUserTaskProcessStartFlow" sourceRef="MiUserTaskProcessStart" targetRef="Reviews" />
+    <bpmn:subProcess id="Reviews">
+      <bpmn:multiInstanceLoopCharacteristics isSequential="true" camunda:collection="orders" camunda:elementVariable="order" />
+      <bpmn:startEvent id="ReviewsStart" />
+      <bpmn:sequenceFlow id="ReviewsStartFlow" sourceRef="ReviewsStart" targetRef="Review" />
+      <bpmn:userTask id="Review" />
+      <bpmn:sequenceFlow id="ReviewFlow" sourceRef="Review" targetRef="ReviewsEnd" />
+      <bpmn:endEvent id="ReviewsEnd" />
+    </bpmn:subProcess>
+    <bpmn:sequenceFlow id="ReviewsFlow" sourceRef="Reviews" targetRef="MiUserTaskProcessEnd" />
+    <bpmn:endEvent id="MiUserTaskProcessEnd" />
+  </bpmn:process>
+
+  <bpmn:process id="MiUserTaskItselfProcess" isExecutable="true">
+    <bpmn:startEvent id="MiUserTaskItselfProcessStart" />
+    <bpmn:sequenceFlow id="MiUserTaskItselfProcessStartFlow" sourceRef="MiUserTaskItselfProcessStart" targetRef="ReviewEach" />
+    <bpmn:userTask id="ReviewEach">
+      <bpmn:multiInstanceLoopCharacteristics isSequential="true" camunda:collection="orders" camunda:elementVariable="order" />
+    </bpmn:userTask>
+    <bpmn:sequenceFlow id="ReviewEachFlow" sourceRef="ReviewEach" targetRef="MiUserTaskItselfProcessEnd" />
+    <bpmn:endEvent id="MiUserTaskItselfProcessEnd" />
+  </bpmn:process>
+
+</bpmn:definitions>

@@ -75,7 +75,7 @@ public class Camunda7ReportedTaskKindTest {
     when(delegateTask.getId()).thenReturn("a-task-id");
 
     final var context = new Camunda7UserTaskEventListener.Camunda7UserTaskInvocationContext(
-        A_USER_TASK, delegateTask, TaskEvent.Event.CREATED, null, "c7", false);
+        A_USER_TASK, delegateTask, TaskEvent.Event.CREATED, null, null);
 
     assertEquals("a-task-id", context.getTaskId(), "the row of ACT_RU_TASK, not an execution");
     assertEquals(
@@ -93,7 +93,7 @@ public class Camunda7ReportedTaskKindTest {
     when(delegateTask.getId()).thenReturn("a-task-id");
 
     final var context = new Camunda7UserTaskEventListener.Camunda7UserTaskInvocationContext(
-        A_USER_TASK, delegateTask, TaskEvent.Event.CANCELED, null, "c7", false);
+        A_USER_TASK, delegateTask, TaskEvent.Event.CANCELED, null, null);
 
     assertEquals(TaskKind.USER_TASK, context.getTaskKind());
 

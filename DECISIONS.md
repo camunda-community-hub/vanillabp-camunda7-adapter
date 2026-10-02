@@ -77,7 +77,10 @@ file share a model. What the adapter adds is listed in
 [What the adapter changes in the BPMN it deploys](https://github.com/vanillabp/camunda7-adapter/wiki/Home#what-the-adapter-changes-in-the-bpmn-it-deploys)
 in the wiki.
 
-### 6. A task handler runs inside the engine's own job transaction
+### 6. A task handler runs inside the engine's own job transaction - the delivery record part superseded by decision 39
+
+*Superseded by decision 39: a delivery is recorded in both datasource modes, and the modes differ
+in the deduplication rather than in the record.*
 
 Camunda 7 delivers a task inside the transaction of the job it is executing, so this adapter runs
 the handler there rather than opening one of its own. That is what makes the three outcomes exact:
@@ -1326,3 +1329,25 @@ the datasource flag it used to be given, which it reads off the registry.
 Nothing of decision 22 or 34 changes. The walk is the same walk, the question about the workflow
 aggregate is the same question, and the third reader of it now holds the registry which the other
 reader in this repository already held.
+
+### 39. A delivery is recorded in both datasource modes, and only the deduplication differs
+
+Story 879 of the platform gave a delivery which names no id a record of its own. Such a record
+takes no part in the deduplication, and it still answers the two other questions a record answers:
+which BPMS holds the task, and which kind of id the id of that task is. A caller who completes a
+task which is gone is then told which method to use, instead of a list of guesses. So this adapter
+writes a record on the application's datasource as well as on an engine datasource of its own, and
+it writes one for a user-task notification in both modes too.
+
+The deduplication is what decision 6 says it is. On the application's datasource nothing is
+deduplicated, because the handler runs in the engine's job transaction and a job the engine hands
+out again proves that nothing was committed. A user-task notification is not deduplicated either,
+not even on an engine with a datasource of its own, because no delivery of a user task is named: one
+transaction creates every user task the token reaches, and the id of such a task comes into being
+while it is created.
+
+The reasoning of decision 6 holds as it stands. What was too wide is the sentence drawn from it: it
+said that nothing is written down where the truth is that nothing is deduplicated.
+
+`Camunda7UserTaskDeliveryRecordIT` holds what a user-task notification leaves behind, and
+`Camunda7RepeatedDeliveryIT` holds the two datasource modes side by side.

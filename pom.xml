@@ -1,6 +1,18 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" child.project.url.inherit.append.path="false" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
+
+  <!-- The release parent of the Camunda Community Hub. Its profiles are the way a hub
+       extension publishes, and they are the contract with the hub, so this repository takes
+       it rather than the VanillaBP release parent. 'relativePath' is empty because there is
+       no POM beside this one to find it in; without that, Maven looks at '../pom.xml'
+       first. -->
+  <parent>
+    <groupId>org.camunda.community</groupId>
+    <artifactId>community-hub-release-parent</artifactId>
+    <version>2.1.0</version>
+    <relativePath/>
+  </parent>
 
   <groupId>org.camunda.community.vanillabp</groupId>
   <artifactId>camunda7-adapter-parent</artifactId>
@@ -8,6 +20,14 @@
   <packaging>pom</packaging>
   <name>VanillaBP Camunda 7 adapter</name>
   <description>VanillaBP Version 2 adapter for Camunda 7 (embedded engine).</description>
+  <!-- Our own address, because the hub parent has one and a child inherits it with its own
+       name appended. Without these lines every artifact of this repository pointed at
+       'github.com/camunda-community-hub/camunda7-adapter-parent', and the three <scm>
+       values at a path under the parent's own repository. Neither is a page. The four
+       'inherit.append.path' attributes turn the appending off, one on <project> above for
+       the URL and three on <scm> below. The Camunda 8 root POM says the same thing the
+       same way. -->
+  <url>https://github.com/vanillabp/camunda7-adapter</url>
 
   <licenses>
     <license>
@@ -35,6 +55,12 @@
     <module>integration-tests</module>
     <module>test-coverage-report</module>
   </modules>
+
+  <scm child.scm.connection.inherit.append.path="false" child.scm.developerConnection.inherit.append.path="false" child.scm.url.inherit.append.path="false">
+    <connection>scm:git:https://github.com/vanillabp/camunda7-adapter.git</connection>
+    <developerConnection>scm:git:https://github.com/vanillabp/camunda7-adapter.git</developerConnection>
+    <url>https://github.com/vanillabp/camunda7-adapter/tree/main</url>
+  </scm>
 
   <distributionManagement>
     <snapshotRepository>
@@ -175,6 +201,19 @@
     <pluginManagement>
       <plugins>
         <plugin>
+          <!-- The hub parent turns the deploy plugin off for everybody, because a hub release
+               goes out through the profiles of that parent and not through a plain deploy.
+               Our snapshots do go out through a plain deploy, into the GitHub Packages
+               registry named in distributionManagement above, and that is what the
+               blueprints and every build downstream of them read. Without this line
+               'mvn deploy' reports success and publishes nothing. -->
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-deploy-plugin</artifactId>
+          <configuration>
+            <skip>false</skip>
+          </configuration>
+        </plugin>
+        <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-surefire-plugin</artifactId>
           <version>3.6.0</version>
@@ -258,9 +297,8 @@
             <!-- javadoc stops after 100 warnings per module, and the line it prints
                  reads like the end of the list. Whoever counts warnings to see how much
                  work a module still holds counts too few. The number below is high enough
-                 that no module reaches it. This repository does not inherit the VanillaBP
-                 release parent, because it moves to the Camunda Community Hub and keeps a
-                 build of its own, so it sets the option here.
+                 that no module reaches it. The hub parent configures javadoc as well, but
+                 only to switch its checks off, so every option this gate needs stands here.
                  The run is incremental too: a module whose sources did not move since the
                  last run is skipped and reports nothing. Delete 'target/reports/apidocs'
                  before counting, or a clean count only says that nobody recompiled. -->
@@ -290,8 +328,9 @@
       </plugin>
       <!-- the sources jar every build attaches. Without it the snapshots of this
            repository carried no sources, and an IDE showed decompiled code to everyone
-           developing against one. This repository has no parent POM, so the version
-           stands here. It is the one the release parent uses for the other
+           developing against one. The hub parent pins an older source plugin and brings an
+           execution with the same id, which merges into this one, so the version stands here
+           to win over it. It is the one the VanillaBP release parent uses for the other
            repositories, so all of them pack their sources the same way. -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>

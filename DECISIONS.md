@@ -645,18 +645,19 @@ a business case of its own, and what the caller iterates over says nothing about
 assumed every call activity was decomposition, which is the assumption this entry drops.
 
 The core answers that question while the application starts, from what its workflow services
-declare. The walk needs the answer while a workflow runs, where there is no core to ask, so the
-answer travels in the model which was deployed: a call activity whose called process continues the
-caller's aggregate gets a `camunda:property` named `vanillabp:sameWorkflowAggregate`, written next
-to the business key of decision 5 and read by `Camunda7MultiInstances`. Two things follow from
-that. An older version of a process which the engine still runs keeps the answer it was deployed
-with, which is what the workflows still standing in it need. And a call activity which names the
-process to call in an expression carries no note, because the model does not say which process will
-be called. The core is asked for it while the workflow runs, through the `Camunda7TaskRegistry` the
-deployment service hands that one answer to, which is where the start listener of a called process
-asks the same question (decisions 32 and 34). It is asked ONLY there. Where the model spells the
-called process out, the answer of the deployment stands, and a workflow standing in an older
-version keeps the answer that version was deployed with.
+declare. The walk needs the answer while a workflow runs, and the core knows only what the
+application declares today, so the answer travels in the model which was deployed: a call activity
+whose called process continues the caller's aggregate gets a `camunda:property` named
+`vanillabp:sameWorkflowAggregate`, written next to the business key of decision 5 and read by
+`Camunda7MultiInstances`. Two things follow from that. An older version of a process which the
+engine still runs keeps the answer it was deployed with, which is what the workflows still standing
+in it need. And a call activity which names the process to call in an expression carries no note,
+because the model does not say which process will be called. The core is asked for it while the
+workflow runs, through the `Camunda7TaskRegistry` the deployment service hands that one answer to,
+which is where the start listener of a called process asks the same question (decisions 32 and 34).
+It is asked ONLY there. Where the model spells the called process out, the answer of the deployment
+stands, and a workflow standing in an older version keeps the answer that version was deployed
+with.
 
 The values themselves are never copied anywhere. The engine holds them in the executions of the
 calling process, and a called process which is not told about them can still read what the model
@@ -889,8 +890,13 @@ events. It now goes on every start event the PROCESS itself holds, the plain and
 included. That follows from the rule. Anybody with access to the engine can start any of these
 processes, so the kind of the start event says nothing about who started this instance. The state
 does: a business key whose workflow aggregate exists is a start of the application's own, no key at
-all is a start past VanillaBP, and a key nothing carries is refused. A start event of an event
-subprocess stays out, which is decision 27, because it fires inside a workflow which already runs.
+all is a start past VanillaBP, and a key nothing carries is refused. One instance with no key is
+nobody's foreign start. A call activity which names the process to call in an expression has
+nothing to carry the caller's name, so the instance it starts arrives here without one. Where the
+called process works on the caller's workflow aggregate, the listener hands the core the caller's
+name and writes it into the instance, and no start past VanillaBP is reported. That is decision 32.
+A start event of an event subprocess stays out, which is decision 27, because it fires inside a
+workflow which already runs.
 
 A process this application does not serve is left alone. An embedded engine holds every definition
 deployed against its database, this application's unclaimed processes and another application's

@@ -1,9 +1,13 @@
 package io.vanillabp.camunda7.wiring;
 
+import java.util.Map;
+
 import org.camunda.bpm.engine.delegate.DelegateTask;
 import org.camunda.bpm.engine.delegate.TaskListener;
 import org.camunda.bpm.engine.impl.persistence.entity.ExecutionEntity;
 
+import io.vanillabp.camunda7.api.Camunda7MultiInstances;
+import io.vanillabp.integration.adapter.spi.workflowtask.MultiInstanceValue;
 import io.vanillabp.integration.adapter.spi.workflowtask.TaskInvocationContext;
 import io.vanillabp.integration.adapter.spi.workflowtask.TaskKind;
 import io.vanillabp.integration.adapter.spi.workflowtask.WorkflowTaskInvoker;
@@ -94,8 +98,7 @@ public class Camunda7UserTaskEventListener implements TaskListener {
     // user-task handlers are OPTIONAL by design - skip silently without one
     final var context = new Camunda7UserTaskInvocationContext(
         connectable.get(), delegateTask, event, taskRegistry
-            .versionOfDefinition(processDefinition.getId()), taskRegistry.getAdapterId(), taskRegistry
-                .engineRunsOnItsOwnDataSource());
+            .versionOfDefinition(processDefinition.getId()), taskRegistry);
     if (!aMethodServesThisUserTask(workflowModuleId, bpmnProcessId, context)) {
       log.trace(
           "Camunda7: no @WorkflowTask handler for user task '{}' of BPMN process '{}' - skipping "
@@ -170,38 +173,38 @@ public class Camunda7UserTaskEventListener implements TaskListener {
     private final String processVersion;
 
     /**
-     * The adapter delivering this notification or <code>null</code>.
+     * What this context asks about the engine it was built in: the adapter holding it,
+     * whether that engine runs on a datasource of its own, and whether a called process
+     * continues the business case of its caller. May be <code>null</code> (tests): no
+     * adapter is named then, the handler runs in the engine's transaction, and the
+     * multi-instance walk ends at a call activity naming its called process in an
+     * expression.
      */
-    private final String adapterId;
+    private final Camunda7TaskRegistry taskRegistry;
 
-    /**
-     * Whether the engine runs on a datasource of its own, which decides whose
-     * transaction the notified handler runs in.
-     */
-    private final boolean engineRunsOnItsOwnDataSource;
+    private Map<String, MultiInstanceValue> multiInstances;
 
     Camunda7UserTaskInvocationContext(
         final Camunda7TaskConnectable connectable,
         final DelegateTask delegateTask,
         final TaskEvent.Event event,
         final String processVersion,
-        final String adapterId,
-        final boolean engineRunsOnItsOwnDataSource) {
-
-      this.adapterId = adapterId;
+        final Camunda7TaskRegistry taskRegistry) {
 
       this.connectable = connectable;
       this.delegateTask = delegateTask;
       this.event = event;
       this.processVersion = processVersion;
-      this.engineRunsOnItsOwnDataSource = engineRunsOnItsOwnDataSource;
+      this.taskRegistry = taskRegistry;
 
     }
 
     @Override
     public String getAdapterId() {
 
-      return adapterId;
+      return taskRegistry == null
+          ? null
+          : taskRegistry.getAdapterId();
 
     }
 
@@ -286,7 +289,7 @@ public class Camunda7UserTaskEventListener implements TaskListener {
       // and that is the application's own as long as the engine shares its datasource.
       // An engine on a datasource of its own commits elsewhere, so VanillaBP opens the
       // transaction the workflow aggregate is saved in itself
-      return !engineRunsOnItsOwnDataSource;
+      return (taskRegistry == null) || !taskRegistry.engineRunsOnItsOwnDataSource();
 
     }
 
@@ -314,6 +317,22 @@ public class Camunda7UserTaskEventListener implements TaskListener {
       // user-task notification therefore runs again after a crash, and no record of
       // VanillaBP changes that
       return null;
+
+    }
+
+    @Override
+    public Map<String, MultiInstanceValue> getMultiInstances() {
+
+      if (multiInstances == null) {
+        // the engine hands a task listener the execution the user task hangs on, which is
+        // the execution the walk starts at on the service-like side as well. So a user task
+        // reads the same levels a service task in its place would read, and a model may not
+        // tell the two apart. With the registry: it answers for a call activity which names
+        // the process it calls in an expression, which the deployed model could say nothing
+        // about
+        multiInstances = Camunda7MultiInstances.of(delegateTask.getExecution(), taskRegistry);
+      }
+      return multiInstances;
 
     }
 

@@ -4,6 +4,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.List;
+
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -17,6 +19,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 import io.vanillabp.camunda7.processservice.Camunda7ProcessService;
 import io.vanillabp.camunda7.springboot.engine.Camunda7EngineHolder;
+import io.vanillabp.integration.adapter.spi.workflowtask.TaskKind;
 import io.vanillabp.integration.test.utils.SuppressOutputExtension;
 import io.vanillabp.integration.test.utils.delivery.TaskDeliveryLogReader;
 import io.vanillabp.integration.test.utils.delivery.TaskDeliveryLogReader.Delivery;
@@ -32,8 +35,11 @@ import io.vanillabp.integration.test.utils.delivery.TaskDeliveryLogReader.Delive
  * is answered from the record instead of running the {@code @WorkflowTask} method
  * again;</li>
  * <li>on the shared datasource the same failure rolls the handler's work back with the
- * job, nothing is recorded, and the handler runs again - which is what a redelivery
- * means there.</li>
+ * job, including the record of that delivery, and the handler runs again - which is what
+ * a redelivery means there. The run which commits leaves a record all the same, and that
+ * record answers no repetition: this mode names no delivery, so there is nothing a
+ * repetition could be recognised by, and what the record still says is who holds the task
+ * and which kind of id its id is.</li>
  * </ul>
  * The job is failed by an end listener of the task
  * ({@link FailTheJobOnce}), which is the only moment where the handler is done and the
@@ -42,16 +48,14 @@ import io.vanillabp.integration.test.utils.delivery.TaskDeliveryLogReader.Delive
  * The record has a second consequence, and it is asserted here for the same reason: a
  * completion of a task which is gone is routed from that record instead of probing the
  * BPMS, so the adapter's own phase-one check is what finds out, and what it raises has to
- * be the type the SPI documents. On the shared datasource no record exists, the platform
- * probes and answers with that type itself, so this is the only setup which can show it.
+ * be the type the SPI documents.
  * <p>
  * What a record CARRIES is asserted here as well, out of the table rather than out of the
  * invocation context: the element id of the BPMN element and the engine's own id of the
- * process instance. This is the only setup of the adapter which writes a record at all, so
- * it is the only place those two fields can be read back.
+ * process instance.
  * <p>
- * The kind of task a record names is read back through the message a caller gets rather
- * than through the column: somebody asking for a user task under the id of a task is told
+ * The kind of task a record names is read twice over, out of the column and out of the
+ * message a caller gets: somebody asking for a user task under the id of a task is told
  * what the id really is. That message exists only where the record carries the kind, so it
  * is the proof that this adapter reported it.
  */
@@ -196,12 +200,12 @@ public class Camunda7RepeatedDeliveryIT {
         1,
         committedHandlerRuns(aggregateId),
         "the handler's work committed in its own transaction and survived the failed job");
-    assertEquals(1, recordedDeliveriesOf("c7b"), "the delivery of the own-datasource engine is remembered");
+    assertEquals(1, recordsOf("c7b").size(), "the delivery of the own-datasource engine is remembered");
 
   }
 
   @Test
-  @DisplayName("On the shared datasource nothing is recorded and the handler runs again")
+  @DisplayName("On the shared datasource the handler runs again, and one record is left behind")
   public void repeatedDeliveryOnTheSharedDataSourceRunsTheHandlerAgain() {
 
     final var aggregateId = transactionTemplate.execute(status -> {
@@ -224,10 +228,22 @@ public class Camunda7RepeatedDeliveryIT {
         1,
         committedHandlerRuns(aggregateId),
         "only the run which committed is in the aggregate");
+    // this mode names no delivery, so no repetition can be recognised - and a record is
+    // written all the same. Exactly one of them: the run which was rolled back took its
+    // record with it, and the run which committed left one
+    final var records = recordsOf("c7");
     assertEquals(
-        0,
-        recordedDeliveriesOf("c7"),
-        "an engine delivering in the application's transaction records nothing");
+        1,
+        records.size(),
+        "the run which committed wrote a record down, the rolled-back one did not");
+    assertEquals(
+        TaskKind.TASK.name(),
+        records.get(0).taskKind(),
+        "and that record says which kind of id its id is, although it answers no repetition");
+    assertEquals(
+        "RD_Task",
+        records.get(0).bpmnElementId(),
+        "and which element of the model handed the task out");
 
   }
 
@@ -435,17 +451,17 @@ public class Camunda7RepeatedDeliveryIT {
    * records of the two share one table.
    *
    * @param adapterId The adapter id which delivered
-   * @return How many deliveries of this test's BPMN process VanillaBP has written down
+   * @return What VanillaBP wrote down about the deliveries of this test's BPMN process
    */
-  private int recordedDeliveriesOf(
+  private List<Delivery> recordsOf(
       final String adapterId) {
 
-    return (int) deliveryLog
+    return deliveryLog
         .deliveries()
         .stream()
         .filter(record -> BPMN_PROCESS_ID.equals(record.bpmnProcessId()))
         .filter(record -> adapterId.equals(record.adapterId()))
-        .count();
+        .toList();
 
   }
 

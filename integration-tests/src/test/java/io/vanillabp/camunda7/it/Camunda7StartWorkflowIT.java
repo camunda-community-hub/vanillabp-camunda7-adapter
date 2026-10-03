@@ -6,7 +6,12 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
+
+import javax.sql.DataSource;
 
 import org.camunda.bpm.engine.RepositoryService;
 import org.camunda.bpm.engine.RuntimeService;
@@ -18,8 +23,10 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import io.vanillabp.camunda7.processservice.Camunda7ProcessService;
+import io.vanillabp.integration.spi.PhaseOperation;
 import io.vanillabp.integration.test.utils.CapturedOutput;
 import io.vanillabp.integration.test.utils.SuppressOutputExtension;
+import io.vanillabp.integration.test.utils.delivery.TaskDeliveryLogReader;
 import io.vanillabp.spi.process.ProcessService;
 
 /**
@@ -73,6 +80,9 @@ public class Camunda7StartWorkflowIT {
 
   @Autowired
   private ProcessService<TestAggregate> processService;
+
+  @Autowired
+  private DataSource applicationDataSource;
 
   @Test
   @DisplayName("BPMN resources are deployed with the workflow module ID as the Camunda tenant ID")
@@ -235,6 +245,22 @@ public class Camunda7StartWorkflowIT {
             + aggregateId
             + " was never created");
 
+    // the start left the id of its instance behind, so a later operation on this workflow
+    // need not ask every configured BPMS which of them holds it
+    final var instanceId = processEngine
+        .getHistoryService()
+        .createHistoricProcessInstanceQuery()
+        .processInstanceBusinessKey(String.valueOf(aggregateId))
+        .tenantIdIn(MODULE_ID)
+        .singleResult()
+        .getId();
+    final var deliveryLog = TaskDeliveryLogReader.of(applicationDataSource);
+    final var startsOfTheAggregate = deliveryLog.workflowStartsOfAggregate(String.valueOf(aggregateId));
+    assertEquals(1, startsOfTheAggregate.size(), () -> "one row about the start: "
+        + startsOfTheAggregate);
+    assertEquals(instanceId, startsOfTheAggregate.get(0).workflowId());
+    assertEquals(BPMN_PROCESS_ID, startsOfTheAggregate.get(0).bpmnProcessId());
+
     // rolled-back start removes both the aggregate and the process instance
     final var rollbackIdHolder = new AtomicReference<Long>();
     final var exception = assertThrows(
@@ -261,6 +287,50 @@ public class Camunda7StartWorkflowIT {
             .processInstanceBusinessKey(String.valueOf(rolledBackId))
             .count(),
         "no process instance was ever created for the rolled-back start");
+    assertTrue(
+        deliveryLog.workflowStartsOfAggregate(String.valueOf(rolledBackId)).isEmpty(),
+        "a start which never happened leaves no row behind");
+
+  }
+
+  /**
+   * Phase two of a start names the instance it created, and a start which finds its workflow
+   * running already names nothing. The engine reports the same start through the listener on
+   * the start event as well, and both write the same row, so the row alone cannot show that
+   * phase two reported anything. What phase two reported is therefore listened to directly.
+   */
+  @Test
+  @DisplayName("Phase two of a start reports the process instance it created, and a repeated one reports nothing")
+  @SuppressWarnings("unchecked")
+  public void phaseTwoOfAStartReportsTheInstanceItCreated() {
+
+    final var aggregateId = transactionTemplate.execute(status -> {
+      final var aggregate = new TestAggregate();
+      aggregate.setContent("reported-instance");
+      return aggregateRepository.save(aggregate).getId();
+    });
+
+    final List<String> reported = new ArrayList<>();
+    final var instanceId = transactionTemplate.execute(status -> {
+      PhaseOperations
+          .phaseTwoOfAStart(
+              camunda7ProcessService, PhaseOperation.START_WORKFLOW, MODULE_ID, BPMN_PROCESS_ID, aggregateId,
+              Map.of(), reported::add);
+      // the job of the first service task waits for the commit, so the workflow still runs
+      // here and the second dispatch finds it
+      PhaseOperations
+          .phaseTwoOfAStart(
+              camunda7ProcessService, PhaseOperation.START_WORKFLOW, MODULE_ID, BPMN_PROCESS_ID, aggregateId,
+              Map.of(), reported::add);
+      return runtimeService
+          .createProcessInstanceQuery()
+          .processInstanceBusinessKey(String.valueOf(aggregateId))
+          .tenantIdIn(MODULE_ID)
+          .singleResult()
+          .getProcessInstanceId();
+    });
+
+    assertEquals(List.of(instanceId), reported);
 
   }
 

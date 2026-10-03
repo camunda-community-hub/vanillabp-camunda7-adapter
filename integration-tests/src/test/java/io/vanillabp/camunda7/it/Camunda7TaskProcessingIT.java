@@ -20,6 +20,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import io.vanillabp.integration.test.utils.SuppressOutputExtension;
+import io.vanillabp.integration.test.utils.delivery.TaskDeliveryLogReader;
 
 /**
  * End-to-end test of {@code @WorkflowTask} processing on a real embedded Camunda 7
@@ -82,6 +83,9 @@ public class Camunda7TaskProcessingIT {
 
   @Autowired
   private org.springframework.context.ApplicationContext applicationContext;
+
+  @Autowired
+  private javax.sql.DataSource applicationDataSource;
 
   private Long startWorkflow() {
 
@@ -898,6 +902,71 @@ public class Camunda7TaskProcessingIT {
         },
         "the message start event to start the instance");
     awaitUntil(() -> processEnded(aggregateId), "MessageStartProcess to end");
+
+    // the start by message left the id of its instance behind, like every other start
+    final var instanceId = processEngine
+        .getHistoryService()
+        .createHistoricProcessInstanceQuery()
+        .processInstanceBusinessKey(String.valueOf(aggregateId))
+        .singleResult()
+        .getId();
+    final var startsOfTheAggregate = TaskDeliveryLogReader
+        .of(applicationDataSource)
+        .workflowStartsOfAggregate(String.valueOf(aggregateId));
+    // two rows name the same instance. Phase two writes one under the process of the workflow
+    // service which asked for the start, and only the report of phase two puts it there. The
+    // listener on the start event writes the other one under the process the message started
+    assertEquals(
+        java.util.Map.of("TaskProcess", instanceId, "MessageStartProcess", instanceId),
+        startsOfTheAggregate
+            .stream()
+            .collect(
+                java.util.stream.Collectors
+                    .toMap(TaskDeliveryLogReader.Delivery::bpmnProcessId, TaskDeliveryLogReader.Delivery::workflowId)),
+        () -> "the rows about the start: "
+            + startsOfTheAggregate);
+
+  }
+
+  /**
+   * Phase two of a start by message names the instance the message created, and a start which
+   * finds its workflow running already names nothing. What phase two reported is listened to
+   * directly, apart from any row the listener on the start event writes.
+   */
+  @Test
+  @DisplayName("Phase two of a start by message reports the process instance the message created")
+  public void phaseTwoOfAStartByMessageReportsTheInstanceItCreated() {
+
+    @SuppressWarnings("unchecked")
+    final var c7ProcessService = (io.vanillabp.camunda7.processservice.Camunda7ProcessService<TaskTestAggregate>) applicationContext
+        .getBean("Camunda7_ProcessService_c7");
+    final var aggregateId = transactionTemplate.execute(status -> {
+      final var aggregate = new TaskTestAggregate();
+      aggregate.setApproved(true);
+      return repository.save(aggregate).getId();
+    });
+
+    final List<String> reported = new java.util.ArrayList<>();
+    final var instanceId = transactionTemplate.execute(status -> {
+      final var startByMessage = java.util.Map
+          .of(io.vanillabp.integration.spi.PhaseTwoCall.ARG_MESSAGE_NAME, "OrderPlaced");
+      PhaseOperations
+          .phaseTwoOfAStart(
+              c7ProcessService, io.vanillabp.integration.spi.PhaseOperation.START_WORKFLOW_BY_MESSAGE,
+              MODULE_ID, "MessageStartProcess", aggregateId, startByMessage, reported::add);
+      // nothing runs before the commit, so the second dispatch finds the workflow running
+      PhaseOperations
+          .phaseTwoOfAStart(
+              c7ProcessService, io.vanillabp.integration.spi.PhaseOperation.START_WORKFLOW_BY_MESSAGE,
+              MODULE_ID, "MessageStartProcess", aggregateId, startByMessage, reported::add);
+      return runtimeService
+          .createProcessInstanceQuery()
+          .processInstanceBusinessKey(String.valueOf(aggregateId))
+          .singleResult()
+          .getProcessInstanceId();
+    });
+
+    assertEquals(List.of(instanceId), reported);
 
   }
 

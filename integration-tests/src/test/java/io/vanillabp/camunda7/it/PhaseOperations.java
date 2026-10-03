@@ -5,6 +5,7 @@ import java.util.Map;
 import io.vanillabp.integration.adapter.spi.MigratableProcessService;
 import io.vanillabp.integration.adapter.spi.PhaseOneRequest;
 import io.vanillabp.integration.adapter.spi.PhaseTwoRequest;
+import io.vanillabp.integration.adapter.spi.workflowstart.WorkflowStartReport;
 import io.vanillabp.integration.spi.AggregatePersistenceAware;
 import io.vanillabp.integration.spi.PhaseOperation;
 
@@ -77,6 +78,37 @@ public final class PhaseOperations {
         .phaseTwo(
             new PhaseTwoRequest<>(
                 workflowModuleId, bpmnProcessId, aggregatePersistence, workflowAggregateId, args));
+
+  }
+
+  /**
+   * Phase two of a start, with somebody listening to which workflow the adapter says it
+   * created, the way the core listens while it dispatches a start.
+   *
+   * @param <A> The workflow-aggregate type
+   * @param adapter The adapter to ask
+   * @param operation The start operation to run
+   * @param workflowModuleId The workflow module the call belongs to
+   * @param bpmnProcessId The BPMN process the call belongs to
+   * @param workflowAggregateId The workflow aggregate's ID
+   * @param args The operation's arguments
+   * @param startedWorkflows Where the adapter's report of the started workflow goes
+   */
+  public static <A> void phaseTwoOfAStart(
+      final MigratableProcessService<A> adapter,
+      final PhaseOperation operation,
+      final String workflowModuleId,
+      final String bpmnProcessId,
+      final Object workflowAggregateId,
+      final Map<String, String> args,
+      final WorkflowStartReport startedWorkflows) {
+
+    adapter
+        .phaseOperations()
+        .get(operation)
+        .phaseTwo(
+            new PhaseTwoRequest<>(
+                workflowModuleId, bpmnProcessId, null, workflowAggregateId, args, startedWorkflows));
 
   }
 

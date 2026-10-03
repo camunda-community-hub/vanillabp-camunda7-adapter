@@ -281,9 +281,9 @@ public class Camunda7ProcessService<A> implements MigratableProcessService<A> {
   /**
    * Correlates a message which STARTS a workflow, honoring the module's tenant
    * (a module prefixing its identifiers has none, see decision 3 in the
-   * repository's DECISIONS.md).
+   * repository's DECISIONS.md). Answers the instance the message created.
    */
-  private void startByMessage(
+  private ProcessInstance startByMessage(
       final String workflowModuleId,
       final String messageName,
       final String businessKey,
@@ -298,7 +298,7 @@ public class Camunda7ProcessService<A> implements MigratableProcessService<A> {
         : correlation.withoutTenantId();
     // the new instance starts with the values its model may read, exactly
     // like a workflow started without a message
-    correlation
+    return correlation
         .setVariables(sharedValues)
         .correlateStartMessage();
 
@@ -554,11 +554,14 @@ public class Camunda7ProcessService<A> implements MigratableProcessService<A> {
     // the aggregate is committed by now, so its shared attributes can be written as
     // the operator context of the new instance - phase one had it at hand, phase two
     // has to read it back
-    startProcessInstance(
+    final var started = startProcessInstance(
         request.workflowModuleId(),
         request.bpmnProcessId(),
         request.workflowAggregateId(),
         aggregateForOperatorContext(request.aggregatePersistence(), request.workflowAggregateId()));
+    // a start creates the root of a call tree, so this instance is the workflow the aggregate
+    // IS, named the way a task of it reports its workflow id
+    request.reportStartedWorkflow(started.getProcessInstanceId());
 
   }
 
@@ -605,7 +608,7 @@ public class Camunda7ProcessService<A> implements MigratableProcessService<A> {
               businessKey);
       return;
     }
-    startByMessage(
+    final var started = startByMessage(
         request.workflowModuleId(),
         request.messageName(),
         businessKey,
@@ -614,6 +617,7 @@ public class Camunda7ProcessService<A> implements MigratableProcessService<A> {
             request.workflowAggregateId(),
             request.workflowModuleId(),
             request.bpmnProcessId()));
+    request.reportStartedWorkflow(started.getProcessInstanceId());
 
   }
 

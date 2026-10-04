@@ -112,4 +112,41 @@ public final class PhaseOperations {
 
   }
 
+  /**
+   * Listens to what phase two of a start reports, id and version together, the way the core
+   * writes both into the row about the start.
+   */
+  public static final class ReportedStarts implements WorkflowStartReport {
+
+    private final java.util.List<String> reported = new java.util.ArrayList<>();
+
+    @Override
+    public void startedWorkflow(
+        final String workflowId) {
+
+      reported.add(workflowId);
+
+    }
+
+    @Override
+    public void startedWorkflow(
+        final String workflowId,
+        final String processVersion) {
+
+      reported.add("%s on version %s".formatted(workflowId, processVersion));
+
+    }
+
+    /**
+     * @return Every report, an id with its version written as "id on version n" and an id
+     *         reported without a version alone
+     */
+    public java.util.List<String> reported() {
+
+      return reported;
+
+    }
+
+  }
+
 }

@@ -266,6 +266,41 @@ public class Camunda7ProcessService<A> implements MigratableProcessService<A> {
   }
 
   /**
+   * The adapter's knowledge about its deployed process definitions, shared with the task
+   * deliveries of the same engine. <code>null</code> in tests which build the service
+   * without an engine holder: a start then reports no version, and a start by message asks
+   * the engine for the newest definition.
+   */
+  private io.vanillabp.camunda7.wiring.Camunda7TaskRegistry taskRegistry;
+
+  /**
+   * Hands over the registry the deliveries of this engine read the version of a process
+   * definition from. A start reports its version through the same cache, so a start and a
+   * task of the same workflow name the version in the same form.
+   *
+   * @param taskRegistry The task registry of the engine this service runs on
+   */
+  public void setTaskRegistry(
+      final io.vanillabp.camunda7.wiring.Camunda7TaskRegistry taskRegistry) {
+
+    this.taskRegistry = taskRegistry;
+
+  }
+
+  /**
+   * The version of the process definition a new instance runs on, in the form a task of the
+   * same workflow reports it.
+   */
+  private String versionOfTheDefinitionOf(
+      final ProcessInstance started) {
+
+    return taskRegistry == null
+        ? null
+        : taskRegistry.versionOfDefinition(started.getProcessDefinitionId());
+
+  }
+
+  /**
    * Sets the tenant names the application configured - this adapter's own configuration,
    * unlike the name-clash-avoidance support, which arrives with the collaborators.
    *
@@ -561,7 +596,7 @@ public class Camunda7ProcessService<A> implements MigratableProcessService<A> {
         aggregateForOperatorContext(request.aggregatePersistence(), request.workflowAggregateId()));
     // a start creates the root of a call tree, so this instance is the workflow the aggregate
     // IS, named the way a task of it reports its workflow id
-    request.reportStartedWorkflow(started.getProcessInstanceId());
+    request.reportStartedWorkflow(started.getProcessInstanceId(), versionOfTheDefinitionOf(started));
 
   }
 
@@ -617,7 +652,7 @@ public class Camunda7ProcessService<A> implements MigratableProcessService<A> {
             request.workflowAggregateId(),
             request.workflowModuleId(),
             request.bpmnProcessId()));
-    request.reportStartedWorkflow(started.getProcessInstanceId());
+    request.reportStartedWorkflow(started.getProcessInstanceId(), versionOfTheDefinitionOf(started));
 
   }
 

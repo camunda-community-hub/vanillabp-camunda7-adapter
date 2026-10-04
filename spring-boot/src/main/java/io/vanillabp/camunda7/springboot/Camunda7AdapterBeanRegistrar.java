@@ -116,6 +116,9 @@ public class Camunda7AdapterBeanRegistrar implements BeanRegistrar {
                 // an engine on a datasource of its own commits separately from the
                 // application, which makes its deliveries repeatable
                 processService.setEngineRunsOnItsOwnDataSource(engine.usesSeparateDataSource());
+                // a start reports the version of its process definition from the cache
+                // the deliveries of this engine read it from
+                processService.setTaskRegistry(engine.getTaskRegistry());
                 processService
                     .setConfiguredTenants(
                         configuredTenantsOf(supplierContext.bean(VanillaBpCamunda7Properties.class), adapterId));

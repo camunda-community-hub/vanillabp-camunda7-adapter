@@ -946,27 +946,31 @@ public class Camunda7TaskProcessingIT {
       return repository.save(aggregate).getId();
     });
 
-    final List<String> reported = new java.util.ArrayList<>();
-    final var instanceId = transactionTemplate.execute(status -> {
+    final var reported = new PhaseOperations.ReportedStarts();
+    final var instance = transactionTemplate.execute(status -> {
       final var startByMessage = java.util.Map
           .of(io.vanillabp.integration.spi.PhaseTwoCall.ARG_MESSAGE_NAME, "OrderPlaced");
       PhaseOperations
           .phaseTwoOfAStart(
               c7ProcessService, io.vanillabp.integration.spi.PhaseOperation.START_WORKFLOW_BY_MESSAGE,
-              MODULE_ID, "MessageStartProcess", aggregateId, startByMessage, reported::add);
+              MODULE_ID, "MessageStartProcess", aggregateId, startByMessage, reported);
       // nothing runs before the commit, so the second dispatch finds the workflow running
       PhaseOperations
           .phaseTwoOfAStart(
               c7ProcessService, io.vanillabp.integration.spi.PhaseOperation.START_WORKFLOW_BY_MESSAGE,
-              MODULE_ID, "MessageStartProcess", aggregateId, startByMessage, reported::add);
+              MODULE_ID, "MessageStartProcess", aggregateId, startByMessage, reported);
       return runtimeService
           .createProcessInstanceQuery()
           .processInstanceBusinessKey(String.valueOf(aggregateId))
-          .singleResult()
-          .getProcessInstanceId();
+          .singleResult();
     });
 
-    assertEquals(List.of(instanceId), reported);
+    // the version comes with the id, in the form a task of the same workflow reports it
+    final var version = processEngine
+        .getRepositoryService()
+        .getProcessDefinition(instance.getProcessDefinitionId())
+        .getVersion();
+    assertEquals(List.of("%s on version %s".formatted(instance.getProcessInstanceId(), version)), reported.reported());
 
   }
 

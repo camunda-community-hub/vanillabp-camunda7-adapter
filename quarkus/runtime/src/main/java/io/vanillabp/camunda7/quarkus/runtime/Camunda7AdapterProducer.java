@@ -105,6 +105,9 @@ public class Camunda7AdapterProducer {
           // an engine on a datasource of its own commits separately from the
           // application, which makes its deliveries repeatable
           processService.setEngineRunsOnItsOwnDataSource(engine.usesSeparateDataSource());
+          // a start reports the version of its process definition from the cache the
+          // deliveries of this engine read it from
+          processService.setTaskRegistry(engine.getTaskRegistry());
           processService.setConfiguredTenants(configuredTenantsOf(overlay, adapterId));
           // Which serialization format nested shared values are stored in,
           // resolved per workflow with a fallback to the module and the adapter

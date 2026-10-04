@@ -378,7 +378,9 @@ public class Camunda7ProcessService<A> implements MigratableProcessService<A> {
     if (newest == null) {
       throw new IllegalStateException(
           """
-              BPMN process '%s' of workflow module '%s' is not deployed to adapter '%s', so no               message can start it! Check that the model of this process is part of the               workflow module's resources."""
+              BPMN process '%s' of workflow module '%s' is not deployed to adapter '%s', so no \
+              message can start it! Check that the model of this process is part of the \
+              workflow module's resources."""
               .formatted(bpmnProcessId, workflowModuleId, adapterId));
     }
     return newest.getId();

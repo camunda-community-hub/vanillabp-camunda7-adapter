@@ -10,6 +10,21 @@ and for the [Camunda 8 adapter](https://github.com/vanillabp/camunda8-adapter/bl
 
 ## 2.0
 
+### A message starts only the process of its own `ProcessService`
+
+Version 1 correlated the message of `startWorkflowByMessage` with the engine's
+`correlateStartMessage()`, so every process with a start event for that message started,
+whichever `ProcessService` you called. Version 2 refuses a message which does not start the
+process of the `ProcessService` you call, with an `IllegalArgumentException` before anything is
+saved. On Camunda 7 the correlation also names the process definition, so even a message the
+check cannot judge starts no other process.
+
+Where your code starts a process through the `ProcessService` of another one, call the
+`ProcessService` of the process the message is meant for instead. Camunda 7 compares the
+message name as the model writes it once the correlation names a definition. So a message start
+event whose name is an expression, such as `${orderMessage}`, cannot be started by a message any
+more. Give it a plain name.
+
 ### A shared value Camunda 7 has no variable type for needs a serialization format
 
 Version 1 answered the expressions of a model from the live workflow aggregate, so

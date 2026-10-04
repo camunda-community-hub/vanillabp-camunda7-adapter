@@ -6,7 +6,6 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
@@ -260,6 +259,7 @@ public class Camunda7StartWorkflowIT {
         + startsOfTheAggregate);
     assertEquals(instanceId, startsOfTheAggregate.get(0).workflowId());
     assertEquals(BPMN_PROCESS_ID, startsOfTheAggregate.get(0).bpmnProcessId());
+    assertEquals(versionOfTheDefinitionOf(instanceId), startsOfTheAggregate.get(0).processVersion());
 
     // rolled-back start removes both the aggregate and the process instance
     final var rollbackIdHolder = new AtomicReference<Long>();
@@ -310,18 +310,18 @@ public class Camunda7StartWorkflowIT {
       return aggregateRepository.save(aggregate).getId();
     });
 
-    final List<String> reported = new ArrayList<>();
+    final var reported = new PhaseOperations.ReportedStarts();
     final var instanceId = transactionTemplate.execute(status -> {
       PhaseOperations
           .phaseTwoOfAStart(
               camunda7ProcessService, PhaseOperation.START_WORKFLOW, MODULE_ID, BPMN_PROCESS_ID, aggregateId,
-              Map.of(), reported::add);
+              Map.of(), reported);
       // the job of the first service task waits for the commit, so the workflow still runs
       // here and the second dispatch finds it
       PhaseOperations
           .phaseTwoOfAStart(
               camunda7ProcessService, PhaseOperation.START_WORKFLOW, MODULE_ID, BPMN_PROCESS_ID, aggregateId,
-              Map.of(), reported::add);
+              Map.of(), reported);
       return runtimeService
           .createProcessInstanceQuery()
           .processInstanceBusinessKey(String.valueOf(aggregateId))
@@ -330,7 +330,33 @@ public class Camunda7StartWorkflowIT {
           .getProcessInstanceId();
     });
 
-    assertEquals(List.of(instanceId), reported);
+    // the version comes with the id, in the form a task of the same workflow reports it
+    assertEquals(
+        List.of("%s on version %s".formatted(instanceId, versionOfTheDefinitionOf(instanceId))),
+        reported.reported());
+
+  }
+
+  /**
+   * The version of the definition a workflow runs on, as the engine counts it.
+   *
+   * @param instanceId The process instance id
+   * @return The version, written as a task of that workflow reports it
+   */
+  private String versionOfTheDefinitionOf(
+      final String instanceId) {
+
+    final var instance = processEngine
+        .getHistoryService()
+        .createHistoricProcessInstanceQuery()
+        .processInstanceId(instanceId)
+        .singleResult();
+    return String
+        .valueOf(
+            processEngine
+                .getRepositoryService()
+                .getProcessDefinition(instance.getProcessDefinitionId())
+                .getVersion());
 
   }
 

@@ -270,6 +270,27 @@ public class Camunda7ProcessVersions extends CachingProcessVersionCatalog {
 
   }
 
+  /**
+   * The engine's process definition id of the version this adapter recorded for that process
+   * during this boot: the definition its deployment created, or the newest one where the
+   * engine deployed nothing because the model did not change.
+   *
+   * @param workflowModuleId The workflow module ID
+   * @param bpmnProcessId The PLAIN BPMN process ID
+   * @return The definition id, or <code>null</code> if this boot recorded no version of that
+   *         process
+   */
+  public String definitionIdDeployedOf(
+      final String workflowModuleId,
+      final String bpmnProcessId) {
+
+    final var version = deployedVersionOf(workflowModuleId, bpmnProcessId);
+    return version == null
+        ? null
+        : definitionIdsByVersion.get(versionKey(workflowModuleId, bpmnProcessId, version));
+
+  }
+
   @Override
   public java.util.Collection<BpmnTaskSpec> tasksOfVersion(
       final String workflowModuleId,

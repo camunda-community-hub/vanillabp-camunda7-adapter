@@ -266,6 +266,41 @@ public class Camunda7ProcessService<A> implements MigratableProcessService<A> {
   }
 
   /**
+   * The adapter's knowledge about its deployed process definitions, shared with the task
+   * deliveries of the same engine. <code>null</code> in tests which build the service
+   * without an engine holder: a start then reports no version, and a start by message asks
+   * the engine for the newest definition.
+   */
+  private io.vanillabp.camunda7.wiring.Camunda7TaskRegistry taskRegistry;
+
+  /**
+   * Hands over the registry the deliveries of this engine read the version of a process
+   * definition from. A start reports its version through the same cache, so a start and a
+   * task of the same workflow name the version in the same form.
+   *
+   * @param taskRegistry The task registry of the engine this service runs on
+   */
+  public void setTaskRegistry(
+      final io.vanillabp.camunda7.wiring.Camunda7TaskRegistry taskRegistry) {
+
+    this.taskRegistry = taskRegistry;
+
+  }
+
+  /**
+   * The version of the process definition a new instance runs on, in the form a task of the
+   * same workflow reports it.
+   */
+  private String versionOfTheDefinitionOf(
+      final ProcessInstance started) {
+
+    return taskRegistry == null
+        ? null
+        : taskRegistry.versionOfDefinition(started.getProcessDefinitionId());
+
+  }
+
+  /**
    * Sets the tenant names the application configured - this adapter's own configuration,
    * unlike the name-clash-avoidance support, which arrives with the collaborators.
    *
@@ -279,28 +314,101 @@ public class Camunda7ProcessService<A> implements MigratableProcessService<A> {
   }
 
   /**
-   * Correlates a message which STARTS a workflow, honoring the module's tenant
-   * (a module prefixing its identifiers has none, see decision 3 in the
-   * repository's DECISIONS.md). Answers the instance the message created.
+   * Correlates a message which STARTS a workflow, and only a workflow of the process the
+   * caller's process service belongs to. Answers the instance the message created.
+   * <p>
+   * The correlation names the process definition. Without it the engine would start every
+   * process whose start event waits for that message, which is what version 1 did. The core
+   * refuses such a message before phase one wherever this adapter could report the messages
+   * of the model, and naming the definition keeps the rule where the core could not check,
+   * for example because a message name is an expression.
+   * <p>
+   * Camunda 7 refuses a correlation which names a process definition and a tenant at the
+   * same time. The definition was looked up within the module's tenant, so it carries the
+   * tenant already.
    */
   private ProcessInstance startByMessage(
       final String workflowModuleId,
+      final String bpmnProcessId,
       final String messageName,
       final String businessKey,
       final java.util.Map<String, Object> sharedValues) {
 
-    var correlation = runtimeService
+    return runtimeService
         .createMessageCorrelation(scopedIdentifier(workflowModuleId, messageName))
-        .processInstanceBusinessKey(businessKey);
-    final var tenantId = tenantIdOf(workflowModuleId);
-    correlation = tenantId != null
-        ? correlation.tenantId(tenantId)
-        : correlation.withoutTenantId();
-    // the new instance starts with the values its model may read, exactly
-    // like a workflow started without a message
-    return correlation
+        .processDefinitionId(definitionStartedByMessages(workflowModuleId, bpmnProcessId))
+        .processInstanceBusinessKey(businessKey)
+        // the new instance starts with the values its model may read, exactly
+        // like a workflow started without a message
         .setVariables(sharedValues)
         .correlateStartMessage();
+
+  }
+
+  /**
+   * The process definition a message start creates its instance of: the one this adapter
+   * deployed for that process while the application started, or the newest one where the
+   * engine deployed nothing because the model did not change. Only where this boot recorded
+   * none, the engine is asked for the newest definition in the module's tenant.
+   *
+   * @param workflowModuleId The workflow module ID
+   * @param bpmnProcessId The PLAIN BPMN process ID
+   * @return The engine's process definition id
+   * @throws IllegalStateException If the engine holds no definition of that process
+   */
+  private String definitionStartedByMessages(
+      final String workflowModuleId,
+      final String bpmnProcessId) {
+
+    final var deployed = taskRegistry == null
+        ? null
+        : taskRegistry.definitionIdDeployedOf(workflowModuleId, bpmnProcessId);
+    if (deployed != null) {
+      return deployed;
+    }
+    final var tenantId = tenantIdOf(workflowModuleId);
+    var query = repositoryService
+        .createProcessDefinitionQuery()
+        .processDefinitionKey(scopedProcessId(workflowModuleId, bpmnProcessId))
+        .latestVersion();
+    query = tenantId != null
+        ? query.tenantIdIn(tenantId)
+        : query.withoutTenantId();
+    final var newest = query.singleResult();
+    if (newest == null) {
+      throw new IllegalStateException(
+          """
+              BPMN process '%s' of workflow module '%s' is not deployed to adapter '%s', so no \
+              message can start it! Check that the model of this process is part of the \
+              workflow module's resources."""
+              .formatted(bpmnProcessId, workflowModuleId, adapterId));
+    }
+    return newest.getId();
+
+  }
+
+  /**
+   * Whether the model of a process definition has a start event for this message, read the
+   * way the engine reads it when a correlation names that definition: the start events the
+   * process itself holds, and the message name as the model writes it.
+   */
+  private boolean startsByMessage(
+      final String processDefinitionId,
+      final String scopedProcessId,
+      final String scopedMessageName) {
+
+    return repositoryService
+        .getBpmnModelInstance(processDefinitionId)
+        .getModelElementsByType(org.camunda.bpm.model.bpmn.instance.StartEvent.class)
+        .stream()
+        .filter(startEvent -> (startEvent
+            .getParentElement() instanceof org.camunda.bpm.model.bpmn.instance.Process process) && scopedProcessId
+                .equals(process.getId()))
+        .flatMap(startEvent -> startEvent.getEventDefinitions().stream())
+        .filter(org.camunda.bpm.model.bpmn.instance.MessageEventDefinition.class::isInstance)
+        .map(org.camunda.bpm.model.bpmn.instance.MessageEventDefinition.class::cast)
+        .anyMatch(definition -> (definition.getMessage() != null) && scopedMessageName
+            .equals(definition.getMessage().getName()));
 
   }
 
@@ -561,30 +669,31 @@ public class Camunda7ProcessService<A> implements MigratableProcessService<A> {
         aggregateForOperatorContext(request.aggregatePersistence(), request.workflowAggregateId()));
     // a start creates the root of a call tree, so this instance is the workflow the aggregate
     // IS, named the way a task of it reports its workflow id
-    request.reportStartedWorkflow(started.getProcessInstanceId());
+    request.reportStartedWorkflow(started.getProcessInstanceId(), versionOfTheDefinitionOf(started));
 
   }
 
   /**
-   * The non-advancing phase-one check of a start by message: is there a message start
-   * event of this name? Starting itself happens after the commit, idempotently.
+   * The non-advancing phase-one check of a start by message: does the process of the
+   * caller's process service have a message start event of this name? Phase two names the
+   * same process definition, so a message which passes here is one phase two can correlate.
+   * Starting itself happens after the commit, idempotently.
    */
   private void checkMessageStartEventExists(
       final PhaseOneRequest<A> request) {
 
     final var scopedMessageName = scopedIdentifier(request.workflowModuleId(), request.messageName());
-    final var startEventExists = runtimeService
-        .createEventSubscriptionQuery()
-        .eventType("message")
-        .eventName(scopedMessageName)
-        .count() > 0;
-    if (!startEventExists) {
+    final var definitionId = definitionStartedByMessages(request.workflowModuleId(), request.bpmnProcessId());
+    final var scopedProcessId = scopedProcessId(request.workflowModuleId(), request.bpmnProcessId());
+    if (!startsByMessage(definitionId, scopedProcessId, scopedMessageName)) {
       throw new IllegalStateException(
           """
-              No message start event named '%s' is deployed (BPMN process '%s' of workflow module \
-              '%s')! Starting the workflow by that message would do nothing - check the message \
-              name against the model."""
-              .formatted(request.messageName(), request.bpmnProcessId(), request.workflowModuleId()));
+              BPMN process '%s' of workflow module '%s' has no message start event named '%s' in \
+              the model adapter '%s' starts! A message starts only the process of the process \
+              service you called. Check the message name against the model of that process. A \
+              message name which is an expression never matches, because the engine compares the \
+              name as the model writes it."""
+              .formatted(request.bpmnProcessId(), request.workflowModuleId(), request.messageName(), adapterId));
     }
 
   }
@@ -610,6 +719,7 @@ public class Camunda7ProcessService<A> implements MigratableProcessService<A> {
     }
     final var started = startByMessage(
         request.workflowModuleId(),
+        request.bpmnProcessId(),
         request.messageName(),
         businessKey,
         sharedValues(
@@ -617,7 +727,7 @@ public class Camunda7ProcessService<A> implements MigratableProcessService<A> {
             request.workflowAggregateId(),
             request.workflowModuleId(),
             request.bpmnProcessId()));
-    request.reportStartedWorkflow(started.getProcessInstanceId());
+    request.reportStartedWorkflow(started.getProcessInstanceId(), versionOfTheDefinitionOf(started));
 
   }
 

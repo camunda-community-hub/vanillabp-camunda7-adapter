@@ -672,15 +672,38 @@ public class Camunda7WorkflowLifecycleTest {
   }
 
   @Test
-  @DisplayName("startWorkflowByMessage starts the workflow through its message start event")
+  @DisplayName("startWorkflowByMessage starts the process of its own process service through its message start event")
   public void startWorkflowByMessageStartsTheWorkflow() throws Exception {
 
-    final var aggregateId = post("introspect/messages/OrderPlaced/start")
+    final var aggregateId = post("introspect/messages/TaskRequested/start")
         .get("id")
         .toString();
 
-    await(() -> ended(aggregateId), "MessageStartProcess to run through");
-    assertEquals("order-placed", resultsOf(aggregateId));
+    await(() -> ended(aggregateId), "TaskProcess to run through");
+    assertEquals("happy", resultsOf(aggregateId));
+
+  }
+
+  @Test
+  @DisplayName("startWorkflowByMessage refuses a message which starts another process")
+  public void startWorkflowByMessageRefusesTheMessageOfAnotherProcess() throws Exception {
+
+    final var aggregateId = post("introspect/aggregates")
+        .get("id")
+        .toString();
+
+    // OrderPlaced starts MessageStartProcess, which is not the process of this service
+    final var refused = post("introspect/messages/OrderPlaced/start/"
+        + aggregateId);
+    assertEquals("IllegalArgumentException", refused.get("rootException"));
+    assertTrue(
+        refused
+            .get("rootMessage")
+            .toString()
+            .contains("Message 'OrderPlaced' does not start BPMN process 'TaskProcess' of workflow module"),
+        String.valueOf(refused.get("rootMessage")));
+    awaitNothingElseHappens();
+    assertEquals(0, instances(aggregateId), "a refused message must start no process at all");
 
   }
 

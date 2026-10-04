@@ -620,6 +620,22 @@ doctrine. `Camunda7TaskProcessingIT#correlateMessageResumesProcess`,
 `#correlateMessageWithCorrelationId`, `#rolledBackCorrelationLeavesInstanceWaiting` and
 `#startWorkflowByMessageStartsInstance` hold this.
 
+**A message starts only the process of its own process service.** While it wires a model,
+the adapter reports the plain names of the message start events of each process
+(`BpmsInitiatedStartInvoker#reportStartMessages`), and the core refuses any other message
+before phase one. A process with a message name the adapter cannot read, an expression, is
+not reported, and the core does not check it. The adapter keeps the rule itself as well:
+phase one reads the model of the process definition, and phase two names that definition in
+the correlation (`processDefinitionId`). The definition is the one this boot deployed, or
+the newest one where the model had not changed. Without the definition id Camunda 7 would
+start every process which waits for the message, which is what version 1 did. A
+correlation which names a definition must not name a tenant as well, and it does not need
+to, because the definition was looked up in the module's tenant. The engine compares the
+message name as the model writes it, so a message start event whose name is an expression
+cannot be started this way at all.
+`Camunda7TaskProcessingIT#startWorkflowByMessageRefusesTheMessageOfAnotherProcess` and
+`#bothPhasesOfAStartByMessageStayWithTheOwnProcess` hold this.
+
 BPMN expressions like gateway conditions or multi-instance collections
 (`${riskAcceptable}`, `${items}`) resolve against the workflow aggregate
 identified by the business key (getter, boolean getter or field - Spring beans

@@ -6,8 +6,14 @@
       <bpmn:outgoing>TP_f1</bpmn:outgoing>
     </bpmn:startEvent>
     <bpmn:sequenceFlow id="TP_f1" sourceRef="TP_Start" targetRef="TP_Happy" />
+    <bpmn:startEvent id="TP_MessageStart">
+      <bpmn:outgoing>TP_fMessage</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="TP_MsgDef" messageRef="Msg_Task" />
+    </bpmn:startEvent>
+    <bpmn:sequenceFlow id="TP_fMessage" sourceRef="TP_MessageStart" targetRef="TP_Happy" />
     <bpmn:serviceTask id="TP_Happy" camunda:expression="${happyTask}">
       <bpmn:incoming>TP_f1</bpmn:incoming>
+      <bpmn:incoming>TP_fMessage</bpmn:incoming>
       <bpmn:outgoing>TP_f2</bpmn:outgoing>
     </bpmn:serviceTask>
     <bpmn:sequenceFlow id="TP_f2" sourceRef="TP_Happy" targetRef="TP_Gateway" />
@@ -221,6 +227,7 @@
   </bpmn:process>
   <bpmn:message id="Msg_Payment" name="PaymentReceived" />
   <bpmn:message id="Msg_Order" name="OrderPlaced" />
+  <bpmn:message id="Msg_Task" name="TaskRequested" />
   <bpmn:process id="MessageProcess" isExecutable="true">
     <bpmn:startEvent id="MP_Start">
       <bpmn:outgoing>MP_f1</bpmn:outgoing>

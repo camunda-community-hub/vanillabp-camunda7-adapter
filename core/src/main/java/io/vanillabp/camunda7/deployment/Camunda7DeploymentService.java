@@ -2372,6 +2372,7 @@ public class Camunda7DeploymentService implements AdapterDeploymentService<BpmnM
 
     // throwing here honors the deployment-failure policy, like the task wiring
     bpmsInitiatedStartInvoker.validateBpmsInitiatedStarts(workflowModuleId, bpmnProcessId, startEvents);
+    reportStartMessages(workflowModuleId, bpmnProcessId, scopedBpmnProcessId, model);
 
     if (!startEvents.isEmpty()) {
       log
@@ -2382,6 +2383,68 @@ public class Camunda7DeploymentService implements AdapterDeploymentService<BpmnM
               workflowModuleId,
               startEvents);
     }
+
+  }
+
+  /**
+   * Tells the core which messages start this process, so it can refuse a
+   * <code>startWorkflowByMessage</code> whose message starts another one before anything is
+   * saved.
+   * <p>
+   * The names are reported PLAIN, the way the application passes them. Only the start events
+   * the process itself holds count: a message start event of an event subprocess starts no
+   * workflow. A name which is an expression cannot be compared with what the application
+   * passes, so a process with such a name is not reported at all, and the core then does not
+   * check it. The correlation still names the process definition, so even then this engine
+   * never starts another process (see {@code Camunda7ProcessService}).
+   *
+   * @param workflowModuleId The workflow module ID
+   * @param bpmnProcessId The plain BPMN process ID
+   * @param scopedBpmnProcessId The process definition key the engine will know
+   * @param model The BPMN model
+   */
+  private void reportStartMessages(
+      final String workflowModuleId,
+      final String bpmnProcessId,
+      final String scopedBpmnProcessId,
+      final BpmnModelInstance model) {
+
+    final var messageNames = new java.util.LinkedHashSet<String>();
+    final var messageStartEvents = model
+        .getModelElementsByType(org.camunda.bpm.model.bpmn.instance.StartEvent.class)
+        .stream()
+        .filter(startEvent -> scopedBpmnProcessId.equals(owningProcessId(startEvent)))
+        .filter(io.vanillabp.camunda7.wiring.Camunda7StartEvents::startsTheWorkflow)
+        .filter(startEvent -> io.vanillabp.camunda7.wiring.Camunda7StartEvents
+            .kindOf(startEvent) == io.vanillabp.spi.service.BpmsStartTrigger.Kind.MESSAGE)
+        .toList();
+    for (final var startEvent : messageStartEvents) {
+      final var scopedMessageName = startEvent
+          .getEventDefinitions()
+          .stream()
+          .filter(org.camunda.bpm.model.bpmn.instance.MessageEventDefinition.class::isInstance)
+          .map(org.camunda.bpm.model.bpmn.instance.MessageEventDefinition.class::cast)
+          .findFirst()
+          .map(definition -> definition.getMessage() == null
+              ? null
+              : definition.getMessage().getName())
+          .orElse(null);
+      if ((scopedMessageName == null) || scopedMessageName.contains("${") || scopedMessageName.contains("#{")) {
+        log
+            .info(
+                "Camunda7[{}]: message start event '{}' of BPMN process '{}' (workflow module '{}') has no "
+                    + "message name this adapter can read, so the messages which start this process are not "
+                    + "reported",
+                adapterId,
+                startEvent.getId(),
+                bpmnProcessId,
+                workflowModuleId);
+        return;
+      }
+      messageNames.add(plainIdentifier(workflowModuleId, scopedMessageName));
+    }
+
+    bpmsInitiatedStartInvoker.reportStartMessages(adapterId, workflowModuleId, bpmnProcessId, messageNames);
 
   }
 

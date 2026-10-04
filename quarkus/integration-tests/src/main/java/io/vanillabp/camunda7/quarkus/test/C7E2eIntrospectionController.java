@@ -594,6 +594,29 @@ public class C7E2eIntrospectionController {
 
   }
 
+  /**
+   * Starts the workflow of an existing aggregate by a message, and reports a refusal
+   * instead of failing the request.
+   *
+   * @param messageName The message which is to start the workflow
+   * @param aggregateId The aggregate whose workflow is to be started
+   * @return Nothing where the start was accepted, otherwise the exception raised
+   * @throws Exception If the transaction cannot be handled
+   */
+  @POST
+  @Path("/messages/{messageName}/start/{aggregateId}")
+  public Map<String, Object> startWorkflowByMessage(
+      @PathParam("messageName") final String messageName,
+      @PathParam("aggregateId") final Long aggregateId) throws Exception {
+
+    return inTransaction(
+        aggregateId,
+        aggregate -> workflowService.startWorkflowByMessage(aggregate, messageName),
+        null,
+        true);
+
+  }
+
   @POST
   @Path("/signals/{signalName}")
   @Transactional

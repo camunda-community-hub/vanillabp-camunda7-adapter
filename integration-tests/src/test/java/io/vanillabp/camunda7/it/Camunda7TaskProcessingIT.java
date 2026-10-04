@@ -884,47 +884,155 @@ public class Camunda7TaskProcessingIT {
   }
 
   @Test
-  @DisplayName("startWorkflowByMessage starts the instance via the message start event")
+  @DisplayName("startWorkflowByMessage starts the process of its own process service")
   public void startWorkflowByMessageStartsInstance() throws Exception {
 
     final var aggregateId = transactionTemplate.execute(status -> {
       final var aggregate = new TaskTestAggregate();
       aggregate.setApproved(true);
       final var saved = repository.save(aggregate);
-      workflowService.startByMessage(saved, "OrderPlaced");
+      workflowService.startByMessage(saved, "TaskRequested");
       return saved.getId();
     });
 
-    awaitUntil(
-        () -> {
-          final var results = repository.findById(aggregateId).orElseThrow().getResults();
-          return (results != null) && results.contains("order-placed");
-        },
-        "the message start event to start the instance");
-    awaitUntil(() -> processEnded(aggregateId), "MessageStartProcess to end");
+    awaitUntil(() -> processEnded(aggregateId), "TaskProcess to end");
 
-    // the start by message left the id of its instance behind, like every other start
-    final var instanceId = processEngine
+    // the start by message left the id of its instance behind, like every other start, and
+    // one row only: the message started the process of the workflow service which asked
+    final var instance = processEngine
         .getHistoryService()
         .createHistoricProcessInstanceQuery()
         .processInstanceBusinessKey(String.valueOf(aggregateId))
-        .singleResult()
-        .getId();
+        .singleResult();
+    assertEquals("TaskProcess", instance.getProcessDefinitionKey());
     final var startsOfTheAggregate = TaskDeliveryLogReader
         .of(applicationDataSource)
         .workflowStartsOfAggregate(String.valueOf(aggregateId));
-    // two rows name the same instance. Phase two writes one under the process of the workflow
-    // service which asked for the start, and only the report of phase two puts it there. The
-    // listener on the start event writes the other one under the process the message started
+    assertEquals(1, startsOfTheAggregate.size(), () -> "the rows about the start: "
+        + startsOfTheAggregate);
+    assertEquals("TaskProcess", startsOfTheAggregate.getFirst().bpmnProcessId());
+    assertEquals(instance.getId(), startsOfTheAggregate.getFirst().workflowId());
     assertEquals(
-        java.util.Map.of("TaskProcess", instanceId, "MessageStartProcess", instanceId),
-        startsOfTheAggregate
-            .stream()
-            .collect(
-                java.util.stream.Collectors
-                    .toMap(TaskDeliveryLogReader.Delivery::bpmnProcessId, TaskDeliveryLogReader.Delivery::workflowId)),
-        () -> "the rows about the start: "
-            + startsOfTheAggregate);
+        String
+            .valueOf(
+                processEngine
+                    .getRepositoryService()
+                    .getProcessDefinition(instance.getProcessDefinitionId())
+                    .getVersion()),
+        startsOfTheAggregate.getFirst().processVersion());
+
+  }
+
+  /**
+   * This adapter reports the messages which start each process, so VanillaBP refuses a
+   * message of another process where the application asks for it, before anything is
+   * saved.
+   */
+  @Test
+  @DisplayName("startWorkflowByMessage refuses a message which starts another process")
+  public void startWorkflowByMessageRefusesTheMessageOfAnotherProcess() {
+
+    final var savedId = new java.util.concurrent.atomic.AtomicReference<Long>();
+    final var refusal = assertThrows(
+        IllegalArgumentException.class,
+        () -> transactionTemplate.executeWithoutResult(status -> {
+          final var aggregate = new TaskTestAggregate();
+          aggregate.setApproved(true);
+          final var saved = repository.save(aggregate);
+          savedId.set(saved.getId());
+          // OrderPlaced starts MessageStartProcess, which is not the process of this service
+          workflowService.startByMessage(saved, "OrderPlaced");
+        }));
+
+    assertTrue(
+        refusal
+            .getMessage()
+            .contains("Message 'OrderPlaced' does not start BPMN process 'TaskProcess' of workflow module 'c7-it'"),
+        refusal.getMessage());
+    assertTrue(refusal.getMessage().contains("'TaskRequested'"), refusal.getMessage());
+    assertEquals(
+        0,
+        processEngine
+            .getHistoryService()
+            .createHistoricProcessInstanceQuery()
+            .processInstanceBusinessKey(String.valueOf(savedId.get()))
+            .count(),
+        "a refused message must start no process at all");
+
+  }
+
+  /**
+   * The correlation itself names the process definition, so a message of another process
+   * starts nothing even where VanillaBP did not check it before phase one. Both phases are
+   * asked directly here, the way they would run for a process whose messages this adapter
+   * could not report.
+   */
+  @Test
+  @DisplayName("Both phases of a start by message accept only a message of the own process")
+  public void bothPhasesOfAStartByMessageStayWithTheOwnProcess() {
+
+    @SuppressWarnings("unchecked")
+    final var c7ProcessService = (io.vanillabp.camunda7.processservice.Camunda7ProcessService<TaskTestAggregate>) applicationContext
+        .getBean("Camunda7_ProcessService_c7");
+    final var aggregateId = transactionTemplate.execute(status -> {
+      final var aggregate = new TaskTestAggregate();
+      aggregate.setApproved(true);
+      return repository.save(aggregate).getId();
+    });
+    final var messageOfAnotherProcess = java.util.Map
+        .of(io.vanillabp.integration.spi.PhaseTwoCall.ARG_MESSAGE_NAME, "OrderPlaced");
+
+    final var phaseOneRefusal = assertThrows(
+        IllegalStateException.class,
+        () -> transactionTemplate.executeWithoutResult(status -> PhaseOperations
+            .phaseOne(
+                c7ProcessService, io.vanillabp.integration.spi.PhaseOperation.START_WORKFLOW_BY_MESSAGE,
+                MODULE_ID, "TaskProcess", null, repository.findById(aggregateId).orElseThrow(),
+                messageOfAnotherProcess)));
+    assertTrue(
+        phaseOneRefusal
+            .getMessage()
+            .contains("BPMN process 'TaskProcess' of workflow module 'c7-it' has no message start event named "
+                + "'OrderPlaced'"),
+        phaseOneRefusal.getMessage());
+
+    // the engine refuses the correlation, it does not start MessageStartProcess instead
+    assertThrows(
+        org.camunda.bpm.engine.MismatchingMessageCorrelationException.class,
+        () -> transactionTemplate.executeWithoutResult(status -> PhaseOperations
+            .phaseTwo(
+                c7ProcessService, io.vanillabp.integration.spi.PhaseOperation.START_WORKFLOW_BY_MESSAGE,
+                MODULE_ID, "TaskProcess", null, aggregateId, messageOfAnotherProcess)));
+    assertEquals(
+        0,
+        processEngine
+            .getHistoryService()
+            .createHistoricProcessInstanceQuery()
+            .processInstanceBusinessKey(String.valueOf(aggregateId))
+            .count(),
+        "a message of another process must start no process at all");
+
+    // the own message passes both phases
+    final var ownMessage = java.util.Map
+        .of(io.vanillabp.integration.spi.PhaseTwoCall.ARG_MESSAGE_NAME, "TaskRequested");
+    transactionTemplate.executeWithoutResult(status -> {
+      PhaseOperations
+          .phaseOne(
+              c7ProcessService, io.vanillabp.integration.spi.PhaseOperation.START_WORKFLOW_BY_MESSAGE,
+              MODULE_ID, "TaskProcess", null, repository.findById(aggregateId).orElseThrow(), ownMessage);
+      PhaseOperations
+          .phaseTwo(
+              c7ProcessService, io.vanillabp.integration.spi.PhaseOperation.START_WORKFLOW_BY_MESSAGE,
+              MODULE_ID, "TaskProcess", null, aggregateId, ownMessage);
+    });
+    assertEquals(
+        "TaskProcess",
+        processEngine
+            .getHistoryService()
+            .createHistoricProcessInstanceQuery()
+            .processInstanceBusinessKey(String.valueOf(aggregateId))
+            .singleResult()
+            .getProcessDefinitionKey());
 
   }
 

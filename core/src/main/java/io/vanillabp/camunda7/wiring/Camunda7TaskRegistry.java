@@ -177,6 +177,25 @@ public class Camunda7TaskRegistry {
   }
 
   /**
+   * The engine's process definition id of the version this adapter deployed for that
+   * process during this boot, or the newest one where the model had not changed.
+   *
+   * @param workflowModuleId The workflow module ID
+   * @param bpmnProcessId The PLAIN BPMN process ID
+   * @return The definition id, or <code>null</code> where this boot recorded none or no
+   *         deployment service was handed over (tests)
+   */
+  public String definitionIdDeployedOf(
+      final String workflowModuleId,
+      final String bpmnProcessId) {
+
+    return processVersions == null
+        ? null
+        : processVersions.definitionIdDeployedOf(workflowModuleId, bpmnProcessId);
+
+  }
+
+  /**
    * The deployed version behind a process definition id, answered from the same cache
    * {@link #versionOfDefinition(String)} reads, so a caller pays the engine for that
    * definition once.

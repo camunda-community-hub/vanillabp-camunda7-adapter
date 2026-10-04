@@ -8,7 +8,6 @@ import java.util.ArrayList;
 
 import org.camunda.bpm.engine.RuntimeService;
 import org.camunda.bpm.engine.TaskService;
-import org.camunda.bpm.engine.runtime.EventSubscriptionQuery;
 import org.camunda.bpm.engine.runtime.Execution;
 import org.camunda.bpm.engine.runtime.ExecutionQuery;
 import org.camunda.bpm.engine.task.TaskQuery;
@@ -57,7 +56,8 @@ public class Camunda7PhaseOneChecksTest {
    * @param executions What an execution query counts (the task's parked execution
    *        respectively an execution waiting for a message)
    * @param userTasks What a task query counts
-   * @param messageStartEvents What an event-subscription query counts
+   * @param messageStartEvents Whether the model of the process starts by the message
+   *        'LoanRequested' (any number above zero) or has a plain start event only
    */
   private static Camunda7ProcessService<String> processService(
       final long executions,
@@ -72,7 +72,8 @@ public class Camunda7PhaseOneChecksTest {
    * @param executions What an execution query counts (the task's parked execution
    *        respectively an execution waiting for a message)
    * @param userTasks What a task query counts
-   * @param messageStartEvents What an event-subscription query counts
+   * @param messageStartEvents Whether the model of the process starts by the message
+   *        'LoanRequested' (any number above zero) or has a plain start event only
    * @param expectedCorrelationId What the waiting executions hold in their local
    *        correlation-id variable
    */
@@ -94,11 +95,8 @@ public class Camunda7PhaseOneChecksTest {
     final var executionQuery = Mockito.mock(ExecutionQuery.class, Mockito.RETURNS_SELF);
     Mockito.when(executionQuery.count()).thenReturn(executions);
     Mockito.when(executionQuery.list()).thenReturn(waitingExecutions);
-    final var eventSubscriptionQuery = Mockito.mock(EventSubscriptionQuery.class, Mockito.RETURNS_SELF);
-    Mockito.when(eventSubscriptionQuery.count()).thenReturn(messageStartEvents);
     final var runtimeService = Mockito.mock(RuntimeService.class);
     Mockito.when(runtimeService.createExecutionQuery()).thenReturn(executionQuery);
-    Mockito.when(runtimeService.createEventSubscriptionQuery()).thenReturn(eventSubscriptionQuery);
     Mockito
         .when(runtimeService.getVariableLocal(Mockito.anyString(), Mockito.anyString()))
         .thenReturn(expectedCorrelationId);
@@ -108,8 +106,27 @@ public class Camunda7PhaseOneChecksTest {
     final var taskService = Mockito.mock(TaskService.class);
     Mockito.when(taskService.createTaskQuery()).thenReturn(taskQuery);
 
+    // the newest definition of the process, and its model with or without the message
+    final var definition = Mockito.mock(org.camunda.bpm.engine.repository.ProcessDefinition.class);
+    Mockito.when(definition.getId()).thenReturn("definition-1");
+    final var definitionQuery = Mockito
+        .mock(org.camunda.bpm.engine.repository.ProcessDefinitionQuery.class, Mockito.RETURNS_SELF);
+    Mockito.when(definitionQuery.singleResult()).thenReturn(definition);
+    final var startEvent = org.camunda.bpm.model.bpmn.Bpmn
+        .createExecutableProcess(PROCESS)
+        .startEvent("LoanRequestStart");
+    final var model = (messageStartEvents > 0
+        ? startEvent.message("LoanRequested")
+        : startEvent)
+        .endEvent()
+        .done();
+    final var repositoryService = Mockito.mock(org.camunda.bpm.engine.RepositoryService.class);
+    Mockito.when(repositoryService.createProcessDefinitionQuery()).thenReturn(definitionQuery);
+    Mockito.when(repositoryService.getBpmnModelInstance("definition-1")).thenReturn(model);
+
     return new Camunda7ProcessService<>(
-        "camunda7", runtimeService, taskService, null, null, io.vanillabp.camunda7.TestCollaborators.complete());
+        "camunda7", runtimeService, taskService, repositoryService, null, io.vanillabp.camunda7.TestCollaborators
+            .complete());
 
   }
 

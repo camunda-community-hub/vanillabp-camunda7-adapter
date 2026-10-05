@@ -110,7 +110,7 @@ about Camunda 8 or the Process-Engine-API. Those adapters share the same flatten
 expressions meet the same missing keys there, but neither hands the adapter a parsed model of this
 shape and FEEL is not JUEL. The gap is known and not closed here.
 
-The [configuration page](https://github.com/vanillabp/camunda7-adapter/wiki/Configuration#migrating-from-an-adapter-which-read-the-aggregate-live)
+The [configuration page](https://github.com/camunda-community-hub/vanillabp-camunda7-adapter/wiki/Configuration#migrating-from-an-adapter-which-read-the-aggregate-live)
 of the wiki carries the narrated version.
 
 ### A renamed BPMN process no longer needs its old model deployed
@@ -217,8 +217,8 @@ true` to keep it.
 There is also no Quarkus caveat any more. Version 1 had no Quarkus artifact at all, so the feature
 was Spring-only by accident; it works on both platforms now.
 
-The [README section](https://github.com/vanillabp/camunda7-adapter/blob/main/README.md#an-idle-engine-lets-go-of-its-database)
-and the [configuration page](https://github.com/vanillabp/camunda7-adapter/wiki/Configuration#letting-an-idle-engine-go-quiet)
+The [README section](https://github.com/camunda-community-hub/vanillabp-camunda7-adapter/blob/main/README.md#an-idle-engine-lets-go-of-its-database)
+and the [configuration page](https://github.com/camunda-community-hub/vanillabp-camunda7-adapter/wiki/Configuration#letting-an-idle-engine-go-quiet)
 of the wiki carry the details.
 
 ### One tenant for every workflow module refuses two modules sharing a BPMN process id
@@ -254,7 +254,7 @@ The name per workflow module is new; it was only settable for the whole adapter 
 two ways are `name-clash-avoidance: use-prefix`, which drops the tenant and prefixes the
 identifiers with the workflow module id instead, and renaming one of the two BPMN processes. Which
 of the three fits depends on what the running workflows of the engine are deployed under, so read
-[what the mode changes](https://github.com/vanillabp/camunda7-adapter/wiki/Configuration#keeping-workflow-modules-apart)
+[what the mode changes](https://github.com/camunda-community-hub/vanillabp-camunda7-adapter/wiki/Configuration#keeping-workflow-modules-apart)
 before changing a booting application.
 
 An application which configures no `tenant-id` at all meets none of this: every workflow module has
@@ -335,8 +335,8 @@ ordinary Camunda 7 model: VanillaBP does not read it, does not refuse it and doe
 listener whose expression names a method you wrote is what the key above is about, which is exactly the
 version 1 shape.
 
-The [README section](https://github.com/vanillabp/camunda7-adapter/blob/main/README.md#listeners-somebody-modelled)
-and the [configuration page](https://github.com/vanillabp/camunda7-adapter/wiki/Configuration#listeners-somebody-modelled)
+The [README section](https://github.com/camunda-community-hub/vanillabp-camunda7-adapter/blob/main/README.md#listeners-somebody-modelled)
+and the [configuration page](https://github.com/camunda-community-hub/vanillabp-camunda7-adapter/wiki/Configuration#listeners-somebody-modelled)
 of the wiki carry the details.
 
 ### A called process is told about the iteration of its caller, unless it has a workflow aggregate of its own

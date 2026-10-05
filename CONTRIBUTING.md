@@ -5,7 +5,7 @@ This repository is the VanillaBP adapter for Camunda 7. It implements the adapte
 engine embedded in the application, in the application's own transaction. Business code never sees
 it: what an application writes against is
 [`spi-for-java`](https://github.com/vanillabp/spi-for-java), and everything this adapter does for
-its users is described in the [wiki](https://github.com/vanillabp/camunda7-adapter/wiki).
+its users is described in the [wiki](https://github.com/camunda-community-hub/vanillabp-camunda7-adapter/wiki).
 
 Where the rules are: [`README.md`](./README.md) explains how the adapter works, module by module
 and behaviour by behaviour, and it is the first thing to read.

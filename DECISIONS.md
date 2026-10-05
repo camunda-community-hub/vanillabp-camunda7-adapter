@@ -74,7 +74,7 @@ added only where a handler exists, the business key is not injected where the ca
 an aggregate of its own or where the application modelled a `camunda:in businessKey` itself, and
 the scoping rewrite runs once per FILE rather than once per process, because all processes of one
 file share a model. What the adapter adds is listed in
-[What the adapter changes in the BPMN it deploys](https://github.com/vanillabp/camunda7-adapter/wiki/Home#what-the-adapter-changes-in-the-bpmn-it-deploys)
+[What the adapter changes in the BPMN it deploys](https://github.com/camunda-community-hub/vanillabp-camunda7-adapter/wiki/Home#what-the-adapter-changes-in-the-bpmn-it-deploys)
 in the wiki.
 
 ### 6. A task handler runs inside the engine's own job transaction - the delivery record part superseded by decision 39
@@ -672,7 +672,7 @@ every called process in a BPMN file of its own: with the calling and the called 
 file the walk finds the enclosing element by chance, which is how the missing model of the caller
 stayed invisible from version 1 until this entry was written.
 
-See [The iteration a called process runs in](https://github.com/vanillabp/camunda7-adapter/wiki/Configuration#the-iteration-a-called-process-runs-in).
+See [The iteration a called process runs in](https://github.com/camunda-community-hub/vanillabp-camunda7-adapter/wiki/Configuration#the-iteration-a-called-process-runs-in).
 
 ### 23. A wake-up which arrives while the next wait is decided still ends that wait
 

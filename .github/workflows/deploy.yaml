@@ -1,0 +1,50 @@
+name: Release to Maven Central
+# The way every Camunda Community Hub extension releases. Somebody publishes a GitHub
+# Release, GitHub creates the tag with it, and the tag name is the version. The hub action
+# sets that version, deploys to Camunda's Artifactory first and to Maven Central second,
+# using the release profiles of community-hub-release-parent and the org secrets of the
+# hub. Then it commits the next development version to 'main'.
+#
+# This repository has one release line and a literal version, which is the case the action
+# was written for. Nothing here runs before a release: the checks of every pull request are
+# the gate.
+"on":
+  release:
+    types: [published]
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # the action pushes the tag and the next development version
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
+        with:
+          # the same JDK the checks build with
+          java-version: 25.0.4+101.0.LTS
+          distribution: temurin
+          cache: maven
+          gpg-private-key: ${{ secrets.MAVEN_CENTRAL_GPG_SIGNING_KEY_SEC }}
+          gpg-passphrase: MAVEN_CENTRAL_GPG_PASSPHRASE
+      - name: Release
+        id: release
+        uses: camunda-community-hub/community-action-maven-release@v2
+        with:
+          release-version: ${{ github.event.release.tag_name }}
+          branch: main
+          nexus-usr: ${{ secrets.NEXUS_USR }}
+          nexus-psw: ${{ secrets.NEXUS_PSW }}
+          sonatype-central-portal-usr: ${{ secrets.COMMUNITY_HUB_MAVEN_CENTRAL_CP_USR }}
+          sonatype-central-portal-psw: ${{ secrets.COMMUNITY_HUB_MAVEN_CENTRAL_CP_PSW }}
+          maven-gpg-passphrase: ${{ secrets.MAVEN_CENTRAL_GPG_SIGNING_KEY_PASSPHRASE }}
+          maven-auto-release-after-close: true
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Attach the artifacts to the GitHub Release
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: ${{ steps.release.outputs.artifacts_archive_path }}
+          asset_name: ${{ steps.release.outputs.artifacts_archive_path }}
+          asset_content_type: application/zip

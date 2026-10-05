@@ -2,6 +2,8 @@
 
 # VanillaBP adapter for Camunda 7
 
+[![](https://img.shields.io/badge/Community%20Extension-An%20open%20source%20community%20maintained%20project-FF4700)](https://github.com/camunda-community-hub/community)
+![Compatible with: Camunda Platform 7](https://img.shields.io/badge/Compatible%20with-Camunda%20Platform%207-26d07c)
 [![](https://img.shields.io/badge/Lifecycle-Incubating-blue)](https://github.com/Camunda-Community-Hub/community/blob/main/extension-lifecycle.md#incubating-)
 [![Apache License V.2](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](./LICENSE)
 
@@ -25,8 +27,8 @@ on are documented in the [VanillaBP Wiki](https://github.com/vanillabp/adapter-p
 
 This adapter runs on both platforms VanillaBP supports:
 
-1. **Spring Boot**<br>[![Coverage](https://img.shields.io/badge/dynamic/regex?url=https%3A%2F%2Fvanillabp.github.io%2Fcamunda7-adapter%2Fspring-boot-report%2Findex.html&search=Total.*%3F.([0-9]%2B)[^0-9]*%3F%25&replace=%241%25&flags=m&label=Coverage&color=green&cacheSeconds=60)](https://vanillabp.github.io/camunda7-adapter/spring-boot-report)
-2. **Quarkus**<br>[![Coverage](https://img.shields.io/badge/dynamic/regex?url=https%3A%2F%2Fvanillabp.github.io%2Fcamunda7-adapter%2Fquarkus-report%2Findex.html&search=Total.*%3F.([0-9]%2B)[^0-9]*%3F%25&replace=%241%25&flags=m&label=Coverage&color=green&cacheSeconds=60)](https://vanillabp.github.io/camunda7-adapter/quarkus-report)
+1. **Spring Boot**<br>[![Coverage](https://img.shields.io/badge/dynamic/regex?url=https%3A%2F%2Fcamunda-community-hub.github.io%2Fvanillabp-camunda7-adapter%2Fspring-boot-report%2Findex.html&search=Total.*%3F.([0-9]%2B)[^0-9]*%3F%25&replace=%241%25&flags=m&label=Coverage&color=green&cacheSeconds=60)](https://camunda-community-hub.github.io/vanillabp-camunda7-adapter/spring-boot-report)
+2. **Quarkus**<br>[![Coverage](https://img.shields.io/badge/dynamic/regex?url=https%3A%2F%2Fcamunda-community-hub.github.io%2Fvanillabp-camunda7-adapter%2Fquarkus-report%2Findex.html&search=Total.*%3F.([0-9]%2B)[^0-9]*%3F%25&replace=%241%25&flags=m&label=Coverage&color=green&cacheSeconds=60)](https://camunda-community-hub.github.io/vanillabp-camunda7-adapter/quarkus-report)
 
 Coverage is measured separately per platform - a platform's tests never cover the other
 platform's code. Click a badge to open the respective report.
@@ -1364,7 +1366,7 @@ starts, and asks for a handler which may run twice and for work the engine canno
 out of it. A warning and not a refusal: the model is right, and no flag of this adapter changes what
 the engine does. `Camunda7CompensationTransactionReportTest` holds the message,
 `Camunda7CompensationTokensTest` the measurement, and the
-[Deviations page](https://github.com/vanillabp/camunda7-adapter/wiki/Deviations#a-compensation-runs-in-one-transaction)
+[Deviations page](https://github.com/camunda-community-hub/vanillabp-camunda7-adapter/wiki/Deviations#a-compensation-runs-in-one-transaction)
 lists it among the gaps.
 
 ### A process id which is only declared
@@ -1679,6 +1681,14 @@ platform published at 12:19, the last build here had run at 10:15, and the break
 a half later inside somebody's pull request. The night writes down which platform snapshot it
 resolved, with the timestamp and the build number, so a red night can be read as a break of the
 platform or as a break of this repository.
+
+Every push to `main` publishes a snapshot to the GitHub Packages registry of this repository,
+`https://maven.pkg.github.com/camunda-community-hub/vanillabp-camunda7-adapter`. A release goes the
+way of every Camunda Community Hub extension: publish a GitHub Release whose tag is the version, for
+example `2.0.0`. The workflow `.github/workflows/deploy.yaml` then runs
+`community-action-maven-release`. It deploys through the profiles of `community-hub-release-parent`
+to Camunda's Artifactory and to Maven Central, and it commits the next development version to `main`.
+Version 1 is maintained on the branch `maintenance/1.x` and releases from there the same way.
 
 ## Test coverage
 

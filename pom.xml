@@ -27,7 +27,7 @@
        'inherit.append.path' attributes turn the appending off, one on <project> above for
        the URL and three on <scm> below. The Camunda 8 root POM says the same thing the
        same way. -->
-  <url>https://github.com/vanillabp/camunda7-adapter</url>
+  <url>https://github.com/camunda-community-hub/vanillabp-camunda7-adapter</url>
 
   <licenses>
     <license>
@@ -57,16 +57,16 @@
   </modules>
 
   <scm child.scm.connection.inherit.append.path="false" child.scm.developerConnection.inherit.append.path="false" child.scm.url.inherit.append.path="false">
-    <connection>scm:git:https://github.com/vanillabp/camunda7-adapter.git</connection>
-    <developerConnection>scm:git:https://github.com/vanillabp/camunda7-adapter.git</developerConnection>
-    <url>https://github.com/vanillabp/camunda7-adapter/tree/main</url>
+    <connection>scm:git:https://github.com/camunda-community-hub/vanillabp-camunda7-adapter.git</connection>
+    <developerConnection>scm:git:https://github.com/camunda-community-hub/vanillabp-camunda7-adapter.git</developerConnection>
+    <url>https://github.com/camunda-community-hub/vanillabp-camunda7-adapter/tree/main</url>
   </scm>
 
   <distributionManagement>
     <snapshotRepository>
       <id>github</id>
       <name>Github Packages</name>
-      <url>https://maven.pkg.github.com/vanillabp/camunda7-adapter</url>
+      <url>https://maven.pkg.github.com/camunda-community-hub/vanillabp-camunda7-adapter</url>
     </snapshotRepository>
   </distributionManagement>
 

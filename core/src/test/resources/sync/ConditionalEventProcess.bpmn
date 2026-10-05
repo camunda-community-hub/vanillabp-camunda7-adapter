@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Definitions_ConditionalEventProcess" targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:process id="ConditionalEventProcess" isExecutable="true">
+    <bpmn:startEvent id="Start"><bpmn:outgoing>Flow_1</bpmn:outgoing></bpmn:startEvent>
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="Start" targetRef="AwaitApproval" />
+    <bpmn:intermediateCatchEvent id="AwaitApproval">
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+      <bpmn:outgoing>Flow_2</bpmn:outgoing>
+      <bpmn:conditionalEventDefinition>
+        <bpmn:condition xsi:type="bpmn:tFormalExpression">${approvedByRiskOffice}</bpmn:condition>
+      </bpmn:conditionalEventDefinition>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="AwaitApproval" targetRef="Assemble" />
+    <bpmn:task id="Assemble">
+      <bpmn:incoming>Flow_2</bpmn:incoming>
+      <bpmn:outgoing>Flow_3</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:boundaryEvent id="WatchBudget" attachedToRef="Assemble" cancelActivity="false">
+      <bpmn:conditionalEventDefinition>
+        <bpmn:condition xsi:type="bpmn:tFormalExpression">${order.budgetExceeded}</bpmn:condition>
+      </bpmn:conditionalEventDefinition>
+    </bpmn:boundaryEvent>
+    <bpmn:subProcess id="Escalation" triggeredByEvent="true">
+      <bpmn:startEvent id="EscalationStart" isInterrupting="false">
+        <bpmn:conditionalEventDefinition>
+          <bpmn:condition xsi:type="bpmn:tFormalExpression">${order.escalation.raised}</bpmn:condition>
+        </bpmn:conditionalEventDefinition>
+      </bpmn:startEvent>
+    </bpmn:subProcess>
+    <bpmn:sequenceFlow id="Flow_3" sourceRef="Assemble" targetRef="End" />
+    <bpmn:endEvent id="End"><bpmn:incoming>Flow_3</bpmn:incoming></bpmn:endEvent>
+  </bpmn:process>
+  <bpmn:process id="ConditionBeforeTimerProcess" isExecutable="true">
+    <bpmn:startEvent id="CBT_Start"><bpmn:outgoing>CBT_Flow_1</bpmn:outgoing></bpmn:startEvent>
+    <bpmn:sequenceFlow id="CBT_Flow_1" sourceRef="CBT_Start" targetRef="CBT_AwaitOrder" />
+    <bpmn:intermediateCatchEvent id="CBT_AwaitOrder">
+      <bpmn:incoming>CBT_Flow_1</bpmn:incoming>
+      <bpmn:outgoing>CBT_Flow_2</bpmn:outgoing>
+      <bpmn:conditionalEventDefinition>
+        <bpmn:condition xsi:type="bpmn:tFormalExpression">${order.reference}</bpmn:condition>
+      </bpmn:conditionalEventDefinition>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:sequenceFlow id="CBT_Flow_2" sourceRef="CBT_AwaitOrder" targetRef="CBT_Wait" />
+    <bpmn:task id="CBT_Wait">
+      <bpmn:incoming>CBT_Flow_2</bpmn:incoming>
+      <bpmn:outgoing>CBT_Flow_3</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:boundaryEvent id="CBT_Reminder" attachedToRef="CBT_Wait" cancelActivity="false">
+      <bpmn:timerEventDefinition id="CBT_Timer">
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">${order.reference}</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:boundaryEvent>
+    <bpmn:sequenceFlow id="CBT_Flow_3" sourceRef="CBT_Wait" targetRef="CBT_End" />
+    <bpmn:endEvent id="CBT_End"><bpmn:incoming>CBT_Flow_3</bpmn:incoming></bpmn:endEvent>
+  </bpmn:process>
+</bpmn:definitions>

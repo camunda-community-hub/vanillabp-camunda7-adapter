@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" id="Definitions_TaskProcessV2" targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:process id="TaskProcess" isExecutable="true" camunda:versionTag="deployed-from-outside">
+    <bpmn:startEvent id="TP2_Start">
+      <bpmn:outgoing>TP2_f1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:sequenceFlow id="TP2_f1" sourceRef="TP2_Start" targetRef="TP2_End" />
+    <bpmn:startEvent id="TP2_MessageStart">
+      <bpmn:outgoing>TP2_fMessage</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="TP2_MsgDef" messageRef="Msg_Task_V2" />
+    </bpmn:startEvent>
+    <bpmn:sequenceFlow id="TP2_fMessage" sourceRef="TP2_MessageStart" targetRef="TP2_End" />
+    <bpmn:endEvent id="TP2_End">
+      <bpmn:incoming>TP2_f1</bpmn:incoming>
+      <bpmn:incoming>TP2_fMessage</bpmn:incoming>
+    </bpmn:endEvent>
+  </bpmn:process>
+  <bpmn:message id="Msg_Task_V2" name="TaskRequested" />
+</bpmn:definitions>

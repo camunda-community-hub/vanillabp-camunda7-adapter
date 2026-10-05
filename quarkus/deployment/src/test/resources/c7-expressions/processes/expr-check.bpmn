@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Every expression of this model reads the workflow aggregate, and each one stops
+     somewhere else: at an attribute the aggregate keeps back, at a top-level name which is
+     an attribute but is not shared, at a name the type does not have, at a type which
+     carries nothing below it, and at a collection which is not one. Three expressions read
+     what IS shared and must stay unmentioned.
+
+     Everything parks in a timer, so deploying this model starts nothing. -->
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Definitions_ExprCheck" targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:process id="ExprCheckProcess" isExecutable="true">
+    <bpmn:startEvent id="XC_Start"><bpmn:outgoing>XC_f0</bpmn:outgoing></bpmn:startEvent>
+    <bpmn:sequenceFlow id="XC_f0" sourceRef="XC_Start" targetRef="XC_Fork" />
+    <bpmn:parallelGateway id="XC_Fork">
+      <bpmn:incoming>XC_f0</bpmn:incoming>
+      <bpmn:outgoing>XC_fork_park</bpmn:outgoing>
+      <bpmn:outgoing>XC_fork_kept</bpmn:outgoing>
+      <bpmn:outgoing>XC_fork_hidden</bpmn:outgoing>
+      <bpmn:outgoing>XC_fork_unknown</bpmn:outgoing>
+      <bpmn:outgoing>XC_fork_shared</bpmn:outgoing>
+      <bpmn:outgoing>XC_fork_date</bpmn:outgoing>
+      <bpmn:outgoing>XC_fork_items</bpmn:outgoing>
+    </bpmn:parallelGateway>
+    <bpmn:sequenceFlow id="XC_fork_park" sourceRef="XC_Fork" targetRef="XC_Park" />
+    <bpmn:intermediateCatchEvent id="XC_Park" camunda:asyncBefore="true">
+      <bpmn:incoming>XC_fork_park</bpmn:incoming>
+      <bpmn:outgoing>XC_fpark</bpmn:outgoing>
+      <bpmn:timerEventDefinition>
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT1H</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:sequenceFlow id="XC_fpark" sourceRef="XC_Park" targetRef="XC_ParkEnd" />
+    <bpmn:endEvent id="XC_ParkEnd"><bpmn:incoming>XC_fpark</bpmn:incoming></bpmn:endEvent>
+
+    <bpmn:sequenceFlow id="XC_fork_kept" sourceRef="XC_Fork" targetRef="XC_Gw_kept" />
+    <bpmn:exclusiveGateway id="XC_Gw_kept" camunda:asyncBefore="true" default="XC_no_kept">
+      <bpmn:incoming>XC_fork_kept</bpmn:incoming>
+      <bpmn:outgoing>XC_yes_kept</bpmn:outgoing>
+      <bpmn:outgoing>XC_no_kept</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:sequenceFlow id="XC_yes_kept" sourceRef="XC_Gw_kept" targetRef="XC_End_kept">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${order.internalCode == 'IC-9'}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="XC_no_kept" sourceRef="XC_Gw_kept" targetRef="XC_Else_kept" />
+    <bpmn:endEvent id="XC_End_kept"><bpmn:incoming>XC_yes_kept</bpmn:incoming></bpmn:endEvent>
+    <bpmn:endEvent id="XC_Else_kept"><bpmn:incoming>XC_no_kept</bpmn:incoming></bpmn:endEvent>
+
+    <bpmn:sequenceFlow id="XC_fork_hidden" sourceRef="XC_Fork" targetRef="XC_Gw_hidden" />
+    <bpmn:exclusiveGateway id="XC_Gw_hidden" camunda:asyncBefore="true" default="XC_no_hidden">
+      <bpmn:incoming>XC_fork_hidden</bpmn:incoming>
+      <bpmn:outgoing>XC_yes_hidden</bpmn:outgoing>
+      <bpmn:outgoing>XC_no_hidden</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:sequenceFlow id="XC_yes_hidden" sourceRef="XC_Gw_hidden" targetRef="XC_End_hidden">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${hiddenOrder.status == 'OPEN'}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="XC_no_hidden" sourceRef="XC_Gw_hidden" targetRef="XC_Else_hidden" />
+    <bpmn:endEvent id="XC_End_hidden"><bpmn:incoming>XC_yes_hidden</bpmn:incoming></bpmn:endEvent>
+    <bpmn:endEvent id="XC_Else_hidden"><bpmn:incoming>XC_no_hidden</bpmn:incoming></bpmn:endEvent>
+
+    <bpmn:sequenceFlow id="XC_fork_unknown" sourceRef="XC_Fork" targetRef="XC_Gw_unknown" />
+    <bpmn:exclusiveGateway id="XC_Gw_unknown" camunda:asyncBefore="true" default="XC_no_unknown">
+      <bpmn:incoming>XC_fork_unknown</bpmn:incoming>
+      <bpmn:outgoing>XC_yes_unknown</bpmn:outgoing>
+      <bpmn:outgoing>XC_no_unknown</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:sequenceFlow id="XC_yes_unknown" sourceRef="XC_Gw_unknown" targetRef="XC_End_unknown">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${order.customer.address.city == 'X'}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="XC_no_unknown" sourceRef="XC_Gw_unknown" targetRef="XC_Else_unknown" />
+    <bpmn:endEvent id="XC_End_unknown"><bpmn:incoming>XC_yes_unknown</bpmn:incoming></bpmn:endEvent>
+    <bpmn:endEvent id="XC_Else_unknown"><bpmn:incoming>XC_no_unknown</bpmn:incoming></bpmn:endEvent>
+
+    <bpmn:sequenceFlow id="XC_fork_shared" sourceRef="XC_Fork" targetRef="XC_Gw_shared" />
+    <bpmn:exclusiveGateway id="XC_Gw_shared" camunda:asyncBefore="true" default="XC_no_shared">
+      <bpmn:incoming>XC_fork_shared</bpmn:incoming>
+      <bpmn:outgoing>XC_yes_shared</bpmn:outgoing>
+      <bpmn:outgoing>XC_no_shared</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:sequenceFlow id="XC_yes_shared" sourceRef="XC_Gw_shared" targetRef="XC_End_shared">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${order.customer.vip}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="XC_no_shared" sourceRef="XC_Gw_shared" targetRef="XC_Else_shared" />
+    <bpmn:endEvent id="XC_End_shared"><bpmn:incoming>XC_yes_shared</bpmn:incoming></bpmn:endEvent>
+    <bpmn:endEvent id="XC_Else_shared"><bpmn:incoming>XC_no_shared</bpmn:incoming></bpmn:endEvent>
+
+    <bpmn:sequenceFlow id="XC_fork_date" sourceRef="XC_Fork" targetRef="XC_Date" />
+    <bpmn:intermediateCatchEvent id="XC_Date" camunda:asyncBefore="true">
+      <bpmn:incoming>XC_fork_date</bpmn:incoming>
+      <bpmn:outgoing>XC_f_date</bpmn:outgoing>
+      <bpmn:conditionalEventDefinition>
+        <bpmn:condition xsi:type="bpmn:tFormalExpression">${order.dueDate.year &gt; 2000}</bpmn:condition>
+      </bpmn:conditionalEventDefinition>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:sequenceFlow id="XC_f_date" sourceRef="XC_Date" targetRef="XC_End_date" />
+    <bpmn:endEvent id="XC_End_date"><bpmn:incoming>XC_f_date</bpmn:incoming></bpmn:endEvent>
+
+    <bpmn:sequenceFlow id="XC_fork_items" sourceRef="XC_Fork" targetRef="XC_Items" />
+    <bpmn:subProcess id="XC_Items" camunda:asyncBefore="true">
+      <bpmn:incoming>XC_fork_items</bpmn:incoming>
+      <bpmn:outgoing>XC_f_items</bpmn:outgoing>
+      <bpmn:multiInstanceLoopCharacteristics isSequential="false" camunda:collection="${order.hiddenItems}" camunda:elementVariable="item">
+      </bpmn:multiInstanceLoopCharacteristics>
+      <bpmn:startEvent id="XC_Items_s"><bpmn:outgoing>XC_Items_i1</bpmn:outgoing></bpmn:startEvent>
+      <bpmn:sequenceFlow id="XC_Items_i1" sourceRef="XC_Items_s" targetRef="XC_Items_w" />
+      <bpmn:intermediateCatchEvent id="XC_Items_w" camunda:asyncBefore="true">
+        <bpmn:incoming>XC_Items_i1</bpmn:incoming>
+        <bpmn:outgoing>XC_Items_i2</bpmn:outgoing>
+        <bpmn:timerEventDefinition>
+          <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT1H</bpmn:timeDuration>
+        </bpmn:timerEventDefinition>
+      </bpmn:intermediateCatchEvent>
+      <bpmn:sequenceFlow id="XC_Items_i2" sourceRef="XC_Items_w" targetRef="XC_Items_e" />
+      <bpmn:endEvent id="XC_Items_e"><bpmn:incoming>XC_Items_i2</bpmn:incoming></bpmn:endEvent>
+    </bpmn:subProcess>
+    <bpmn:sequenceFlow id="XC_f_items" sourceRef="XC_Items" targetRef="XC_End_items" />
+    <bpmn:endEvent id="XC_End_items"><bpmn:incoming>XC_f_items</bpmn:incoming></bpmn:endEvent>
+  </bpmn:process>
+</bpmn:definitions>

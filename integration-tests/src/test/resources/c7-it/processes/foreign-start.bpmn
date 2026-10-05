@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:camunda="http://camunda.org/schema/1.0/bpmn"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  id="Definitions_ForeignStart"
+                  targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:process id="ForeignTimerProcess" isExecutable="true">
+    <bpmn:startEvent id="LateTimer">
+      <bpmn:outgoing>Flow_Timer_ToRecord</bpmn:outgoing>
+      <bpmn:timerEventDefinition id="TimerEventDefinition_Foreign">
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT1S</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:startEvent>
+    <bpmn:sequenceFlow id="Flow_Timer_ToRecord" sourceRef="LateTimer" targetRef="Activity_Timer_Record" />
+    <bpmn:serviceTask id="Activity_Timer_Record" camunda:expression="${recordForeignTimerStart}">
+      <bpmn:incoming>Flow_Timer_ToRecord</bpmn:incoming>
+      <bpmn:outgoing>Flow_Timer_ToEnd</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="Flow_Timer_ToEnd" sourceRef="Activity_Timer_Record" targetRef="Event_Timer_End" />
+    <bpmn:endEvent id="Event_Timer_End">
+      <bpmn:incoming>Flow_Timer_ToEnd</bpmn:incoming>
+    </bpmn:endEvent>
+  </bpmn:process>
+  <bpmn:process id="ForeignSignalProcess" isExecutable="true">
+    <bpmn:startEvent id="SignalHeard">
+      <bpmn:outgoing>Flow_Signal_ToRecord</bpmn:outgoing>
+      <bpmn:signalEventDefinition id="SignalEventDefinition_Foreign" signalRef="Signal_ForeignStart" />
+    </bpmn:startEvent>
+    <bpmn:sequenceFlow id="Flow_Signal_ToRecord" sourceRef="SignalHeard" targetRef="Activity_Signal_Record" />
+    <bpmn:serviceTask id="Activity_Signal_Record" camunda:expression="${recordForeignSignalStart}">
+      <bpmn:incoming>Flow_Signal_ToRecord</bpmn:incoming>
+      <bpmn:outgoing>Flow_Signal_ToEnd</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="Flow_Signal_ToEnd" sourceRef="Activity_Signal_Record" targetRef="Event_Signal_End" />
+    <bpmn:endEvent id="Event_Signal_End">
+      <bpmn:incoming>Flow_Signal_ToEnd</bpmn:incoming>
+    </bpmn:endEvent>
+  </bpmn:process>
+  <bpmn:process id="ForeignConditionProcess" isExecutable="true">
+    <bpmn:startEvent id="ConditionMet">
+      <bpmn:outgoing>Flow_Condition_ToRecord</bpmn:outgoing>
+      <bpmn:conditionalEventDefinition id="ConditionalEventDefinition_Foreign" camunda:variableName="foreignStartReady">
+        <bpmn:condition xsi:type="bpmn:tFormalExpression">${foreignStartReady == true}</bpmn:condition>
+      </bpmn:conditionalEventDefinition>
+    </bpmn:startEvent>
+    <bpmn:sequenceFlow id="Flow_Condition_ToRecord" sourceRef="ConditionMet" targetRef="Activity_Condition_Record" />
+    <bpmn:serviceTask id="Activity_Condition_Record" camunda:expression="${recordForeignConditionStart}">
+      <bpmn:incoming>Flow_Condition_ToRecord</bpmn:incoming>
+      <bpmn:outgoing>Flow_Condition_ToEnd</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="Flow_Condition_ToEnd" sourceRef="Activity_Condition_Record" targetRef="Event_Condition_End" />
+    <bpmn:endEvent id="Event_Condition_End">
+      <bpmn:incoming>Flow_Condition_ToEnd</bpmn:incoming>
+    </bpmn:endEvent>
+  </bpmn:process>
+  <bpmn:process id="ForeignNumericIdProcess" isExecutable="true">
+    <bpmn:startEvent id="NumericIdConditionMet">
+      <bpmn:outgoing>Flow_Numeric_ToRecord</bpmn:outgoing>
+      <bpmn:conditionalEventDefinition id="ConditionalEventDefinition_NumericId" camunda:variableName="foreignNumericIdReady">
+        <bpmn:condition xsi:type="bpmn:tFormalExpression">${foreignNumericIdReady == true}</bpmn:condition>
+      </bpmn:conditionalEventDefinition>
+    </bpmn:startEvent>
+    <bpmn:sequenceFlow id="Flow_Numeric_ToRecord" sourceRef="NumericIdConditionMet" targetRef="Activity_Numeric_Record" />
+    <bpmn:serviceTask id="Activity_Numeric_Record" camunda:expression="${recordForeignNumericIdStart}">
+      <bpmn:incoming>Flow_Numeric_ToRecord</bpmn:incoming>
+      <bpmn:outgoing>Flow_Numeric_ToEnd</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="Flow_Numeric_ToEnd" sourceRef="Activity_Numeric_Record" targetRef="Event_Numeric_End" />
+    <bpmn:endEvent id="Event_Numeric_End">
+      <bpmn:incoming>Flow_Numeric_ToEnd</bpmn:incoming>
+    </bpmn:endEvent>
+  </bpmn:process>
+  <bpmn:process id="ForeignPlainProcess" isExecutable="true">
+    <bpmn:startEvent id="PlainStart">
+      <bpmn:outgoing>Flow_Plain_ToRecord</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:sequenceFlow id="Flow_Plain_ToRecord" sourceRef="PlainStart" targetRef="Activity_Plain_Record" />
+    <bpmn:serviceTask id="Activity_Plain_Record" camunda:expression="${recordForeignPlainStart}">
+      <bpmn:incoming>Flow_Plain_ToRecord</bpmn:incoming>
+      <bpmn:outgoing>Flow_Plain_ToEnd</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="Flow_Plain_ToEnd" sourceRef="Activity_Plain_Record" targetRef="Event_Plain_End" />
+    <bpmn:endEvent id="Event_Plain_End">
+      <bpmn:incoming>Flow_Plain_ToEnd</bpmn:incoming>
+    </bpmn:endEvent>
+  </bpmn:process>
+  <bpmn:signal id="Signal_ForeignStart" name="ForeignStartSignal" />
+</bpmn:definitions>

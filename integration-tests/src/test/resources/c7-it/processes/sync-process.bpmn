@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" id="Definitions_Sync" targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:process id="SyncProcess" isExecutable="true">
+    <bpmn:startEvent id="SP_Start">
+      <bpmn:outgoing>SP_f1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:sequenceFlow id="SP_f1" sourceRef="SP_Start" targetRef="SP_Gateway" />
+    <bpmn:exclusiveGateway id="SP_Gateway" default="SP_fNo">
+      <bpmn:incoming>SP_f1</bpmn:incoming>
+      <bpmn:outgoing>SP_fYes</bpmn:outgoing>
+      <bpmn:outgoing>SP_fNo</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:sequenceFlow id="SP_fYes" sourceRef="SP_Gateway" targetRef="SP_Await">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">${approved}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:serviceTask id="SP_Await" camunda:delegateExpression="${syncAwait}">
+      <bpmn:incoming>SP_fYes</bpmn:incoming>
+      <bpmn:outgoing>SP_f2</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="SP_f2" sourceRef="SP_Await" targetRef="SP_End" />
+    <bpmn:sequenceFlow id="SP_fNo" sourceRef="SP_Gateway" targetRef="SP_EndRejected" />
+    <bpmn:endEvent id="SP_End">
+      <bpmn:incoming>SP_f2</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:endEvent id="SP_EndRejected">
+      <bpmn:incoming>SP_fNo</bpmn:incoming>
+    </bpmn:endEvent>
+  </bpmn:process>
+</bpmn:definitions>

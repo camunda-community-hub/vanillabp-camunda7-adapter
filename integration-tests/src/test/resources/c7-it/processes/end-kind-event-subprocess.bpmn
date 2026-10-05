@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:camunda="http://camunda.org/schema/1.0/bpmn"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  id="Definitions_EndKindEventSubprocess"
+                  targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:process id="EndKindEventSubprocessProcess" isExecutable="true">
+    <bpmn:startEvent id="Event_Start">
+      <bpmn:outgoing>Flow_ToWait</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:sequenceFlow id="Flow_ToWait" sourceRef="Event_Start" targetRef="Event_Wait" />
+    <!-- an hour: this event is never reached, it only holds the token until the event
+         subprocess takes it away -->
+    <bpmn:intermediateCatchEvent id="Event_Wait">
+      <bpmn:incoming>Flow_ToWait</bpmn:incoming>
+      <bpmn:outgoing>Flow_ToEnd</bpmn:outgoing>
+      <bpmn:timerEventDefinition id="TimerEventDefinition_Wait">
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT1H</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:sequenceFlow id="Flow_ToEnd" sourceRef="Event_Wait" targetRef="Event_End" />
+    <bpmn:endEvent id="Event_End">
+      <bpmn:incoming>Flow_ToEnd</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:subProcess id="Activity_TakeOver" triggeredByEvent="true">
+      <bpmn:startEvent id="Event_Interrupting" isInterrupting="true">
+        <bpmn:outgoing>Flow_SubToEnd</bpmn:outgoing>
+        <bpmn:timerEventDefinition id="TimerEventDefinition_Interrupting">
+          <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT1S</bpmn:timeDuration>
+        </bpmn:timerEventDefinition>
+      </bpmn:startEvent>
+      <bpmn:sequenceFlow id="Flow_SubToEnd" sourceRef="Event_Interrupting" targetRef="Event_SubEnd" />
+      <bpmn:endEvent id="Event_SubEnd">
+        <bpmn:incoming>Flow_SubToEnd</bpmn:incoming>
+      </bpmn:endEvent>
+    </bpmn:subProcess>
+  </bpmn:process>
+</bpmn:definitions>

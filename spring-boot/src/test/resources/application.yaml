@@ -1,0 +1,11 @@
+vanillabp:
+  adapters:
+    c7:
+      type: camunda7
+  prioritized-adapters:
+    - c7
+  workflow-modules:
+    c7-smoke-test:
+      adapters:
+        c7:
+          resources-location: classpath*:c7-smoke-test/processes

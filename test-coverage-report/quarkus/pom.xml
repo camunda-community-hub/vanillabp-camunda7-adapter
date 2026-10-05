@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>org.camunda.community.vanillabp</groupId>
+    <artifactId>camunda7-adapter-test-coverage-report</artifactId>
+    <version>2.0.0-SNAPSHOT</version>
+  </parent>
+
+  <artifactId>camunda7-adapter-quarkus-report</artifactId>
+  <packaging>pom</packaging>
+  <name>VanillaBP Camunda 7 adapter - Test coverage report - Quarkus</name>
+  <description>Aggregated test coverage of the Camunda 7 adapter's platform-neutral core and its Quarkus extension.</description>
+
+  <dependencies>
+    <dependency>
+      <groupId>org.camunda.community.vanillabp</groupId>
+      <artifactId>camunda7-adapter</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.camunda.community.vanillabp</groupId>
+      <artifactId>camunda7-adapter-quarkus</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.camunda.community.vanillabp</groupId>
+      <artifactId>camunda7-adapter-quarkus-deployment</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <!-- the Quarkus end-to-end suite: it runs the adapter's documented
+         features on a booted application against the embedded engine, and its
+         execution data is where the platform-neutral core's Quarkus coverage comes
+         from -->
+    <dependency>
+      <groupId>org.camunda.community.vanillabp</groupId>
+      <artifactId>camunda7-adapter-quarkus-integration-tests</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <artifactId>maven-deploy-plugin</artifactId>
+        <version>3.2.0</version>
+        <configuration>
+          <!-- nothing to deploy - report is published on Github pages -->
+          <skip>true</skip>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.jacoco</groupId>
+        <artifactId>jacoco-maven-plugin</artifactId>
+        <version>${jacoco.version}</version>
+        <executions>
+          <execution>
+            <goals>
+              <!-- 'report-aggregate' sums up all '*.exec' files found in the modules listed in <dependencies> into one report -->
+              <goal>report-aggregate</goal>
+            </goals>
+            <phase>verify</phase>
+            <configuration>
+              <outputDirectory>${project.basedir}/report</outputDirectory>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+</project>

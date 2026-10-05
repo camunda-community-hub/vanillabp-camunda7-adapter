@@ -1,0 +1,209 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Definitions_ExprPlacements" targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:process id="ExprPlacements" isExecutable="true">
+    <bpmn:startEvent id="EX_Start"><bpmn:outgoing>EX_f0</bpmn:outgoing></bpmn:startEvent>
+    <bpmn:sequenceFlow id="EX_f0" sourceRef="EX_Start" targetRef="EX_Fork" />
+    <bpmn:parallelGateway id="EX_Fork">
+      <bpmn:incoming>EX_f0</bpmn:incoming>
+      <bpmn:outgoing>EX_fork_park</bpmn:outgoing>
+      <bpmn:outgoing>EX_fork_P01</bpmn:outgoing>
+      <bpmn:outgoing>EX_fork_P02</bpmn:outgoing>
+      <bpmn:outgoing>EX_fork_P03</bpmn:outgoing>
+      <bpmn:outgoing>EX_fork_P04</bpmn:outgoing>
+      <bpmn:outgoing>EX_fork_P19</bpmn:outgoing>
+      <bpmn:outgoing>EX_fork_P06</bpmn:outgoing>
+      <bpmn:outgoing>EX_fork_P07</bpmn:outgoing>
+      <bpmn:outgoing>EX_fork_P08</bpmn:outgoing>
+      <bpmn:outgoing>EX_fork_P11</bpmn:outgoing>
+      <bpmn:outgoing>EX_fork_P13</bpmn:outgoing>
+      <bpmn:outgoing>EX_fork_P14</bpmn:outgoing>
+      <bpmn:outgoing>EX_fork_P15</bpmn:outgoing>
+      <bpmn:outgoing>EX_fork_P16</bpmn:outgoing>
+    </bpmn:parallelGateway>
+    <bpmn:sequenceFlow id="EX_fork_park" sourceRef="EX_Fork" targetRef="EX_Park" />
+    <bpmn:intermediateCatchEvent id="EX_Park" camunda:asyncBefore="true">
+      <bpmn:incoming>EX_fork_park</bpmn:incoming>
+      <bpmn:outgoing>EX_fpark</bpmn:outgoing>
+      <bpmn:timerEventDefinition>
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT1H</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:sequenceFlow id="EX_fpark" sourceRef="EX_Park" targetRef="EX_ParkEnd" />
+    <bpmn:endEvent id="EX_ParkEnd"><bpmn:incoming>EX_fpark</bpmn:incoming></bpmn:endEvent>
+    <bpmn:sequenceFlow id="EX_fork_P01" sourceRef="EX_Fork" targetRef="EX_P01" />
+    <bpmn:intermediateCatchEvent id="EX_P01" camunda:asyncBefore="true">
+      <bpmn:incoming>EX_fork_P01</bpmn:incoming>
+      <bpmn:outgoing>EX_f_P01</bpmn:outgoing>
+      <bpmn:conditionalEventDefinition>
+        <bpmn:condition xsi:type="bpmn:tFormalExpression">${order.getTotal() &gt; 100}</bpmn:condition>
+      </bpmn:conditionalEventDefinition>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:sequenceFlow id="EX_f_P01" sourceRef="EX_P01" targetRef="EX_End_P01" />
+    <bpmn:endEvent id="EX_End_P01"><bpmn:incoming>EX_f_P01</bpmn:incoming></bpmn:endEvent>
+    <bpmn:sequenceFlow id="EX_fork_P02" sourceRef="EX_Fork" targetRef="EX_P02" />
+    <bpmn:intermediateCatchEvent id="EX_P02" camunda:asyncBefore="true">
+      <bpmn:incoming>EX_fork_P02</bpmn:incoming>
+      <bpmn:outgoing>EX_f_P02</bpmn:outgoing>
+      <bpmn:conditionalEventDefinition>
+        <bpmn:condition xsi:type="bpmn:tFormalExpression">${order.internalCode == 'IC-9'}</bpmn:condition>
+      </bpmn:conditionalEventDefinition>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:sequenceFlow id="EX_f_P02" sourceRef="EX_P02" targetRef="EX_End_P02" />
+    <bpmn:endEvent id="EX_End_P02"><bpmn:incoming>EX_f_P02</bpmn:incoming></bpmn:endEvent>
+    <bpmn:sequenceFlow id="EX_fork_P03" sourceRef="EX_Fork" targetRef="EX_P03" />
+    <bpmn:intermediateCatchEvent id="EX_P03" camunda:asyncBefore="true">
+      <bpmn:incoming>EX_fork_P03</bpmn:incoming>
+      <bpmn:outgoing>EX_f_P03</bpmn:outgoing>
+      <bpmn:conditionalEventDefinition>
+        <bpmn:condition xsi:type="bpmn:tFormalExpression">${order.dueDate.year &gt; 2000}</bpmn:condition>
+      </bpmn:conditionalEventDefinition>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:sequenceFlow id="EX_f_P03" sourceRef="EX_P03" targetRef="EX_End_P03" />
+    <bpmn:endEvent id="EX_End_P03"><bpmn:incoming>EX_f_P03</bpmn:incoming></bpmn:endEvent>
+    <bpmn:sequenceFlow id="EX_fork_P04" sourceRef="EX_Fork" targetRef="EX_P04" />
+    <bpmn:intermediateCatchEvent id="EX_P04" camunda:asyncBefore="true">
+      <bpmn:incoming>EX_fork_P04</bpmn:incoming>
+      <bpmn:outgoing>EX_f_P04</bpmn:outgoing>
+      <bpmn:conditionalEventDefinition>
+        <bpmn:condition xsi:type="bpmn:tFormalExpression">${order.customer.vip}</bpmn:condition>
+      </bpmn:conditionalEventDefinition>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:sequenceFlow id="EX_f_P04" sourceRef="EX_P04" targetRef="EX_End_P04" />
+    <bpmn:endEvent id="EX_End_P04"><bpmn:incoming>EX_f_P04</bpmn:incoming></bpmn:endEvent>
+    <bpmn:sequenceFlow id="EX_fork_P19" sourceRef="EX_Fork" targetRef="EX_P19" />
+    <bpmn:intermediateCatchEvent id="EX_P19" camunda:asyncBefore="true">
+      <bpmn:incoming>EX_fork_P19</bpmn:incoming>
+      <bpmn:outgoing>EX_f_P19</bpmn:outgoing>
+      <bpmn:conditionalEventDefinition>
+        <bpmn:condition xsi:type="bpmn:tFormalExpression">${order.internalCode}</bpmn:condition>
+      </bpmn:conditionalEventDefinition>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:sequenceFlow id="EX_f_P19" sourceRef="EX_P19" targetRef="EX_End_P19" />
+    <bpmn:endEvent id="EX_End_P19"><bpmn:incoming>EX_f_P19</bpmn:incoming></bpmn:endEvent>
+    <bpmn:sequenceFlow id="EX_fork_P06" sourceRef="EX_Fork" targetRef="EX_P06" />
+    <bpmn:intermediateCatchEvent id="EX_P06" camunda:asyncBefore="true">
+      <bpmn:incoming>EX_fork_P06</bpmn:incoming>
+      <bpmn:outgoing>EX_f_P06</bpmn:outgoing>
+      <bpmn:timerEventDefinition>
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">${order.internalCode}</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:sequenceFlow id="EX_f_P06" sourceRef="EX_P06" targetRef="EX_End_P06" />
+    <bpmn:endEvent id="EX_End_P06"><bpmn:incoming>EX_f_P06</bpmn:incoming></bpmn:endEvent>
+    <bpmn:sequenceFlow id="EX_fork_P07" sourceRef="EX_Fork" targetRef="EX_P07" />
+    <bpmn:intermediateCatchEvent id="EX_P07" camunda:asyncBefore="true">
+      <bpmn:incoming>EX_fork_P07</bpmn:incoming>
+      <bpmn:outgoing>EX_f_P07</bpmn:outgoing>
+      <bpmn:timerEventDefinition>
+        <bpmn:timeDate xsi:type="bpmn:tFormalExpression">${dueAt}</bpmn:timeDate>
+      </bpmn:timerEventDefinition>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:sequenceFlow id="EX_f_P07" sourceRef="EX_P07" targetRef="EX_End_P07" />
+    <bpmn:endEvent id="EX_End_P07"><bpmn:incoming>EX_f_P07</bpmn:incoming></bpmn:endEvent>
+    <bpmn:sequenceFlow id="EX_fork_P08" sourceRef="EX_Fork" targetRef="EX_P08" />
+    <bpmn:intermediateCatchEvent id="EX_P08" camunda:asyncBefore="true">
+      <bpmn:incoming>EX_fork_P08</bpmn:incoming>
+      <bpmn:outgoing>EX_f_P08</bpmn:outgoing>
+      <bpmn:timerEventDefinition>
+        <bpmn:timeDate xsi:type="bpmn:tFormalExpression">${hiddenOrder.dueAt}</bpmn:timeDate>
+      </bpmn:timerEventDefinition>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:sequenceFlow id="EX_f_P08" sourceRef="EX_P08" targetRef="EX_End_P08" />
+    <bpmn:endEvent id="EX_End_P08"><bpmn:incoming>EX_f_P08</bpmn:incoming></bpmn:endEvent>
+    <bpmn:sequenceFlow id="EX_fork_P11" sourceRef="EX_Fork" targetRef="EX_P11" />
+    <bpmn:subProcess id="EX_P11" camunda:asyncBefore="true">
+      <bpmn:incoming>EX_fork_P11</bpmn:incoming>
+      <bpmn:outgoing>EX_f_P11</bpmn:outgoing>
+      <bpmn:multiInstanceLoopCharacteristics isSequential="false">
+        <bpmn:loopCardinality xsi:type="bpmn:tFormalExpression">${order.items.size()}</bpmn:loopCardinality>
+      </bpmn:multiInstanceLoopCharacteristics>
+      <bpmn:startEvent id="EX_P11_s"><bpmn:outgoing>EX_P11_i1</bpmn:outgoing></bpmn:startEvent>
+      <bpmn:sequenceFlow id="EX_P11_i1" sourceRef="EX_P11_s" targetRef="EX_P11_w" />
+      <bpmn:intermediateCatchEvent id="EX_P11_w" camunda:asyncBefore="true">
+        <bpmn:incoming>EX_P11_i1</bpmn:incoming>
+        <bpmn:outgoing>EX_P11_i2</bpmn:outgoing>
+        <bpmn:timerEventDefinition>
+          <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT1H</bpmn:timeDuration>
+        </bpmn:timerEventDefinition>
+      </bpmn:intermediateCatchEvent>
+      <bpmn:sequenceFlow id="EX_P11_i2" sourceRef="EX_P11_w" targetRef="EX_P11_e" />
+      <bpmn:endEvent id="EX_P11_e"><bpmn:incoming>EX_P11_i2</bpmn:incoming></bpmn:endEvent>
+    </bpmn:subProcess>
+    <bpmn:sequenceFlow id="EX_f_P11" sourceRef="EX_P11" targetRef="EX_End_P11" />
+    <bpmn:endEvent id="EX_End_P11"><bpmn:incoming>EX_f_P11</bpmn:incoming></bpmn:endEvent>
+    <bpmn:sequenceFlow id="EX_fork_P13" sourceRef="EX_Fork" targetRef="EX_P13" />
+    <bpmn:subProcess id="EX_P13" camunda:asyncBefore="true">
+      <bpmn:incoming>EX_fork_P13</bpmn:incoming>
+      <bpmn:outgoing>EX_f_P13</bpmn:outgoing>
+      <bpmn:multiInstanceLoopCharacteristics isSequential="false">
+        <bpmn:loopCardinality xsi:type="bpmn:tFormalExpression">${order.internalCode}</bpmn:loopCardinality>
+      </bpmn:multiInstanceLoopCharacteristics>
+      <bpmn:startEvent id="EX_P13_s"><bpmn:outgoing>EX_P13_i1</bpmn:outgoing></bpmn:startEvent>
+      <bpmn:sequenceFlow id="EX_P13_i1" sourceRef="EX_P13_s" targetRef="EX_P13_w" />
+      <bpmn:intermediateCatchEvent id="EX_P13_w" camunda:asyncBefore="true">
+        <bpmn:incoming>EX_P13_i1</bpmn:incoming>
+        <bpmn:outgoing>EX_P13_i2</bpmn:outgoing>
+        <bpmn:timerEventDefinition>
+          <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT1H</bpmn:timeDuration>
+        </bpmn:timerEventDefinition>
+      </bpmn:intermediateCatchEvent>
+      <bpmn:sequenceFlow id="EX_P13_i2" sourceRef="EX_P13_w" targetRef="EX_P13_e" />
+      <bpmn:endEvent id="EX_P13_e"><bpmn:incoming>EX_P13_i2</bpmn:incoming></bpmn:endEvent>
+    </bpmn:subProcess>
+    <bpmn:sequenceFlow id="EX_f_P13" sourceRef="EX_P13" targetRef="EX_End_P13" />
+    <bpmn:endEvent id="EX_End_P13"><bpmn:incoming>EX_f_P13</bpmn:incoming></bpmn:endEvent>
+    <bpmn:sequenceFlow id="EX_fork_P14" sourceRef="EX_Fork" targetRef="EX_P14" />
+    <bpmn:subProcess id="EX_P14" camunda:asyncBefore="true">
+      <bpmn:incoming>EX_fork_P14</bpmn:incoming>
+      <bpmn:outgoing>EX_f_P14</bpmn:outgoing>
+      <bpmn:multiInstanceLoopCharacteristics isSequential="false" camunda:collection="${order.items}" camunda:elementVariable="item">
+      </bpmn:multiInstanceLoopCharacteristics>
+      <bpmn:startEvent id="EX_P14_s"><bpmn:outgoing>EX_P14_i1</bpmn:outgoing></bpmn:startEvent>
+      <bpmn:sequenceFlow id="EX_P14_i1" sourceRef="EX_P14_s" targetRef="EX_P14_w" />
+      <bpmn:intermediateCatchEvent id="EX_P14_w" camunda:asyncBefore="true">
+        <bpmn:incoming>EX_P14_i1</bpmn:incoming>
+        <bpmn:outgoing>EX_P14_i2</bpmn:outgoing>
+        <bpmn:timerEventDefinition>
+          <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT1H</bpmn:timeDuration>
+        </bpmn:timerEventDefinition>
+      </bpmn:intermediateCatchEvent>
+      <bpmn:sequenceFlow id="EX_P14_i2" sourceRef="EX_P14_w" targetRef="EX_P14_e" />
+      <bpmn:endEvent id="EX_P14_e"><bpmn:incoming>EX_P14_i2</bpmn:incoming></bpmn:endEvent>
+    </bpmn:subProcess>
+    <bpmn:sequenceFlow id="EX_f_P14" sourceRef="EX_P14" targetRef="EX_End_P14" />
+    <bpmn:endEvent id="EX_End_P14"><bpmn:incoming>EX_f_P14</bpmn:incoming></bpmn:endEvent>
+    <bpmn:sequenceFlow id="EX_fork_P15" sourceRef="EX_Fork" targetRef="EX_P15" />
+    <bpmn:subProcess id="EX_P15" camunda:asyncBefore="true">
+      <bpmn:incoming>EX_fork_P15</bpmn:incoming>
+      <bpmn:outgoing>EX_f_P15</bpmn:outgoing>
+      <bpmn:multiInstanceLoopCharacteristics isSequential="false" camunda:collection="${order.hiddenItems}" camunda:elementVariable="item">
+      </bpmn:multiInstanceLoopCharacteristics>
+      <bpmn:startEvent id="EX_P15_s"><bpmn:outgoing>EX_P15_i1</bpmn:outgoing></bpmn:startEvent>
+      <bpmn:sequenceFlow id="EX_P15_i1" sourceRef="EX_P15_s" targetRef="EX_P15_w" />
+      <bpmn:intermediateCatchEvent id="EX_P15_w" camunda:asyncBefore="true">
+        <bpmn:incoming>EX_P15_i1</bpmn:incoming>
+        <bpmn:outgoing>EX_P15_i2</bpmn:outgoing>
+        <bpmn:timerEventDefinition>
+          <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT1H</bpmn:timeDuration>
+        </bpmn:timerEventDefinition>
+      </bpmn:intermediateCatchEvent>
+      <bpmn:sequenceFlow id="EX_P15_i2" sourceRef="EX_P15_w" targetRef="EX_P15_e" />
+      <bpmn:endEvent id="EX_P15_e"><bpmn:incoming>EX_P15_i2</bpmn:incoming></bpmn:endEvent>
+    </bpmn:subProcess>
+    <bpmn:sequenceFlow id="EX_f_P15" sourceRef="EX_P15" targetRef="EX_End_P15" />
+    <bpmn:endEvent id="EX_End_P15"><bpmn:incoming>EX_f_P15</bpmn:incoming></bpmn:endEvent>
+    <bpmn:sequenceFlow id="EX_fork_P16" sourceRef="EX_Fork" targetRef="EX_P16" />
+    <bpmn:subProcess id="EX_P16" camunda:asyncBefore="true">
+      <bpmn:incoming>EX_fork_P16</bpmn:incoming>
+      <bpmn:outgoing>EX_f_P16</bpmn:outgoing>
+      <bpmn:multiInstanceLoopCharacteristics isSequential="false" camunda:collection="${order.items}" camunda:elementVariable="item">
+        <bpmn:completionCondition xsi:type="bpmn:tFormalExpression">${order.internalCode == 'IC-9'}</bpmn:completionCondition>
+      </bpmn:multiInstanceLoopCharacteristics>
+      <bpmn:startEvent id="EX_P16_s"><bpmn:outgoing>EX_P16_i1</bpmn:outgoing></bpmn:startEvent>
+      <bpmn:sequenceFlow id="EX_P16_i1" sourceRef="EX_P16_s" targetRef="EX_P16_e" />
+      <bpmn:endEvent id="EX_P16_e"><bpmn:incoming>EX_P16_i1</bpmn:incoming></bpmn:endEvent>
+    </bpmn:subProcess>
+    <bpmn:sequenceFlow id="EX_f_P16" sourceRef="EX_P16" targetRef="EX_End_P16" />
+    <bpmn:endEvent id="EX_End_P16"><bpmn:incoming>EX_f_P16</bpmn:incoming></bpmn:endEvent>
+  </bpmn:process>
+</bpmn:definitions>

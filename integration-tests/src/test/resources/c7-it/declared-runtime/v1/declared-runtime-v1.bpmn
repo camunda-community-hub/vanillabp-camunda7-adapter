@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- The model BEFORE the rename: the engine starts this process on its own, by a
+     repeating timer and by a signal. After the rename nothing is deployed under this id
+     any more, while the engine keeps firing the timer of ITS latest version and keeps
+     the signal subscription - so both starts keep happening for a process the renamed
+     application only declares. -->
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" id="Definitions_DeclaredRuntimeV1" targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:signal id="Sig_DeclRuntime" name="DeclRuntimeSignal" />
+  <bpmn:process id="DeclaredRuntimeOld" isExecutable="true">
+    <bpmn:startEvent id="DR_TimerStart">
+      <bpmn:outgoing>DR_f1</bpmn:outgoing>
+      <bpmn:timerEventDefinition id="DR_TimerDef">
+        <bpmn:timeCycle xsi:type="bpmn:tFormalExpression"
+                        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">R/PT2S</bpmn:timeCycle>
+      </bpmn:timerEventDefinition>
+    </bpmn:startEvent>
+    <bpmn:startEvent id="DR_SignalStart">
+      <bpmn:outgoing>DR_f2</bpmn:outgoing>
+      <bpmn:signalEventDefinition id="DR_SignalDef" signalRef="Sig_DeclRuntime" />
+    </bpmn:startEvent>
+    <bpmn:sequenceFlow id="DR_f1" sourceRef="DR_TimerStart" targetRef="DR_Record" />
+    <bpmn:sequenceFlow id="DR_f2" sourceRef="DR_SignalStart" targetRef="DR_Record" />
+    <bpmn:serviceTask id="DR_Record" camunda:expression="${declaredRuntimeTask}">
+      <bpmn:incoming>DR_f1</bpmn:incoming>
+      <bpmn:incoming>DR_f2</bpmn:incoming>
+      <bpmn:outgoing>DR_f3</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="DR_f3" sourceRef="DR_Record" targetRef="DR_End" />
+    <bpmn:endEvent id="DR_End">
+      <bpmn:incoming>DR_f3</bpmn:incoming>
+    </bpmn:endEvent>
+  </bpmn:process>
+</bpmn:definitions>

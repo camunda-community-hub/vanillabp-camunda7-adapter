@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" id="Definitions_Versioned" targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:process id="VersionedProcess" isExecutable="true">
+    <bpmn:startEvent id="VP_Start">
+      <bpmn:outgoing>VP_f1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:sequenceFlow id="VP_f1" sourceRef="VP_Start" targetRef="VP_Task" />
+    <bpmn:serviceTask id="VP_Task" camunda:delegateExpression="${versionedTask}">
+      <bpmn:incoming>VP_f1</bpmn:incoming>
+      <bpmn:outgoing>VP_f2</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="VP_f2" sourceRef="VP_Task" targetRef="VP_End" />
+    <bpmn:endEvent id="VP_End">
+      <bpmn:incoming>VP_f2</bpmn:incoming>
+    </bpmn:endEvent>
+  </bpmn:process>
+</bpmn:definitions>

@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="https://www.omg.org/spec/DMN/20191111/MODEL/" xmlns:camunda="http://camunda.org/schema/1.0/dmn" id="creditRatingDefinitions" name="Credit rating" namespace="http://vanillabp.io/c7-it">
+  <decision id="creditRating" name="Credit rating">
+    <decisionTable id="creditRatingTable" hitPolicy="UNIQUE">
+      <input id="creditRatingInput" label="Approved">
+        <inputExpression id="creditRatingInputExpression" typeRef="boolean">
+          <text>approved</text>
+        </inputExpression>
+      </input>
+      <output id="creditRatingOutput" label="Rating" name="rating" typeRef="string" />
+      <rule id="creditRatingApproved">
+        <inputEntry id="creditRatingApprovedInput">
+          <text>true</text>
+        </inputEntry>
+        <outputEntry id="creditRatingApprovedOutput">
+          <text>"GOOD"</text>
+        </outputEntry>
+      </rule>
+      <rule id="creditRatingDenied">
+        <inputEntry id="creditRatingDeniedInput">
+          <text>false</text>
+        </inputEntry>
+        <outputEntry id="creditRatingDeniedOutput">
+          <text>"POOR"</text>
+        </outputEntry>
+      </rule>
+    </decisionTable>
+  </decision>
+</definitions>

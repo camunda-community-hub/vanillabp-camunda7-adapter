@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" id="Definitions_AggregateChanged" targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:process id="AggregateChangedProcess" isExecutable="true">
+    <bpmn:startEvent id="AC_Start">
+      <bpmn:outgoing>AC_f1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:sequenceFlow id="AC_f1" sourceRef="AC_Start" targetRef="AC_Wait" />
+    <bpmn:intermediateCatchEvent id="AC_Wait">
+      <bpmn:incoming>AC_f1</bpmn:incoming>
+      <bpmn:outgoing>AC_f2</bpmn:outgoing>
+      <bpmn:conditionalEventDefinition>
+        <bpmn:condition xsi:type="bpmn:tFormalExpression" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">${readyToGo}</bpmn:condition>
+      </bpmn:conditionalEventDefinition>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:sequenceFlow id="AC_f2" sourceRef="AC_Wait" targetRef="AC_Continue" />
+    <bpmn:serviceTask id="AC_Continue" camunda:delegateExpression="${conditionMet}">
+      <bpmn:incoming>AC_f2</bpmn:incoming>
+      <bpmn:outgoing>AC_f3</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="AC_f3" sourceRef="AC_Continue" targetRef="AC_End" />
+    <bpmn:endEvent id="AC_End">
+      <bpmn:incoming>AC_f3</bpmn:incoming>
+    </bpmn:endEvent>
+  </bpmn:process>
+  <bpmn:process id="AggregateChangedMultiInstanceProcess" isExecutable="true">
+    <bpmn:startEvent id="MI_Start">
+      <bpmn:outgoing>MI_f1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:sequenceFlow id="MI_f1" sourceRef="MI_Start" targetRef="MI_Sub" />
+    <bpmn:subProcess id="MI_Sub">
+      <bpmn:incoming>MI_f1</bpmn:incoming>
+      <bpmn:outgoing>MI_f2</bpmn:outgoing>
+      <bpmn:multiInstanceLoopCharacteristics isSequential="false" camunda:collection="${items}" camunda:elementVariable="item" />
+      <bpmn:startEvent id="MI_SubStart">
+        <bpmn:outgoing>MI_sf1</bpmn:outgoing>
+      </bpmn:startEvent>
+      <bpmn:sequenceFlow id="MI_sf1" sourceRef="MI_SubStart" targetRef="MI_Task" />
+      <bpmn:serviceTask id="MI_Task" camunda:delegateExpression="${multiInstanceTask}">
+        <bpmn:incoming>MI_sf1</bpmn:incoming>
+        <bpmn:outgoing>MI_sf2</bpmn:outgoing>
+      </bpmn:serviceTask>
+      <bpmn:sequenceFlow id="MI_sf2" sourceRef="MI_Task" targetRef="MI_SubEnd" />
+      <bpmn:endEvent id="MI_SubEnd">
+        <bpmn:incoming>MI_sf2</bpmn:incoming>
+      </bpmn:endEvent>
+      <bpmn:subProcess id="MI_EventSub" triggeredByEvent="true">
+        <bpmn:startEvent id="MI_Condition">
+          <bpmn:outgoing>MI_ef1</bpmn:outgoing>
+          <bpmn:conditionalEventDefinition>
+            <bpmn:condition xsi:type="bpmn:tFormalExpression" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">${escalate}</bpmn:condition>
+          </bpmn:conditionalEventDefinition>
+        </bpmn:startEvent>
+        <bpmn:sequenceFlow id="MI_ef1" sourceRef="MI_Condition" targetRef="MI_Escalate" />
+        <bpmn:serviceTask id="MI_Escalate" camunda:delegateExpression="${escalated}">
+          <bpmn:incoming>MI_ef1</bpmn:incoming>
+          <bpmn:outgoing>MI_ef2</bpmn:outgoing>
+        </bpmn:serviceTask>
+        <bpmn:sequenceFlow id="MI_ef2" sourceRef="MI_Escalate" targetRef="MI_EventSubEnd" />
+        <bpmn:endEvent id="MI_EventSubEnd">
+          <bpmn:incoming>MI_ef2</bpmn:incoming>
+        </bpmn:endEvent>
+      </bpmn:subProcess>
+    </bpmn:subProcess>
+    <bpmn:sequenceFlow id="MI_f2" sourceRef="MI_Sub" targetRef="MI_End" />
+    <bpmn:endEvent id="MI_End">
+      <bpmn:incoming>MI_f2</bpmn:incoming>
+    </bpmn:endEvent>
+  </bpmn:process>
+  <bpmn:process id="AggregateChangedBoundaryProcess" isExecutable="true">
+    <bpmn:startEvent id="BP_Start">
+      <bpmn:outgoing>BP_f1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:sequenceFlow id="BP_f1" sourceRef="BP_Start" targetRef="BP_Task" />
+    <bpmn:serviceTask id="BP_Task" camunda:delegateExpression="${boundaryTask}">
+      <bpmn:incoming>BP_f1</bpmn:incoming>
+      <bpmn:outgoing>BP_f2</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:boundaryEvent id="BP_Timer" attachedToRef="BP_Task">
+      <bpmn:outgoing>BP_f3</bpmn:outgoing>
+      <bpmn:timerEventDefinition>
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">PT1H</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:boundaryEvent>
+    <bpmn:sequenceFlow id="BP_f3" sourceRef="BP_Timer" targetRef="BP_TimeoutEnd" />
+    <bpmn:endEvent id="BP_TimeoutEnd">
+      <bpmn:incoming>BP_f3</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="BP_f2" sourceRef="BP_Task" targetRef="BP_End" />
+    <bpmn:endEvent id="BP_End">
+      <bpmn:incoming>BP_f2</bpmn:incoming>
+    </bpmn:endEvent>
+  </bpmn:process>
+</bpmn:definitions>

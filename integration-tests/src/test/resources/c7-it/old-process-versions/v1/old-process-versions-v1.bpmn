@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Version 1 of the process: a task which survives into version 2, a task
+     which is dropped there, and a task nobody serves in this version (its method names
+     a version this engine does not hold). The dropped task stays open, so a workflow
+     started here is still running on version 1 when the next boot deploys version 2 -
+     and it never reaches the unserved task, which would raise an incident instead. -->
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" id="Definitions_OldProcessVersionsV1" targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:process id="OldProcessVersionsProcess" isExecutable="true">
+    <bpmn:startEvent id="OPV_Start">
+      <bpmn:outgoing>OPV_f1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:sequenceFlow id="OPV_f1" sourceRef="OPV_Start" targetRef="OPV_Kept" />
+    <bpmn:serviceTask id="OPV_Kept" camunda:expression="${keptInBothVersions}">
+      <bpmn:incoming>OPV_f1</bpmn:incoming>
+      <bpmn:outgoing>OPV_f2</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="OPV_f2" sourceRef="OPV_Kept" targetRef="OPV_Gone" />
+    <bpmn:serviceTask id="OPV_Gone" camunda:delegateExpression="${droppedInVersionTwo}">
+      <bpmn:incoming>OPV_f2</bpmn:incoming>
+      <bpmn:outgoing>OPV_f3</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="OPV_f3" sourceRef="OPV_Gone" targetRef="OPV_Never" />
+    <bpmn:serviceTask id="OPV_Never" camunda:expression="${servedForAnUnknownVersion}">
+      <bpmn:incoming>OPV_f3</bpmn:incoming>
+      <bpmn:outgoing>OPV_f4</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="OPV_f4" sourceRef="OPV_Never" targetRef="OPV_End" />
+    <bpmn:endEvent id="OPV_End">
+      <bpmn:incoming>OPV_f4</bpmn:incoming>
+    </bpmn:endEvent>
+  </bpmn:process>
+</bpmn:definitions>

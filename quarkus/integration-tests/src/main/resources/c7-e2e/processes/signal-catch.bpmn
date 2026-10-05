@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:camunda="http://camunda.org/schema/1.0/bpmn"
+                  id="Definitions_SignalCatch"
+                  targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:signal id="Signal_OrderReceived" name="OrderReceived" />
+  <bpmn:process id="SignalCatchProcess" isExecutable="true">
+    <bpmn:startEvent id="Event_Start">
+      <bpmn:outgoing>Flow_ToWait</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:sequenceFlow id="Flow_ToWait" sourceRef="Event_Start" targetRef="Event_WaitForSignal" />
+    <bpmn:intermediateCatchEvent id="Event_WaitForSignal">
+      <bpmn:incoming>Flow_ToWait</bpmn:incoming>
+      <bpmn:outgoing>Flow_ToRecord</bpmn:outgoing>
+      <bpmn:signalEventDefinition id="SignalEventDefinition_1" signalRef="Signal_OrderReceived" />
+    </bpmn:intermediateCatchEvent>
+    <bpmn:sequenceFlow id="Flow_ToRecord" sourceRef="Event_WaitForSignal" targetRef="Activity_Record" />
+    <bpmn:serviceTask id="Activity_Record" camunda:expression="${recordSignal}">
+      <bpmn:incoming>Flow_ToRecord</bpmn:incoming>
+      <bpmn:outgoing>Flow_ToEnd</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="Flow_ToEnd" sourceRef="Activity_Record" targetRef="Event_End" />
+    <bpmn:endEvent id="Event_End">
+      <bpmn:incoming>Flow_ToEnd</bpmn:incoming>
+    </bpmn:endEvent>
+  </bpmn:process>
+</bpmn:definitions>

@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" id="Definitions_BusinessRule" targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:process id="BusinessRuleProcess" isExecutable="true">
+    <bpmn:startEvent id="BR_Start">
+      <bpmn:outgoing>BR_f1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:sequenceFlow id="BR_f1" sourceRef="BR_Start" targetRef="BR_Rate" />
+    <bpmn:businessRuleTask id="BR_Rate" camunda:decisionRef="creditRating" camunda:decisionRefBinding="deployment" camunda:mapDecisionResult="singleEntry" camunda:resultVariable="rating">
+      <bpmn:incoming>BR_f1</bpmn:incoming>
+      <bpmn:outgoing>BR_f2</bpmn:outgoing>
+    </bpmn:businessRuleTask>
+    <bpmn:sequenceFlow id="BR_f2" sourceRef="BR_Rate" targetRef="BR_Read" />
+    <bpmn:serviceTask id="BR_Read" camunda:expression="${readTheRating}">
+      <bpmn:extensionElements>
+        <camunda:inputOutput>
+          <camunda:inputParameter name="rating">${rating}</camunda:inputParameter>
+        </camunda:inputOutput>
+      </bpmn:extensionElements>
+      <bpmn:incoming>BR_f2</bpmn:incoming>
+      <bpmn:outgoing>BR_f3</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="BR_f3" sourceRef="BR_Read" targetRef="BR_End" />
+    <bpmn:endEvent id="BR_End">
+      <bpmn:incoming>BR_f3</bpmn:incoming>
+    </bpmn:endEvent>
+  </bpmn:process>
+</bpmn:definitions>

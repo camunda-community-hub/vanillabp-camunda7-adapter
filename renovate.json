@@ -1,18 +1,17 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": [
-    "config:recommended"
-  ],
+  "extends": ["github>vanillabp/renovate-config"],
+  "timezone": "Europe/Vienna",
   "packageRules": [
     {
-      "description": "One pull request for the whole Spring train. Boot, Framework, Security, Data and the starters only make sense together - the six different Boot 3.x baselines this workspace carried before the Boot 4 migration came from updating them one at a time.",
-      "groupName": "spring",
-      "matchPackagePatterns": ["^org\\.springframework"]
+      "description": "VanillaBP and the adapters follow the framework, not Renovate: their versions are bumped when a release is cut, and while they are snapshots there is nothing to look up.",
+      "matchPackageNames": ["/^io\\.vanillabp/", "/^org\\.camunda\\.community\\.vanillabp/"],
+      "enabled": false
     },
     {
-      "description": "Camunda stays manual. Client and cluster are only guaranteed compatible at equal versions, and a cluster upgrade in a customer project takes its time, so a library must never force one.",
-      "matchPackagePatterns": ["^io\\.camunda", "^org\\.camunda"],
-      "enabled": false
+      "description": "Camunda 7.24 is the final feature release and the community edition ended with it, so this adapter pins 7.24.x and needs no release lines. Anything above 7.24 could only come from an enterprise environment release, which is a deliberate step rather than an upkeep PR.",
+      "matchPackageNames": ["/^org\\.camunda\\.bpm/"],
+      "allowedVersions": "/^7\\.24\\./"
     }
   ]
 }

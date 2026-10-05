@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- The model AFTER the rename. Deliberately WITHOUT a timer start: any workflow a
+     timer starts while this generation runs therefore belongs to the OLD id, which is
+     what the test tells the two apart by. The signal start stays, under a name of its
+     own, so the methods keep serving a BPMS-initiated start of the deployed id too. -->
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" id="Definitions_DeclaredRuntimeV2" targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:signal id="Sig_DeclRuntimeNew" name="DeclRuntimeSignalNew" />
+  <bpmn:process id="DeclaredRuntimeNew" isExecutable="true">
+    <bpmn:startEvent id="DR_SignalStart">
+      <bpmn:outgoing>DR_f2</bpmn:outgoing>
+      <bpmn:signalEventDefinition id="DR_SignalDef" signalRef="Sig_DeclRuntimeNew" />
+    </bpmn:startEvent>
+    <bpmn:sequenceFlow id="DR_f2" sourceRef="DR_SignalStart" targetRef="DR_Record" />
+    <bpmn:serviceTask id="DR_Record" camunda:expression="${declaredRuntimeTask}">
+      <bpmn:incoming>DR_f2</bpmn:incoming>
+      <bpmn:outgoing>DR_f3</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="DR_f3" sourceRef="DR_Record" targetRef="DR_End" />
+    <bpmn:endEvent id="DR_End">
+      <bpmn:incoming>DR_f3</bpmn:incoming>
+    </bpmn:endEvent>
+  </bpmn:process>
+</bpmn:definitions>

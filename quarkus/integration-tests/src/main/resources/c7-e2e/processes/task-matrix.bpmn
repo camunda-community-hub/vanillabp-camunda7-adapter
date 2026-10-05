@@ -1,0 +1,293 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" id="Definitions_TaskMatrix" targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:error id="Error_Payment" name="PaymentFailed" errorCode="PAYMENT_FAILED" />
+  <bpmn:process id="TaskProcess" isExecutable="true">
+    <bpmn:startEvent id="TP_Start">
+      <bpmn:outgoing>TP_f1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:sequenceFlow id="TP_f1" sourceRef="TP_Start" targetRef="TP_Happy" />
+    <bpmn:startEvent id="TP_MessageStart">
+      <bpmn:outgoing>TP_fMessage</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="TP_MsgDef" messageRef="Msg_Task" />
+    </bpmn:startEvent>
+    <bpmn:sequenceFlow id="TP_fMessage" sourceRef="TP_MessageStart" targetRef="TP_Happy" />
+    <bpmn:serviceTask id="TP_Happy" camunda:expression="${happyTask}">
+      <bpmn:incoming>TP_f1</bpmn:incoming>
+      <bpmn:incoming>TP_fMessage</bpmn:incoming>
+      <bpmn:outgoing>TP_f2</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="TP_f2" sourceRef="TP_Happy" targetRef="TP_Gateway" />
+    <bpmn:exclusiveGateway id="TP_Gateway" default="TP_fNo">
+      <bpmn:incoming>TP_f2</bpmn:incoming>
+      <bpmn:outgoing>TP_fYes</bpmn:outgoing>
+      <bpmn:outgoing>TP_fNo</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:sequenceFlow id="TP_fYes" sourceRef="TP_Gateway" targetRef="TP_AfterApproval">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">${approved}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:serviceTask id="TP_AfterApproval" camunda:expression="${afterApproval}">
+      <bpmn:incoming>TP_fYes</bpmn:incoming>
+      <bpmn:outgoing>TP_f3</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="TP_f3" sourceRef="TP_AfterApproval" targetRef="TP_End" />
+    <bpmn:sequenceFlow id="TP_fNo" sourceRef="TP_Gateway" targetRef="TP_EndRejected" />
+    <bpmn:endEvent id="TP_End">
+      <bpmn:incoming>TP_f3</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:endEvent id="TP_EndRejected">
+      <bpmn:incoming>TP_fNo</bpmn:incoming>
+    </bpmn:endEvent>
+  </bpmn:process>
+  <bpmn:process id="ErrorProcess" isExecutable="true">
+    <bpmn:startEvent id="EP_Start">
+      <bpmn:outgoing>EP_f1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:sequenceFlow id="EP_f1" sourceRef="EP_Start" targetRef="EP_Task" />
+    <bpmn:serviceTask id="EP_Task" camunda:expression="${errorTask}">
+      <bpmn:incoming>EP_f1</bpmn:incoming>
+      <bpmn:outgoing>EP_f2</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:boundaryEvent id="EP_Boundary" attachedToRef="EP_Task">
+      <bpmn:outgoing>EP_fErr</bpmn:outgoing>
+      <bpmn:errorEventDefinition id="EP_ErrDef" errorRef="Error_Payment" />
+    </bpmn:boundaryEvent>
+    <bpmn:sequenceFlow id="EP_fErr" sourceRef="EP_Boundary" targetRef="EP_Handle" />
+    <bpmn:serviceTask id="EP_Handle" camunda:expression="${errorHandled}">
+      <bpmn:incoming>EP_fErr</bpmn:incoming>
+      <bpmn:outgoing>EP_f3</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="EP_f2" sourceRef="EP_Task" targetRef="EP_End" />
+    <bpmn:sequenceFlow id="EP_f3" sourceRef="EP_Handle" targetRef="EP_EndHandled" />
+    <bpmn:endEvent id="EP_End">
+      <bpmn:incoming>EP_f2</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:endEvent id="EP_EndHandled">
+      <bpmn:incoming>EP_f3</bpmn:incoming>
+    </bpmn:endEvent>
+  </bpmn:process>
+  <bpmn:process id="FailProcess" isExecutable="true">
+    <bpmn:startEvent id="FP_Start">
+      <bpmn:outgoing>FP_f1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:sequenceFlow id="FP_f1" sourceRef="FP_Start" targetRef="FP_Task" />
+    <bpmn:serviceTask id="FP_Task" camunda:expression="${alwaysFails}">
+      <bpmn:incoming>FP_f1</bpmn:incoming>
+      <bpmn:outgoing>FP_f2</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="FP_f2" sourceRef="FP_Task" targetRef="FP_End" />
+    <bpmn:endEvent id="FP_End">
+      <bpmn:incoming>FP_f2</bpmn:incoming>
+    </bpmn:endEvent>
+  </bpmn:process>
+  <bpmn:process id="AsyncProcess" isExecutable="true">
+    <bpmn:startEvent id="AP_Start">
+      <bpmn:outgoing>AP_f1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:sequenceFlow id="AP_f1" sourceRef="AP_Start" targetRef="AP_Task" />
+    <bpmn:serviceTask id="AP_Task" camunda:delegateExpression="${asyncTask}">
+      <bpmn:incoming>AP_f1</bpmn:incoming>
+      <bpmn:outgoing>AP_f2</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="AP_f2" sourceRef="AP_Task" targetRef="AP_End" />
+    <bpmn:endEvent id="AP_End">
+      <bpmn:incoming>AP_f2</bpmn:incoming>
+    </bpmn:endEvent>
+  </bpmn:process>
+  <bpmn:process id="MultiInstanceProcess" isExecutable="true">
+    <bpmn:startEvent id="MI_Start">
+      <bpmn:outgoing>MI_f1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:sequenceFlow id="MI_f1" sourceRef="MI_Start" targetRef="MI_Task" />
+    <bpmn:serviceTask id="MI_Task" camunda:expression="${miTask}">
+      <bpmn:incoming>MI_f1</bpmn:incoming>
+      <bpmn:outgoing>MI_f2</bpmn:outgoing>
+      <bpmn:multiInstanceLoopCharacteristics isSequential="true" camunda:collection="${items}" camunda:elementVariable="item" />
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="MI_f2" sourceRef="MI_Task" targetRef="MI_End" />
+    <bpmn:endEvent id="MI_End">
+      <bpmn:incoming>MI_f2</bpmn:incoming>
+    </bpmn:endEvent>
+  </bpmn:process>
+  <bpmn:process id="AsyncCancelProcess" isExecutable="true">
+    <bpmn:startEvent id="AC_Start">
+      <bpmn:outgoing>AC_f1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:sequenceFlow id="AC_f1" sourceRef="AC_Start" targetRef="AC_Task" />
+    <bpmn:serviceTask id="AC_Task" camunda:delegateExpression="${awaitCancel}">
+      <bpmn:incoming>AC_f1</bpmn:incoming>
+      <bpmn:outgoing>AC_f2</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:boundaryEvent id="AC_Boundary" attachedToRef="AC_Task">
+      <bpmn:outgoing>AC_fErr</bpmn:outgoing>
+      <bpmn:errorEventDefinition id="AC_ErrDef" errorRef="Error_Payment" />
+    </bpmn:boundaryEvent>
+    <bpmn:sequenceFlow id="AC_fErr" sourceRef="AC_Boundary" targetRef="AC_Handle" />
+    <bpmn:serviceTask id="AC_Handle" camunda:expression="${cancelHandled}">
+      <bpmn:incoming>AC_fErr</bpmn:incoming>
+      <bpmn:outgoing>AC_f3</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="AC_f2" sourceRef="AC_Task" targetRef="AC_End" />
+    <bpmn:sequenceFlow id="AC_f3" sourceRef="AC_Handle" targetRef="AC_EndHandled" />
+    <bpmn:endEvent id="AC_End">
+      <bpmn:incoming>AC_f2</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:endEvent id="AC_EndHandled">
+      <bpmn:incoming>AC_f3</bpmn:incoming>
+    </bpmn:endEvent>
+  </bpmn:process>
+  <bpmn:process id="CancelEventProcess" isExecutable="true">
+    <bpmn:startEvent id="CE_Start">
+      <bpmn:outgoing>CE_f1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:sequenceFlow id="CE_f1" sourceRef="CE_Start" targetRef="CE_Task" />
+    <bpmn:serviceTask id="CE_Task" camunda:delegateExpression="${awaitCancelEvent}">
+      <bpmn:incoming>CE_f1</bpmn:incoming>
+      <bpmn:outgoing>CE_f2</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="CE_f2" sourceRef="CE_Task" targetRef="CE_End" />
+    <bpmn:endEvent id="CE_End">
+      <bpmn:incoming>CE_f2</bpmn:incoming>
+    </bpmn:endEvent>
+  </bpmn:process>
+  <bpmn:process id="MixedProcess" isExecutable="true">
+    <bpmn:startEvent id="MX_Start">
+      <bpmn:outgoing>MX_f1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:sequenceFlow id="MX_f1" sourceRef="MX_Start" targetRef="MX_Send" />
+    <bpmn:sendTask id="MX_Send" camunda:expression="${mixedSend}">
+      <bpmn:incoming>MX_f1</bpmn:incoming>
+      <bpmn:outgoing>MX_f2</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:sequenceFlow id="MX_f2" sourceRef="MX_Send" targetRef="MX_Rule" />
+    <bpmn:businessRuleTask id="MX_Rule" camunda:expression="${mixedRule}">
+      <bpmn:incoming>MX_f2</bpmn:incoming>
+      <bpmn:outgoing>MX_f3</bpmn:outgoing>
+    </bpmn:businessRuleTask>
+    <bpmn:sequenceFlow id="MX_f3" sourceRef="MX_Rule" targetRef="MX_Script" />
+    <bpmn:scriptTask id="MX_Script" scriptFormat="javascript">
+      <bpmn:incoming>MX_f3</bpmn:incoming>
+      <bpmn:outgoing>MX_f4</bpmn:outgoing>
+      <bpmn:script>// no-op</bpmn:script>
+    </bpmn:scriptTask>
+    <bpmn:sequenceFlow id="MX_f4" sourceRef="MX_Script" targetRef="MX_User" />
+    <bpmn:userTask id="MX_User">
+      <bpmn:incoming>MX_f4</bpmn:incoming>
+      <bpmn:outgoing>MX_f5</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:sequenceFlow id="MX_f5" sourceRef="MX_User" targetRef="MX_Receive" />
+    <bpmn:receiveTask id="MX_Receive">
+      <bpmn:incoming>MX_f5</bpmn:incoming>
+      <bpmn:outgoing>MX_f6</bpmn:outgoing>
+    </bpmn:receiveTask>
+    <bpmn:sequenceFlow id="MX_f6" sourceRef="MX_Receive" targetRef="MX_End" />
+    <bpmn:endEvent id="MX_End">
+      <bpmn:incoming>MX_f6</bpmn:incoming>
+    </bpmn:endEvent>
+  </bpmn:process>
+  <bpmn:process id="UserTaskProcess" isExecutable="true">
+    <bpmn:startEvent id="UT_Start">
+      <bpmn:outgoing>UT_f1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:sequenceFlow id="UT_f1" sourceRef="UT_Start" targetRef="UT_Task" />
+    <bpmn:userTask id="UT_Task" camunda:formKey="approveRequest">
+      <bpmn:incoming>UT_f1</bpmn:incoming>
+      <bpmn:outgoing>UT_f2</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:boundaryEvent id="UT_Boundary" attachedToRef="UT_Task">
+      <bpmn:outgoing>UT_fErr</bpmn:outgoing>
+      <bpmn:errorEventDefinition id="UT_ErrDef" errorRef="Error_Payment" />
+    </bpmn:boundaryEvent>
+    <bpmn:sequenceFlow id="UT_fErr" sourceRef="UT_Boundary" targetRef="UT_Handle" />
+    <bpmn:serviceTask id="UT_Handle" camunda:expression="${userTaskCancelHandled}">
+      <bpmn:incoming>UT_fErr</bpmn:incoming>
+      <bpmn:outgoing>UT_f3</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="UT_f2" sourceRef="UT_Task" targetRef="UT_End" />
+    <bpmn:sequenceFlow id="UT_f3" sourceRef="UT_Handle" targetRef="UT_EndHandled" />
+    <bpmn:endEvent id="UT_End">
+      <bpmn:incoming>UT_f2</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:endEvent id="UT_EndHandled">
+      <bpmn:incoming>UT_f3</bpmn:incoming>
+    </bpmn:endEvent>
+  </bpmn:process>
+  <bpmn:process id="SilentUserTaskProcess" isExecutable="true">
+    <bpmn:startEvent id="SU_Start">
+      <bpmn:outgoing>SU_f1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:sequenceFlow id="SU_f1" sourceRef="SU_Start" targetRef="SU_Task" />
+    <bpmn:userTask id="SU_Task">
+      <bpmn:incoming>SU_f1</bpmn:incoming>
+      <bpmn:outgoing>SU_f2</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:sequenceFlow id="SU_f2" sourceRef="SU_Task" targetRef="SU_End" />
+    <bpmn:endEvent id="SU_End">
+      <bpmn:incoming>SU_f2</bpmn:incoming>
+    </bpmn:endEvent>
+  </bpmn:process>
+  <bpmn:message id="Msg_Payment" name="PaymentReceived" />
+  <bpmn:message id="Msg_Order" name="OrderPlaced" />
+  <bpmn:message id="Msg_Task" name="TaskRequested" />
+  <bpmn:process id="MessageProcess" isExecutable="true">
+    <bpmn:startEvent id="MP_Start">
+      <bpmn:outgoing>MP_f1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:sequenceFlow id="MP_f1" sourceRef="MP_Start" targetRef="MP_Wait" />
+    <bpmn:intermediateCatchEvent id="MP_Wait">
+      <bpmn:incoming>MP_f1</bpmn:incoming>
+      <bpmn:outgoing>MP_f2</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MP_MsgDef" messageRef="Msg_Payment" />
+    </bpmn:intermediateCatchEvent>
+    <bpmn:sequenceFlow id="MP_f2" sourceRef="MP_Wait" targetRef="MP_Done" />
+    <bpmn:serviceTask id="MP_Done" camunda:expression="${messageArrived}">
+      <bpmn:incoming>MP_f2</bpmn:incoming>
+      <bpmn:outgoing>MP_f3</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="MP_f3" sourceRef="MP_Done" targetRef="MP_End" />
+    <bpmn:endEvent id="MP_End">
+      <bpmn:incoming>MP_f3</bpmn:incoming>
+    </bpmn:endEvent>
+  </bpmn:process>
+  <bpmn:process id="MessageStartProcess" isExecutable="true">
+    <bpmn:startEvent id="MS_Start">
+      <bpmn:outgoing>MS_f1</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MS_MsgDef" messageRef="Msg_Order" />
+    </bpmn:startEvent>
+    <bpmn:sequenceFlow id="MS_f1" sourceRef="MS_Start" targetRef="MS_Task" />
+    <bpmn:serviceTask id="MS_Task" camunda:expression="${orderPlaced}">
+      <bpmn:incoming>MS_f1</bpmn:incoming>
+      <bpmn:outgoing>MS_f2</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="MS_f2" sourceRef="MS_Task" targetRef="MS_End" />
+    <bpmn:endEvent id="MS_End">
+      <bpmn:incoming>MS_f2</bpmn:incoming>
+    </bpmn:endEvent>
+  </bpmn:process>
+  <bpmn:process id="RollbackOnlyProcess" isExecutable="true">
+    <bpmn:startEvent id="RO_Start">
+      <bpmn:outgoing>RO_f1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:sequenceFlow id="RO_f1" sourceRef="RO_Start" targetRef="RO_Task" />
+    <bpmn:serviceTask id="RO_Task" camunda:expression="${nestedTransaction}">
+      <bpmn:incoming>RO_f1</bpmn:incoming>
+      <bpmn:outgoing>RO_f2</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="RO_f2" sourceRef="RO_Task" targetRef="RO_End" />
+    <bpmn:boundaryEvent id="RO_Error" attachedToRef="RO_Task">
+      <bpmn:outgoing>RO_f3</bpmn:outgoing>
+      <bpmn:errorEventDefinition id="RO_ErrDef" errorRef="Error_Payment" />
+    </bpmn:boundaryEvent>
+    <bpmn:sequenceFlow id="RO_f3" sourceRef="RO_Error" targetRef="RO_Handled" />
+    <bpmn:serviceTask id="RO_Handled" camunda:expression="${errorHandled}">
+      <bpmn:incoming>RO_f3</bpmn:incoming>
+      <bpmn:outgoing>RO_f4</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="RO_f4" sourceRef="RO_Handled" targetRef="RO_ErrorEnd" />
+    <bpmn:endEvent id="RO_ErrorEnd">
+      <bpmn:incoming>RO_f4</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:endEvent id="RO_End">
+      <bpmn:incoming>RO_f2</bpmn:incoming>
+    </bpmn:endEvent>
+  </bpmn:process>
+</bpmn:definitions>

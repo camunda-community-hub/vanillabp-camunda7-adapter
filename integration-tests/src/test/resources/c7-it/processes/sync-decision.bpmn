@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" id="Definitions_SyncDecision" targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:process id="SyncDecisionProcess" isExecutable="true">
+    <bpmn:startEvent id="SD_Start">
+      <bpmn:outgoing>SD_f1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:sequenceFlow id="SD_f1" sourceRef="SD_Start" targetRef="SD_Decide" />
+    <bpmn:serviceTask id="SD_Decide" camunda:expression="${decideTask}">
+      <bpmn:incoming>SD_f1</bpmn:incoming>
+      <bpmn:outgoing>SD_f2</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="SD_f2" sourceRef="SD_Decide" targetRef="SD_Gateway" />
+    <bpmn:exclusiveGateway id="SD_Gateway" default="SD_fNo">
+      <bpmn:incoming>SD_f2</bpmn:incoming>
+      <bpmn:outgoing>SD_fYes</bpmn:outgoing>
+      <bpmn:outgoing>SD_fNo</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:sequenceFlow id="SD_fYes" sourceRef="SD_Gateway" targetRef="SD_Await">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">${decided and customer.vip}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:serviceTask id="SD_Await" camunda:delegateExpression="${decisionAwait}">
+      <bpmn:incoming>SD_fYes</bpmn:incoming>
+      <bpmn:outgoing>SD_f3</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="SD_f3" sourceRef="SD_Await" targetRef="SD_End" />
+    <bpmn:sequenceFlow id="SD_fNo" sourceRef="SD_Gateway" targetRef="SD_Rejected" />
+    <bpmn:serviceTask id="SD_Rejected" camunda:expression="${decisionRejected}">
+      <bpmn:incoming>SD_fNo</bpmn:incoming>
+      <bpmn:outgoing>SD_f4</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="SD_f4" sourceRef="SD_Rejected" targetRef="SD_EndRejected" />
+    <bpmn:endEvent id="SD_End">
+      <bpmn:incoming>SD_f3</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:endEvent id="SD_EndRejected">
+      <bpmn:incoming>SD_f4</bpmn:incoming>
+    </bpmn:endEvent>
+  </bpmn:process>
+</bpmn:definitions>

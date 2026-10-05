@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" id="Definitions_Calling" targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:process id="CallingProcess" isExecutable="true">
+    <bpmn:startEvent id="StartEvent_1">
+      <bpmn:outgoing>Flow_start_to_call</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:sequenceFlow id="Flow_start_to_call" sourceRef="StartEvent_1" targetRef="CallActivity_1" />
+    <!-- deliberately WITHOUT camunda:in businessKey - VanillaBP injects it while preparing the BPMN -->
+    <bpmn:callActivity id="CallActivity_1" calledElement="CalledProcess">
+      <bpmn:incoming>Flow_start_to_call</bpmn:incoming>
+      <bpmn:outgoing>Flow_call_to_end</bpmn:outgoing>
+    </bpmn:callActivity>
+    <bpmn:sequenceFlow id="Flow_call_to_end" sourceRef="CallActivity_1" targetRef="EndEvent_1" />
+    <bpmn:endEvent id="EndEvent_1">
+      <bpmn:incoming>Flow_call_to_end</bpmn:incoming>
+    </bpmn:endEvent>
+  </bpmn:process>
+</bpmn:definitions>

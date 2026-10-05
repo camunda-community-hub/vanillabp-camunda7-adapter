@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+    xmlns:camunda="http://camunda.org/schema/1.0/bpmn"
+    id="Definitions_MiOuterCaller" targetNamespace="http://vanillabp.io/test">
+
+  <!-- the outermost level of the two-call-activity chain. It lives in a file of its own,
+       like the process it calls and like the process that one calls: with two of them in
+       one file the lookup finds the enclosing element by chance -->
+  <bpmn:process id="TwoLevelCaller" isExecutable="true">
+    <bpmn:startEvent id="TwoLevelCallerStart" />
+    <bpmn:sequenceFlow id="TwoLevelCallerStartFlow" sourceRef="TwoLevelCallerStart" targetRef="Regions" />
+    <bpmn:subProcess id="Regions">
+      <bpmn:multiInstanceLoopCharacteristics isSequential="true" camunda:collection="regions" camunda:elementVariable="region" />
+      <bpmn:startEvent id="RegionsStart" />
+      <bpmn:sequenceFlow id="RegionsStartFlow" sourceRef="RegionsStart" targetRef="PerRegion" />
+      <bpmn:callActivity id="PerRegion" calledElement="MiSubprocessCaller">
+        <bpmn:extensionElements>
+          <camunda:in source="orders" target="orders" />
+        </bpmn:extensionElements>
+      </bpmn:callActivity>
+      <bpmn:sequenceFlow id="PerRegionFlow" sourceRef="PerRegion" targetRef="RegionsEnd" />
+      <bpmn:endEvent id="RegionsEnd" />
+    </bpmn:subProcess>
+    <bpmn:sequenceFlow id="RegionsFlow" sourceRef="Regions" targetRef="TwoLevelCallerEnd" />
+    <bpmn:endEvent id="TwoLevelCallerEnd" />
+  </bpmn:process>
+
+</bpmn:definitions>

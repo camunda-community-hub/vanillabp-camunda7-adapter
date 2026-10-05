@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" id="Definitions_QTaskMatrix" targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:error id="QError_Payment" name="PaymentFailed" errorCode="PAYMENT_FAILED" />
+  <bpmn:process id="QTaskProcess" isExecutable="true">
+    <bpmn:startEvent id="QT_Start">
+      <bpmn:outgoing>QT_f1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:sequenceFlow id="QT_f1" sourceRef="QT_Start" targetRef="QT_Happy" />
+    <bpmn:serviceTask id="QT_Happy" camunda:expression="${qHappy}">
+      <bpmn:incoming>QT_f1</bpmn:incoming>
+      <bpmn:outgoing>QT_f2</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="QT_f2" sourceRef="QT_Happy" targetRef="QT_Error" />
+    <bpmn:serviceTask id="QT_Error" camunda:expression="${qError}">
+      <bpmn:incoming>QT_f2</bpmn:incoming>
+      <bpmn:outgoing>QT_f3</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:boundaryEvent id="QT_Boundary" attachedToRef="QT_Error">
+      <bpmn:outgoing>QT_fErr</bpmn:outgoing>
+      <bpmn:errorEventDefinition id="QT_ErrDef" errorRef="QError_Payment" />
+    </bpmn:boundaryEvent>
+    <bpmn:sequenceFlow id="QT_fErr" sourceRef="QT_Boundary" targetRef="QT_Handle" />
+    <bpmn:serviceTask id="QT_Handle" camunda:expression="${qHandled}">
+      <bpmn:incoming>QT_fErr</bpmn:incoming>
+      <bpmn:outgoing>QT_f4</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="QT_f3" sourceRef="QT_Error" targetRef="QT_End" />
+    <bpmn:sequenceFlow id="QT_f4" sourceRef="QT_Handle" targetRef="QT_EndHandled" />
+    <bpmn:endEvent id="QT_End">
+      <bpmn:incoming>QT_f3</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:endEvent id="QT_EndHandled">
+      <bpmn:incoming>QT_f4</bpmn:incoming>
+    </bpmn:endEvent>
+  </bpmn:process>
+  <bpmn:process id="QFailProcess" isExecutable="true">
+    <bpmn:startEvent id="QF_Start">
+      <bpmn:outgoing>QF_f1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:sequenceFlow id="QF_f1" sourceRef="QF_Start" targetRef="QF_Task" />
+    <bpmn:serviceTask id="QF_Task" camunda:expression="${qFails}">
+      <bpmn:incoming>QF_f1</bpmn:incoming>
+      <bpmn:outgoing>QF_f2</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="QF_f2" sourceRef="QF_Task" targetRef="QF_End" />
+    <bpmn:endEvent id="QF_End">
+      <bpmn:incoming>QF_f2</bpmn:incoming>
+    </bpmn:endEvent>
+  </bpmn:process>
+  <bpmn:process id="QAsyncProcess" isExecutable="true">
+    <bpmn:startEvent id="QA_Start">
+      <bpmn:outgoing>QA_f1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:sequenceFlow id="QA_f1" sourceRef="QA_Start" targetRef="QA_Task" />
+    <bpmn:serviceTask id="QA_Task" camunda:expression="${qAsync}">
+      <bpmn:incoming>QA_f1</bpmn:incoming>
+      <bpmn:outgoing>QA_f2</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="QA_f2" sourceRef="QA_Task" targetRef="QA_End" />
+    <bpmn:endEvent id="QA_End">
+      <bpmn:incoming>QA_f2</bpmn:incoming>
+    </bpmn:endEvent>
+  </bpmn:process>
+</bpmn:definitions>

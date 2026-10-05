@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- The model BEFORE the rename. Its two tasks are wired the two ways VanillaBP knows on
+     Camunda 7: one 'camunda:expression', which completes when the handler returns, and one
+     'camunda:delegateExpression', which stays open until the application completes it. The
+     difference lives in the model and nowhere else, which is why the adapter reads the
+     model the engine still holds rather than guessing from what the application serves. -->
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" id="Definitions_RenamedProcessV1" targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:message id="Msg_RenameContinue" name="RenameContinue" />
+  <bpmn:process id="RenamedProcessOld" isExecutable="true">
+    <bpmn:startEvent id="RN_Start">
+      <bpmn:outgoing>RN_f1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:sequenceFlow id="RN_f1" sourceRef="RN_Start" targetRef="RN_Started" />
+    <bpmn:serviceTask id="RN_Started" camunda:expression="${renameStarted}">
+      <bpmn:incoming>RN_f1</bpmn:incoming>
+      <bpmn:outgoing>RN_f2</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="RN_f2" sourceRef="RN_Started" targetRef="RN_Wait" />
+    <!-- where the workflow stands while the application is upgraded -->
+    <bpmn:intermediateCatchEvent id="RN_Wait">
+      <bpmn:incoming>RN_f2</bpmn:incoming>
+      <bpmn:outgoing>RN_f3</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="RN_MsgDef" messageRef="Msg_RenameContinue" />
+    </bpmn:intermediateCatchEvent>
+    <bpmn:sequenceFlow id="RN_f3" sourceRef="RN_Wait" targetRef="RN_Finished" />
+    <bpmn:serviceTask id="RN_Finished" camunda:delegateExpression="${renameFinished}">
+      <bpmn:incoming>RN_f3</bpmn:incoming>
+      <bpmn:outgoing>RN_f4</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="RN_f4" sourceRef="RN_Finished" targetRef="RN_End" />
+    <bpmn:endEvent id="RN_End">
+      <bpmn:incoming>RN_f4</bpmn:incoming>
+    </bpmn:endEvent>
+  </bpmn:process>
+</bpmn:definitions>

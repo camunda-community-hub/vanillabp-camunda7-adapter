@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+    xmlns:camunda="http://camunda.org/schema/1.0/bpmn"
+    id="Definitions_MiCallers" targetNamespace="http://vanillabp.io/test">
+
+  <!-- the shape the walk used to lose: a plain call activity inside a multi-instance
+       subprocess, with the called process in a file of its own -->
+  <bpmn:process id="MiSubprocessCaller" isExecutable="true">
+    <bpmn:startEvent id="MiSubprocessCallerStart" />
+    <bpmn:sequenceFlow id="MiSubprocessCallerStartFlow" sourceRef="MiSubprocessCallerStart" targetRef="OrderBatch" />
+    <bpmn:subProcess id="OrderBatch">
+      <bpmn:multiInstanceLoopCharacteristics isSequential="true" camunda:collection="orders" camunda:elementVariable="order" />
+      <bpmn:startEvent id="OrderBatchStart" />
+      <bpmn:sequenceFlow id="OrderBatchStartFlow" sourceRef="OrderBatchStart" targetRef="HandleOrder" />
+      <bpmn:callActivity id="HandleOrder" calledElement="ApprovalProcess" />
+      <bpmn:sequenceFlow id="HandleOrderFlow" sourceRef="HandleOrder" targetRef="OrderBatchEnd" />
+      <bpmn:endEvent id="OrderBatchEnd" />
+    </bpmn:subProcess>
+    <bpmn:sequenceFlow id="OrderBatchFlow" sourceRef="OrderBatch" targetRef="MiSubprocessCallerEnd" />
+    <bpmn:endEvent id="MiSubprocessCallerEnd" />
+  </bpmn:process>
+
+  <!-- the shape which worked before this fix, because the call activity carries the
+       multi-instance characteristics itself -->
+  <bpmn:process id="MiCallActivityCaller" isExecutable="true">
+    <bpmn:startEvent id="MiCallActivityCallerStart" />
+    <bpmn:sequenceFlow id="MiCallActivityCallerStartFlow" sourceRef="MiCallActivityCallerStart" targetRef="HandleEach" />
+    <bpmn:callActivity id="HandleEach" calledElement="ApprovalProcess">
+      <bpmn:multiInstanceLoopCharacteristics isSequential="true" camunda:collection="orders" camunda:elementVariable="order" />
+    </bpmn:callActivity>
+    <bpmn:sequenceFlow id="HandleEachFlow" sourceRef="HandleEach" targetRef="MiCallActivityCallerEnd" />
+    <bpmn:endEvent id="MiCallActivityCallerEnd" />
+  </bpmn:process>
+
+  <!-- a called process which iterates on its own, so two chains meet -->
+  <bpmn:process id="OwnLoopCaller" isExecutable="true">
+    <bpmn:startEvent id="OwnLoopCallerStart" />
+    <bpmn:sequenceFlow id="OwnLoopCallerStartFlow" sourceRef="OwnLoopCallerStart" targetRef="Batch" />
+    <bpmn:subProcess id="Batch">
+      <bpmn:multiInstanceLoopCharacteristics isSequential="true" camunda:collection="batches" camunda:elementVariable="batch" />
+      <bpmn:startEvent id="BatchStart" />
+      <bpmn:sequenceFlow id="BatchStartFlow" sourceRef="BatchStart" targetRef="HandleBatch" />
+      <bpmn:callActivity id="HandleBatch" calledElement="OwnLoopProcess">
+        <bpmn:extensionElements>
+          <camunda:in source="items" target="items" />
+        </bpmn:extensionElements>
+      </bpmn:callActivity>
+      <bpmn:sequenceFlow id="HandleBatchFlow" sourceRef="HandleBatch" targetRef="BatchEnd" />
+      <bpmn:endEvent id="BatchEnd" />
+    </bpmn:subProcess>
+    <bpmn:sequenceFlow id="BatchFlow" sourceRef="Batch" targetRef="OwnLoopCallerEnd" />
+    <bpmn:endEvent id="OwnLoopCallerEnd" />
+  </bpmn:process>
+
+  <!-- the called process named by an EXPRESSION: the deployment reads a string nobody can
+       resolve yet, so nothing is written onto this call activity and the walk has to ask
+       the core while the workflow runs -->
+  <bpmn:process id="ExpressionCaller" isExecutable="true">
+    <bpmn:startEvent id="ExpressionCallerStart" />
+    <bpmn:sequenceFlow id="ExpressionCallerStartFlow" sourceRef="ExpressionCallerStart" targetRef="ExpressionBatch" />
+    <bpmn:subProcess id="ExpressionBatch">
+      <bpmn:multiInstanceLoopCharacteristics isSequential="true" camunda:collection="orders" camunda:elementVariable="order" />
+      <bpmn:startEvent id="ExpressionBatchStart" />
+      <bpmn:sequenceFlow id="ExpressionBatchStartFlow" sourceRef="ExpressionBatchStart" targetRef="HandleByExpression" />
+      <bpmn:callActivity id="HandleByExpression" calledElement="${processToCall}" />
+      <bpmn:sequenceFlow id="HandleByExpressionFlow" sourceRef="HandleByExpression" targetRef="ExpressionBatchEnd" />
+      <bpmn:endEvent id="ExpressionBatchEnd" />
+    </bpmn:subProcess>
+    <bpmn:sequenceFlow id="ExpressionBatchFlow" sourceRef="ExpressionBatch" targetRef="ExpressionCallerEnd" />
+    <bpmn:endEvent id="ExpressionCallerEnd" />
+  </bpmn:process>
+
+  <!-- the same naming, reaching a process with an aggregate of its own: the core says no
+       and the walk ends there, exactly as it does for a statically named one -->
+  <bpmn:process id="ForeignByExpressionCaller" isExecutable="true">
+    <bpmn:startEvent id="ForeignByExpressionCallerStart" />
+    <bpmn:sequenceFlow id="ForeignByExpressionCallerStartFlow" sourceRef="ForeignByExpressionCallerStart" targetRef="ForeignByExpressionBatch" />
+    <bpmn:subProcess id="ForeignByExpressionBatch">
+      <bpmn:multiInstanceLoopCharacteristics isSequential="true" camunda:collection="orders" camunda:elementVariable="order" />
+      <bpmn:startEvent id="ForeignByExpressionBatchStart" />
+      <bpmn:sequenceFlow id="ForeignByExpressionBatchStartFlow" sourceRef="ForeignByExpressionBatchStart" targetRef="ShipByExpression" />
+      <bpmn:callActivity id="ShipByExpression" calledElement="${processToCall}" />
+      <bpmn:sequenceFlow id="ShipByExpressionFlow" sourceRef="ShipByExpression" targetRef="ForeignByExpressionBatchEnd" />
+      <bpmn:endEvent id="ForeignByExpressionBatchEnd" />
+    </bpmn:subProcess>
+    <bpmn:sequenceFlow id="ForeignByExpressionBatchFlow" sourceRef="ForeignByExpressionBatch" targetRef="ForeignByExpressionCallerEnd" />
+    <bpmn:endEvent id="ForeignByExpressionCallerEnd" />
+  </bpmn:process>
+
+  <!-- a called process working on a workflow aggregate of its own -->
+  <bpmn:process id="ForeignAggregateCaller" isExecutable="true">
+    <bpmn:startEvent id="ForeignAggregateCallerStart" />
+    <bpmn:sequenceFlow id="ForeignAggregateCallerStartFlow" sourceRef="ForeignAggregateCallerStart" targetRef="Shipments" />
+    <bpmn:subProcess id="Shipments">
+      <bpmn:multiInstanceLoopCharacteristics isSequential="true" camunda:collection="orders" camunda:elementVariable="order" />
+      <bpmn:startEvent id="ShipmentsStart" />
+      <bpmn:sequenceFlow id="ShipmentsStartFlow" sourceRef="ShipmentsStart" targetRef="Ship" />
+      <bpmn:callActivity id="Ship" calledElement="OwnAggregateProcess" />
+      <bpmn:sequenceFlow id="ShipFlow" sourceRef="Ship" targetRef="ShipmentsEnd" />
+      <bpmn:endEvent id="ShipmentsEnd" />
+    </bpmn:subProcess>
+    <bpmn:sequenceFlow id="ShipmentsFlow" sourceRef="Shipments" targetRef="ForeignAggregateCallerEnd" />
+    <bpmn:endEvent id="ForeignAggregateCallerEnd" />
+  </bpmn:process>
+
+</bpmn:definitions>

@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:camunda="http://camunda.org/schema/1.0/bpmn"
+                  id="Definitions_1" targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:process id="ExpressionsProcess" isExecutable="true">
+    <bpmn:startEvent id="Start"/>
+    <bpmn:exclusiveGateway id="Gateway"/>
+    <bpmn:sequenceFlow id="Flow_yes" sourceRef="Gateway" targetRef="Approve">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression"
+                                xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">${approved and not empty customerName}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:serviceTask id="Approve" camunda:expression="${approveTask.execute(execution)}"/>
+    <bpmn:serviceTask id="Assess" camunda:delegateExpression="${assessTask}">
+      <bpmn:multiInstanceLoopCharacteristics camunda:collection="${riskFactors}" camunda:elementVariable="factor"/>
+    </bpmn:serviceTask>
+    <bpmn:boundaryEvent id="Reminder" attachedToRef="Approve" cancelActivity="false">
+      <bpmn:timerEventDefinition id="Timer_1">
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression"
+                           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">${reminderDelay}</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:boundaryEvent>
+    <bpmn:endEvent id="End"/>
+  </bpmn:process>
+</bpmn:definitions>

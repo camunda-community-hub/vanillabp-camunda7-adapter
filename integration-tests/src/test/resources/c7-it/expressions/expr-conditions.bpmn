@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Definitions_ExprConditions" targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:process id="ExprConditions" isExecutable="true">
+    <bpmn:startEvent id="EC_Start"><bpmn:outgoing>EC_f0</bpmn:outgoing></bpmn:startEvent>
+    <bpmn:sequenceFlow id="EC_f0" sourceRef="EC_Start" targetRef="EC_Fork" />
+    <bpmn:parallelGateway id="EC_Fork">
+      <bpmn:incoming>EC_f0</bpmn:incoming>
+      <bpmn:outgoing>EC_fork_park</bpmn:outgoing>
+      <bpmn:outgoing>EC_fork_C01</bpmn:outgoing>
+      <bpmn:outgoing>EC_fork_C02</bpmn:outgoing>
+      <bpmn:outgoing>EC_fork_C07</bpmn:outgoing>
+      <bpmn:outgoing>EC_fork_C08</bpmn:outgoing>
+      <bpmn:outgoing>EC_fork_C10</bpmn:outgoing>
+      <bpmn:outgoing>EC_fork_C19</bpmn:outgoing>
+      <bpmn:outgoing>EC_fork_C20</bpmn:outgoing>
+      <bpmn:outgoing>EC_fork_C21</bpmn:outgoing>
+    </bpmn:parallelGateway>
+    <bpmn:sequenceFlow id="EC_fork_park" sourceRef="EC_Fork" targetRef="EC_Park" />
+    <bpmn:intermediateCatchEvent id="EC_Park" camunda:asyncBefore="true">
+      <bpmn:incoming>EC_fork_park</bpmn:incoming>
+      <bpmn:outgoing>EC_fpark</bpmn:outgoing>
+      <bpmn:timerEventDefinition>
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT1H</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:sequenceFlow id="EC_fpark" sourceRef="EC_Park" targetRef="EC_ParkEnd" />
+    <bpmn:endEvent id="EC_ParkEnd"><bpmn:incoming>EC_fpark</bpmn:incoming></bpmn:endEvent>
+    <bpmn:sequenceFlow id="EC_fork_C01" sourceRef="EC_Fork" targetRef="EC_Gw_C01" />
+    <bpmn:exclusiveGateway id="EC_Gw_C01" camunda:asyncBefore="true" default="EC_no_C01">
+      <bpmn:incoming>EC_fork_C01</bpmn:incoming>
+      <bpmn:outgoing>EC_yes_C01</bpmn:outgoing>
+      <bpmn:outgoing>EC_no_C01</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:sequenceFlow id="EC_yes_C01" sourceRef="EC_Gw_C01" targetRef="EC_True_C01">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${order.customer.vip}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="EC_no_C01" sourceRef="EC_Gw_C01" targetRef="EC_False_C01" />
+    <bpmn:endEvent id="EC_True_C01"><bpmn:incoming>EC_yes_C01</bpmn:incoming></bpmn:endEvent>
+    <bpmn:endEvent id="EC_False_C01"><bpmn:incoming>EC_no_C01</bpmn:incoming></bpmn:endEvent>
+    <bpmn:sequenceFlow id="EC_fork_C02" sourceRef="EC_Fork" targetRef="EC_Gw_C02" />
+    <bpmn:exclusiveGateway id="EC_Gw_C02" camunda:asyncBefore="true" default="EC_no_C02">
+      <bpmn:incoming>EC_fork_C02</bpmn:incoming>
+      <bpmn:outgoing>EC_yes_C02</bpmn:outgoing>
+      <bpmn:outgoing>EC_no_C02</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:sequenceFlow id="EC_yes_C02" sourceRef="EC_Gw_C02" targetRef="EC_True_C02">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${order.getTotal() &gt; 100}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="EC_no_C02" sourceRef="EC_Gw_C02" targetRef="EC_False_C02" />
+    <bpmn:endEvent id="EC_True_C02"><bpmn:incoming>EC_yes_C02</bpmn:incoming></bpmn:endEvent>
+    <bpmn:endEvent id="EC_False_C02"><bpmn:incoming>EC_no_C02</bpmn:incoming></bpmn:endEvent>
+    <bpmn:sequenceFlow id="EC_fork_C07" sourceRef="EC_Fork" targetRef="EC_Gw_C07" />
+    <bpmn:exclusiveGateway id="EC_Gw_C07" camunda:asyncBefore="true" default="EC_no_C07">
+      <bpmn:incoming>EC_fork_C07</bpmn:incoming>
+      <bpmn:outgoing>EC_yes_C07</bpmn:outgoing>
+      <bpmn:outgoing>EC_no_C07</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:sequenceFlow id="EC_yes_C07" sourceRef="EC_Gw_C07" targetRef="EC_True_C07">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${order.dueDate.year &gt; 2000}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="EC_no_C07" sourceRef="EC_Gw_C07" targetRef="EC_False_C07" />
+    <bpmn:endEvent id="EC_True_C07"><bpmn:incoming>EC_yes_C07</bpmn:incoming></bpmn:endEvent>
+    <bpmn:endEvent id="EC_False_C07"><bpmn:incoming>EC_no_C07</bpmn:incoming></bpmn:endEvent>
+    <bpmn:sequenceFlow id="EC_fork_C08" sourceRef="EC_Fork" targetRef="EC_Gw_C08" />
+    <bpmn:exclusiveGateway id="EC_Gw_C08" camunda:asyncBefore="true" default="EC_no_C08">
+      <bpmn:incoming>EC_fork_C08</bpmn:incoming>
+      <bpmn:outgoing>EC_yes_C08</bpmn:outgoing>
+      <bpmn:outgoing>EC_no_C08</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:sequenceFlow id="EC_yes_C08" sourceRef="EC_Gw_C08" targetRef="EC_True_C08">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${order.internalCode == 'IC-9'}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="EC_no_C08" sourceRef="EC_Gw_C08" targetRef="EC_False_C08" />
+    <bpmn:endEvent id="EC_True_C08"><bpmn:incoming>EC_yes_C08</bpmn:incoming></bpmn:endEvent>
+    <bpmn:endEvent id="EC_False_C08"><bpmn:incoming>EC_no_C08</bpmn:incoming></bpmn:endEvent>
+    <bpmn:sequenceFlow id="EC_fork_C10" sourceRef="EC_Fork" targetRef="EC_Gw_C10" />
+    <bpmn:exclusiveGateway id="EC_Gw_C10" camunda:asyncBefore="true" default="EC_no_C10">
+      <bpmn:incoming>EC_fork_C10</bpmn:incoming>
+      <bpmn:outgoing>EC_yes_C10</bpmn:outgoing>
+      <bpmn:outgoing>EC_no_C10</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:sequenceFlow id="EC_yes_C10" sourceRef="EC_Gw_C10" targetRef="EC_True_C10">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${hiddenOrder.status == 'OPEN'}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="EC_no_C10" sourceRef="EC_Gw_C10" targetRef="EC_False_C10" />
+    <bpmn:endEvent id="EC_True_C10"><bpmn:incoming>EC_yes_C10</bpmn:incoming></bpmn:endEvent>
+    <bpmn:endEvent id="EC_False_C10"><bpmn:incoming>EC_no_C10</bpmn:incoming></bpmn:endEvent>
+    <bpmn:sequenceFlow id="EC_fork_C19" sourceRef="EC_Fork" targetRef="EC_Gw_C19" />
+    <bpmn:exclusiveGateway id="EC_Gw_C19" camunda:asyncBefore="true">
+      <bpmn:incoming>EC_fork_C19</bpmn:incoming>
+      <bpmn:outgoing>EC_yes_C19</bpmn:outgoing>
+      <bpmn:outgoing>EC_never_C19</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:sequenceFlow id="EC_yes_C19" sourceRef="EC_Gw_C19" targetRef="EC_True_C19">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${order.internalCode == 'IC-9'}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="EC_never_C19" sourceRef="EC_Gw_C19" targetRef="EC_Never_C19">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${1 == 2}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:endEvent id="EC_True_C19"><bpmn:incoming>EC_yes_C19</bpmn:incoming></bpmn:endEvent>
+    <bpmn:endEvent id="EC_Never_C19"><bpmn:incoming>EC_never_C19</bpmn:incoming></bpmn:endEvent>
+    <bpmn:sequenceFlow id="EC_fork_C20" sourceRef="EC_Fork" targetRef="EC_Gw_C20" />
+    <bpmn:exclusiveGateway id="EC_Gw_C20" camunda:asyncBefore="true">
+      <bpmn:incoming>EC_fork_C20</bpmn:incoming>
+      <bpmn:outgoing>EC_yes_C20</bpmn:outgoing>
+      <bpmn:outgoing>EC_never_C20</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:sequenceFlow id="EC_yes_C20" sourceRef="EC_Gw_C20" targetRef="EC_True_C20">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${order.getTotal() &gt; 100}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="EC_never_C20" sourceRef="EC_Gw_C20" targetRef="EC_Never_C20">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${1 == 2}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:endEvent id="EC_True_C20"><bpmn:incoming>EC_yes_C20</bpmn:incoming></bpmn:endEvent>
+    <bpmn:endEvent id="EC_Never_C20"><bpmn:incoming>EC_never_C20</bpmn:incoming></bpmn:endEvent>
+    <bpmn:sequenceFlow id="EC_fork_C21" sourceRef="EC_Fork" targetRef="EC_Gw_C21" />
+    <bpmn:exclusiveGateway id="EC_Gw_C21" camunda:asyncBefore="true" default="EC_no_C21">
+      <bpmn:incoming>EC_fork_C21</bpmn:incoming>
+      <bpmn:outgoing>EC_yes_C21</bpmn:outgoing>
+      <bpmn:outgoing>EC_no_C21</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:sequenceFlow id="EC_yes_C21" sourceRef="EC_Gw_C21" targetRef="EC_True_C21">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${order.customer.address.city == 'X'}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="EC_no_C21" sourceRef="EC_Gw_C21" targetRef="EC_False_C21" />
+    <bpmn:endEvent id="EC_True_C21"><bpmn:incoming>EC_yes_C21</bpmn:incoming></bpmn:endEvent>
+    <bpmn:endEvent id="EC_False_C21"><bpmn:incoming>EC_no_C21</bpmn:incoming></bpmn:endEvent>
+  </bpmn:process>
+</bpmn:definitions>

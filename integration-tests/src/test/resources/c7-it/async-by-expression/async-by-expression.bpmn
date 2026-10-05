@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- The same AsyncProcess as in 'processes/task-matrix.bpmn', but its task
+     is wired by 'camunda:expression' - which completes the task when the expression
+     returns, while the serving method declares @TaskId and wants to keep it open.
+     The application must not start. -->
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" id="Definitions_AsyncByExpression" targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:process id="AsyncProcess" isExecutable="true">
+    <bpmn:startEvent id="AP_Start">
+      <bpmn:outgoing>AP_f1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:sequenceFlow id="AP_f1" sourceRef="AP_Start" targetRef="AP_Task" />
+    <bpmn:serviceTask id="AP_Task" camunda:expression="${asyncTask}">
+      <bpmn:incoming>AP_f1</bpmn:incoming>
+      <bpmn:outgoing>AP_f2</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="AP_f2" sourceRef="AP_Task" targetRef="AP_End" />
+    <bpmn:endEvent id="AP_End">
+      <bpmn:incoming>AP_f2</bpmn:incoming>
+    </bpmn:endEvent>
+  </bpmn:process>
+</bpmn:definitions>

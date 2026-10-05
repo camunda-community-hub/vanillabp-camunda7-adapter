@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" id="Definitions_Orphan" targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:process id="OrphanProcess" isExecutable="true">
+    <bpmn:startEvent id="OP_Start">
+      <bpmn:outgoing>OP_f1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:sequenceFlow id="OP_f1" sourceRef="OP_Start" targetRef="OP_Task" />
+    <bpmn:serviceTask id="OP_Task" camunda:expression="${orphanModelled}">
+      <bpmn:incoming>OP_f1</bpmn:incoming>
+      <bpmn:outgoing>OP_f2</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="OP_f2" sourceRef="OP_Task" targetRef="OP_End" />
+    <bpmn:endEvent id="OP_End">
+      <bpmn:incoming>OP_f2</bpmn:incoming>
+    </bpmn:endEvent>
+  </bpmn:process>
+</bpmn:definitions>

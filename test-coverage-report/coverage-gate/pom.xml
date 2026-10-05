@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>org.camunda.community.vanillabp</groupId>
+    <artifactId>camunda7-adapter-test-coverage-report</artifactId>
+    <version>2.0.0-SNAPSHOT</version>
+  </parent>
+
+  <artifactId>camunda7-adapter-coverage-gate</artifactId>
+  <name>VanillaBP Camunda 7 adapter - Test coverage gate</name>
+  <description>Breaks the build when a platform's aggregated coverage drops below the threshold, or when a module produces coverage data no aggregated report reads. Declared as the LAST module of the reactor, because it judges what the other modules produced.</description>
+
+  <properties>
+    <!-- nothing to publish - this module only judges the reports -->
+    <maven.install.skip>true</maven.install.skip>
+    <maven.deploy.skip>true</maven.deploy.skip>
+    <!-- and therefore no javadoc to check: the goal is bound in every module of this
+         build, and a module which publishes nothing has no reader to write for -->
+    <maven.javadoc.skip>true</maven.javadoc.skip>
+    <!-- the gate contributes no coverage itself, so it needs no entry in any report;
+         the empty agent keeps Surefire's inherited '@{jacoco.agent}' resolvable -->
+    <jacoco.skip>true</jacoco.skip>
+    <jacoco.agent/>
+  </properties>
+
+  <dependencies>
+    <dependency>
+      <groupId>io.vanillabp</groupId>
+      <artifactId>test-utils</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter</artifactId>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <artifactId>maven-jar-plugin</artifactId>
+        <configuration>
+          <!-- the module has no main sources; 'mvn install verify' runs the package phase
+               twice, and the second attempt to attach an empty JAR fails the build -->
+          <skipIfEmpty>true</skipIfEmpty>
+        </configuration>
+      </plugin>
+      <plugin>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <configuration>
+          <systemPropertyVariables>
+            <coverage.repository.root>${project.basedir}/../..</coverage.repository.root>
+            <!-- the gate runs in 'test', the reports it reads are written in 'verify',
+                 so it has to know whether this run gets that far. Maven's own goals are
+                 a list and arrive empty as a system property; the command line its
+                 launcher exports carries the same answer as text -->
+            <coverage.maven.command>${env.MAVEN_CMD_LINE_ARGS}</coverage.maven.command>
+            <coverage.threshold.spring-boot>${coverage.threshold.spring-boot}</coverage.threshold.spring-boot>
+            <coverage.threshold.quarkus>${coverage.threshold.quarkus}</coverage.threshold.quarkus>
+            <coverage.rule>${coverage.rule}</coverage.rule>
+          </systemPropertyVariables>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+</project>

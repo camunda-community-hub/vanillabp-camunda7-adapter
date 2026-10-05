@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Definitions_LossyFormat" targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:process id="LossyFormat" isExecutable="true">
+    <bpmn:startEvent id="LF_Start">
+      <bpmn:outgoing>LF_f1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:sequenceFlow id="LF_f1" sourceRef="LF_Start" targetRef="LF_Gw" />
+    <bpmn:exclusiveGateway id="LF_Gw" default="LF_Else">
+      <bpmn:incoming>LF_f1</bpmn:incoming>
+      <bpmn:outgoing>LF_Top</bpmn:outgoing>
+      <bpmn:outgoing>LF_Nested</bpmn:outgoing>
+      <bpmn:outgoing>LF_Reference</bpmn:outgoing>
+      <bpmn:outgoing>LF_Else</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:sequenceFlow id="LF_Top" sourceRef="LF_Gw" targetRef="LF_End">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${total &gt; 100}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="LF_Nested" sourceRef="LF_Gw" targetRef="LF_End">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${order.total &gt; 100}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="LF_Reference" sourceRef="LF_Gw" targetRef="LF_End">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${reference == 'REF-1'}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="LF_Else" sourceRef="LF_Gw" targetRef="LF_End" />
+    <bpmn:endEvent id="LF_End">
+      <bpmn:incoming>LF_Top</bpmn:incoming>
+      <bpmn:incoming>LF_Nested</bpmn:incoming>
+      <bpmn:incoming>LF_Reference</bpmn:incoming>
+      <bpmn:incoming>LF_Else</bpmn:incoming>
+    </bpmn:endEvent>
+  </bpmn:process>
+</bpmn:definitions>

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" id="Definitions_Broken" targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:process id="TaskProcess" isExecutable="true">
+    <bpmn:startEvent id="BR_Start">
+      <bpmn:outgoing>BR_f1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:sequenceFlow id="BR_f1" sourceRef="BR_Start" targetRef="BR_Task" />
+    <bpmn:serviceTask id="BR_Task" camunda:expression="${notImplemented}">
+      <bpmn:incoming>BR_f1</bpmn:incoming>
+      <bpmn:outgoing>BR_f2</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="BR_f2" sourceRef="BR_Task" targetRef="BR_End" />
+    <bpmn:endEvent id="BR_End">
+      <bpmn:incoming>BR_f2</bpmn:incoming>
+    </bpmn:endEvent>
+  </bpmn:process>
+</bpmn:definitions>

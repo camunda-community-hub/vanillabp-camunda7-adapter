@@ -1,0 +1,2 @@
+org.springframework.boot.EnvironmentPostProcessor=\
+  io.vanillabp.camunda7.springboot.webapps.Camunda7WebappsEnvironmentPostProcessor

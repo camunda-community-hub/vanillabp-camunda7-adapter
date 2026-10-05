@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Definitions_ModelledListeners" targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:process id="ModelledListenerProcess" isExecutable="true">
+    <bpmn:startEvent id="ML_Start">
+      <bpmn:outgoing>ML_f1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:sequenceFlow id="ML_f1" sourceRef="ML_Start" targetRef="ML_Work" />
+    <bpmn:serviceTask id="ML_Work" camunda:delegateExpression="${doTheWork}">
+      <bpmn:incoming>ML_f1</bpmn:incoming>
+      <bpmn:outgoing>ML_f2</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="ML_f2" sourceRef="ML_Work" targetRef="ML_Wait" />
+    <bpmn:userTask id="ML_Wait">
+      <bpmn:extensionElements>
+        <camunda:executionListener event="start" expression="${theWaitBegins}" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>ML_f2</bpmn:incoming>
+      <bpmn:outgoing>ML_f3</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:sequenceFlow id="ML_f3" sourceRef="ML_Wait" targetRef="ML_End" />
+    <bpmn:boundaryEvent id="ML_Timeout" attachedToRef="ML_Wait" cancelActivity="true">
+      <bpmn:outgoing>ML_f4</bpmn:outgoing>
+      <bpmn:timerEventDefinition>
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT1S</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:boundaryEvent>
+    <bpmn:sequenceFlow id="ML_f4" sourceRef="ML_Timeout" targetRef="ML_End" />
+    <bpmn:endEvent id="ML_End">
+      <bpmn:extensionElements>
+        <camunda:executionListener event="start" expression="${theEndIsReached}" />
+        <camunda:executionListener event="end" delegateExpression="${theEndIsDone}" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>ML_f3</bpmn:incoming>
+      <bpmn:incoming>ML_f4</bpmn:incoming>
+    </bpmn:endEvent>
+  </bpmn:process>
+</bpmn:definitions>

@@ -1,0 +1,37 @@
+quarkus:
+  datasource:
+    db-kind: h2
+    jdbc:
+      url: jdbc:h2:mem:c7-quarkus-facts-default;DB_CLOSE_DELAY=-1
+    c7b:
+      db-kind: h2
+      jdbc:
+        url: jdbc:h2:mem:c7-quarkus-facts-named;DB_CLOSE_DELAY=-1
+  hibernate-orm:
+    schema-management:
+      strategy: drop-and-create
+vanillabp:
+  adapters:
+    c7:
+      type: camunda7
+      data-source-name: default
+      name-clash-avoidance: by-adapter
+    c7b:
+      type: camunda7
+      data-source-name: c7b
+      name-clash-avoidance: by-adapter
+  prioritized-adapters:
+    - c7
+    - c7b
+  workflow-modules:
+    c7-test:
+      adapters:
+        c7:
+          resources-location: classpath:c7-test/processes
+        c7b:
+          resources-location: classpath:c7-test/processes
+      workflows:
+        TestProcess:
+          allow-full-sync-with-bpms: true
+          declared-aggregate-values:
+            - '*'

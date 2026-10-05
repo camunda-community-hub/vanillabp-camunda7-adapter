@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" id="Definitions_TestProcess" targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:process id="TestProcess" isExecutable="true">
+    <bpmn:startEvent id="StartEvent_1">
+      <bpmn:outgoing>Flow_start_to_task</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:sequenceFlow id="Flow_start_to_task" sourceRef="StartEvent_1" targetRef="ServiceTask_1" />
+    <!-- the expression names the @WorkflowTask method's
+         task definition; the adapter's parse listener forces async-before/after anyway -->
+    <bpmn:serviceTask id="ServiceTask_1" camunda:expression="${testTask}">
+      <bpmn:incoming>Flow_start_to_task</bpmn:incoming>
+      <bpmn:outgoing>Flow_task_to_end</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="Flow_task_to_end" sourceRef="ServiceTask_1" targetRef="EndEvent_1" />
+    <bpmn:endEvent id="EndEvent_1">
+      <bpmn:incoming>Flow_task_to_end</bpmn:incoming>
+    </bpmn:endEvent>
+  </bpmn:process>
+</bpmn:definitions>

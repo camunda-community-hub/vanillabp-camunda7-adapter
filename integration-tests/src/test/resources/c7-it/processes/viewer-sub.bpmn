@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitions_ViewerSubProcess" targetNamespace="http://bpmn.io/schema/bpmn">
+  <!-- the called process of ViewerParentProcess: waits in a timer catch event so the
+       workflow stays running while the viewer API is queried -->
+  <bpmn:process id="ViewerSubProcess" isExecutable="true">
+    <bpmn:startEvent id="TheSubStartEvent">
+      <bpmn:outgoing>Flow_sub_start_to_wait</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:sequenceFlow id="Flow_sub_start_to_wait" sourceRef="TheSubStartEvent" targetRef="TheWait" />
+    <bpmn:intermediateCatchEvent id="TheWait">
+      <bpmn:incoming>Flow_sub_start_to_wait</bpmn:incoming>
+      <bpmn:outgoing>Flow_wait_to_sub_end</bpmn:outgoing>
+      <bpmn:timerEventDefinition id="TheWaitTimer">
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">PT2H</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:sequenceFlow id="Flow_wait_to_sub_end" sourceRef="TheWait" targetRef="TheSubEndEvent" />
+    <bpmn:endEvent id="TheSubEndEvent">
+      <bpmn:incoming>Flow_wait_to_sub_end</bpmn:incoming>
+    </bpmn:endEvent>
+  </bpmn:process>
+</bpmn:definitions>

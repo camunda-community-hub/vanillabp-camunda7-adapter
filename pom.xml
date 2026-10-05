@@ -1,133 +1,33 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" child.project.url.inherit.append.path="false" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
+  <!-- The release parent of the Camunda Community Hub. Its profiles are the way a hub
+       extension publishes, and they are the contract with the hub, so this repository takes
+       it rather than the VanillaBP release parent. 'relativePath' is empty because there is
+       no POM beside this one to find it in; without that, Maven looks at '../pom.xml'
+       first. -->
   <parent>
     <groupId>org.camunda.community</groupId>
     <artifactId>community-hub-release-parent</artifactId>
     <version>2.1.0</version>
+    <relativePath/>
   </parent>
 
   <groupId>org.camunda.community.vanillabp</groupId>
-  <artifactId>camunda7-adapter</artifactId>
-
-  <name>VanillaBP SPI adapter for Camunda 7.x</name>
-  <version>1.6.1-SNAPSHOT</version>
+  <artifactId>camunda7-adapter-parent</artifactId>
+  <version>2.0.0-SNAPSHOT</version>
   <packaging>pom</packaging>
-  <description>This is an adapter which implements the binding of the VanillaBP SPI in order to run business processes using Camunda 7.</description>
+  <name>VanillaBP Camunda 7 adapter</name>
+  <description>VanillaBP Version 2 adapter for Camunda 7 (embedded engine).</description>
+  <!-- Our own address, because the hub parent has one and a child inherits it with its own
+       name appended. Without these lines every artifact of this repository pointed at
+       'github.com/camunda-community-hub/camunda7-adapter-parent', and the three <scm>
+       values at a path under the parent's own repository. Neither is a page. The four
+       'inherit.append.path' attributes turn the appending off, one on <project> above for
+       the URL and three on <scm> below. The Camunda 8 root POM says the same thing the
+       same way. -->
   <url>https://github.com/camunda-community-hub/vanillabp-camunda7-adapter</url>
-
-  <properties>
-    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <!--
-      Camunda 7 Enterprise. Spring Boot 4 is only supported from 7.24.3 onwards, and only through the
-      artifacts carrying a "-4" suffix; Camunda 7 Community ended with 7.24.0 in October 2025. 7.24.12-ee
-      is the highest version currently available in the internal repository.
-
-      Requires the Camunda Artifactory
-    -->
-    <camunda.version>7.24.12-ee</camunda.version>
-    <version.java>21</version.java>
-  </properties>
-
-  <build>
-    <pluginManagement>
-      <plugins>
-        <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-source-plugin</artifactId>
-          <executions>
-            <execution>
-              <id>attach-sources</id>
-              <goals>
-                <goal>jar</goal>
-              </goals>
-            </execution>
-          </executions>
-        </plugin>
-        <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-compiler-plugin</artifactId>
-          <version>3.10.1</version>
-          <configuration>
-            <release>${version.java}</release>
-          </configuration>
-        </plugin>
-        <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-deploy-plugin</artifactId>
-          <configuration>
-            <skip>false</skip>
-          </configuration>
-        </plugin>
-        <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-javadoc-plugin</artifactId>
-          <version>3.6.0</version>
-          <configuration>
-            <release>${version.java}</release>
-          </configuration>
-        </plugin>
-      </plugins>
-    </pluginManagement>
-    <plugins>
-      <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>flatten-maven-plugin</artifactId>
-        <version>1.8.0</version>
-        <configuration>
-          <flattenMode>oss</flattenMode>
-        </configuration>
-        <executions>
-          <execution>
-            <id>flatten</id><phase>process-resources</phase><goals><goal>flatten</goal></goals>
-          </execution>
-          <execution>
-            <id>flatten.clean</id><phase>clean</phase><goals><goal>clean</goal></goals>
-          </execution>
-        </executions>
-      </plugin>
-    </plugins>
-  </build>
-
-  <repositories>
-    <repository>
-      <!--
-        Camunda 7 enterprise artifacts, needed since 1.6.0: Spring Boot 4 support arrived in Camunda
-        7.24.3 and the 7.24 line is enterprise-only.
-
-        Credentials come from settings.xml, never from here.
-
-        Note the "-ee" in the path: artifactory/camunda-bpm serves the community artifacts and answers 404
-        for camunda-bpm-spring-boot-starter-4, measured with valid enterprise credentials.
-      -->
-      <id>camunda-enterprise</id>
-      <url>https://artifacts.camunda.com/artifactory/camunda-bpm-ee/</url>
-    </repository>
-  </repositories>
-
-  <dependencyManagement>
-    <dependencies>
-      <dependency>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-dependencies</artifactId>
-        <version>4.1.0</version>
-        <type>pom</type>
-        <scope>import</scope>
-      </dependency>
-      <dependency>
-        <groupId>org.camunda.bpm</groupId>
-        <artifactId>camunda-bom</artifactId>
-        <version>${camunda.version}</version>
-        <scope>import</scope>
-        <type>pom</type>
-      </dependency>
-    </dependencies>
-  </dependencyManagement>
-
-  <modules>
-    <module>spring-boot</module>
-  </modules>
 
   <licenses>
     <license>
@@ -145,10 +45,21 @@
     </developer>
   </developers>
 
-  <scm>
+  <modules>
+    <module>core</module>
+    <module>spring-boot</module>
+    <module>spring-boot-webapps</module>
+    <module>quarkus/runtime</module>
+    <module>quarkus/deployment</module>
+    <module>quarkus/integration-tests</module>
+    <module>integration-tests</module>
+    <module>test-coverage-report</module>
+  </modules>
+
+  <scm child.scm.connection.inherit.append.path="false" child.scm.developerConnection.inherit.append.path="false" child.scm.url.inherit.append.path="false">
     <connection>scm:git:https://github.com/camunda-community-hub/vanillabp-camunda7-adapter.git</connection>
     <developerConnection>scm:git:https://github.com/camunda-community-hub/vanillabp-camunda7-adapter.git</developerConnection>
-    <url>http://github.com/camunda-community-hub/vanillabp-camunda7-adapter/tree/main</url>
+    <url>https://github.com/camunda-community-hub/vanillabp-camunda7-adapter/tree/main</url>
   </scm>
 
   <distributionManagement>
@@ -158,4 +69,394 @@
       <url>https://maven.pkg.github.com/camunda-community-hub/vanillabp-camunda7-adapter</url>
     </snapshotRepository>
   </distributionManagement>
+
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <!-- our snapshots go out through a plain 'mvn deploy', see the deploy plugin below.
+         A module which is not published sets this to true in its own properties. -->
+    <maven.deploy.skip>false</maven.deploy.skip>
+    <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+    <maven.compiler.release>21</maven.compiler.release>
+    <version.java>21</version.java>
+    <jacoco.version>0.8.15</jacoco.version>
+    <!-- where the build breaks, in PERCENT of covered instructions per platform,
+         enforced by test-coverage-report/coverage-gate. The rule stays 90 per platform, which is
+         the number the coverage badges of the README are read against. The gate stands at
+         85, the same number in every VanillaBP repository, because a threshold marks the
+         point where somebody has to look and not the goal to aim at. It is never raised to whatever a
+         suite happens to reach, and never lowered to make a build pass. -->
+    <coverage.threshold.spring-boot>85</coverage.threshold.spring-boot>
+    <coverage.threshold.quarkus>85</coverage.threshold.quarkus>
+    <!-- the rule, as a number the gate can print: it reports every run against both, so
+         the distance between a passing build and the rule is readable without opening
+         the report -->
+    <coverage.rule>90</coverage.rule>
+    <spi-for-java.version>2.0.0-SNAPSHOT</spi-for-java.version>
+    <adapter-platform.version>2.0.0-SNAPSHOT</adapter-platform.version>
+    <camunda.version>7.24.0</camunda.version>
+    <spring-boot.version>4.1.1</spring-boot.version>
+    <quarkus.version>3.40.1</quarkus.version>
+    <lombok.version>1.18.48</lombok.version>
+  </properties>
+
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-dependencies</artifactId>
+        <version>${spring-boot.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+      <dependency>
+        <groupId>io.quarkus</groupId>
+        <artifactId>quarkus-bom</artifactId>
+        <version>${quarkus.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+      <dependency>
+        <groupId>io.vanillabp</groupId>
+        <artifactId>spi-for-java</artifactId>
+        <version>${spi-for-java.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.vanillabp</groupId>
+        <artifactId>vanillabp-adapter-spi</artifactId>
+        <version>${adapter-platform.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.vanillabp.adapter</groupId>
+        <artifactId>migration-adapter</artifactId>
+        <version>${adapter-platform.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.vanillabp</groupId>
+        <artifactId>vanillabp-spring-boot-integration</artifactId>
+        <version>${adapter-platform.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.vanillabp</groupId>
+        <artifactId>vanillabp-quarkus-integration</artifactId>
+        <version>${adapter-platform.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.vanillabp</groupId>
+        <artifactId>vanillabp-quarkus-integration-deployment</artifactId>
+        <version>${adapter-platform.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.vanillabp</groupId>
+        <artifactId>test-utils</artifactId>
+        <version>${adapter-platform.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.camunda.bpm</groupId>
+        <artifactId>camunda-engine</artifactId>
+        <version>${camunda.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.camunda.bpm</groupId>
+        <artifactId>camunda-engine-spring-6</artifactId>
+        <version>${camunda.version}</version>
+      </dependency>
+      <!-- Managed here and declared without a version in the three modules which use
+           them, so that no POM we publish names '${camunda.version}' where a consumer
+           reads a version. Our own build resolved that name because this file is in the
+           reactor, while a consumer reads the published child and resolves this file as
+           the newest build of the snapshot, never as the build the child went out with.
+           The property and the versions using it now stand in one file, so our own build
+           is what breaks if the property ever leaves, instead of a consumer breaking
+           later. See handAnApplicationNoPropertyInsteadOfAValue in PublishedPoms of the
+           platform's test-utils. The entries carry the version and nothing else: a scope
+           written here would apply to the transitive paths too, and the test scope these
+           three have in two modules belongs at the declaration. -->
+      <dependency>
+        <groupId>org.camunda.bpm.springboot</groupId>
+        <artifactId>camunda-bpm-spring-boot-starter-webapp</artifactId>
+        <version>${camunda.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.camunda.bpm</groupId>
+        <artifactId>camunda-engine-plugin-spin</artifactId>
+        <version>${camunda.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.camunda.spin</groupId>
+        <artifactId>camunda-spin-dataformat-json-jackson</artifactId>
+        <version>${camunda.version}</version>
+      </dependency>
+      <!-- 'provided' here and again at every declaration below: Lombok translates the
+           source and has no work left once the class file exists, so no application using
+           our artifacts may find it on its runtime classpath. Writing 'optional' here did
+           not do that. Maven copies a managed version, scope and exclusions into a
+           dependency, but not the optional flag, so the POMs we publish said nothing. -->
+      <dependency>
+        <groupId>org.projectlombok</groupId>
+        <artifactId>lombok</artifactId>
+        <version>${lombok.version}</version>
+        <scope>provided</scope>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+
+  <build>
+    <pluginManagement>
+      <plugins>
+        <plugin>
+          <!-- The hub parent turns the deploy plugin off for everybody, because a hub release
+               goes out through the profiles of that parent and not through a plain deploy.
+               Our snapshots do go out through a plain deploy, into the GitHub Packages
+               registry named in distributionManagement above, and that is what the
+               blueprints and every build downstream of them read. Without this line
+               'mvn deploy' reports success and publishes nothing. -->
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-deploy-plugin</artifactId>
+          <configuration>
+            <!-- The value, not a literal 'false': a test-only module sets
+                 'maven.deploy.skip' to true in its own properties, and a literal here would
+                 override it, because plugin configuration beats a property. Measured on
+                 2026-10-02: a literal 'false' published 'quarkus/integration-tests', which
+                 says in its own properties that it is not published, and ended the deploy
+                 with "did not assign a main file to the project but it has attachments" on
+                 'integration-tests', which compiles no main sources and therefore packs no
+                 jar. The property cannot be left alone either, because the parent writes its
+                 'true' as configuration and beats the property the same way. -->
+            <skip>${maven.deploy.skip}</skip>
+          </configuration>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-surefire-plugin</artifactId>
+          <version>3.6.0</version>
+          <configuration>
+            <!-- '@{jacoco.agent}' is resolved lazily per module (late property binding),
+                 forwarding coverage also into forked JVMs -->
+            <argLine>@{jacoco.agent}</argLine>
+          </configuration>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-failsafe-plugin</artifactId>
+          <version>3.6.0</version>
+          <configuration>
+            <argLine>@{jacoco.agent}</argLine>
+          </configuration>
+          <executions>
+            <execution>
+              <goals>
+                <goal>integration-test</goal>
+                <goal>verify</goal>
+              </goals>
+            </execution>
+          </executions>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-compiler-plugin</artifactId>
+          <version>3.16.0</version>
+          <configuration>
+            <release>${version.java}</release>
+            <compilerArgs>
+              <!-- most of this adapter is internal, so most of its javadoc is out of reach
+                   of the javadoc plugin of this pom: that one reads what Maven Central
+                   shows and starts at protected. javac reads the comment on a private field as well,
+                   which is where a link to a renamed method quietly rots. Every group is
+                   checked but 'missing', because a comment which was never written is a
+                   warning and not a broken build. -->
+              <arg>-Xdoclint:all,-missing</arg>
+            </compilerArgs>
+            <annotationProcessorPaths>
+              <path>
+                <groupId>org.projectlombok</groupId>
+                <artifactId>lombok</artifactId>
+                <version>${lombok.version}</version>
+              </path>
+            </annotationProcessorPaths>
+          </configuration>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-javadoc-plugin</artifactId>
+          <version>3.12.0</version>
+          <configuration>
+            <!-- javadoc runs in every build. A goal nobody runs stops working without
+                 anybody noticing, and the release is a bad moment to find that out, because
+                 that is when the javadoc artifact is built.
+                 It breaks on errors, which is a reference javadoc cannot resolve or broken
+                 HTML, and it breaks on warnings too, which is mostly a comment nobody
+                 wrote. What this repository publishes is read by somebody wiring this
+                 adapter into an application, and by whoever writes the next adapter against
+                 the same SPI, so a missing sentence is a gap for a reader with no other
+                 source. The gaps here were written once. Letting a warning pass again would
+                 park the next one in a build which looks green. -->
+            <doclint>all</doclint>
+            <failOnError>true</failOnError>
+            <failOnWarnings>true</failOnWarnings>
+            <!-- the Quarkus extension processor writes an accessor class next to every
+                 class carrying build steps, and generated code has no comments. It is
+                 compiled, never published and read by nobody, so it is left out here
+                 rather than being the reason a warning stays allowed everywhere. -->
+            <sourceFileExcludes>
+              <sourceFileExclude>**/*$$accessor.java</sourceFileExclude>
+            </sourceFileExcludes>
+            <!-- no link into the JDK API: that link is fetched over the network, and the
+                 check should give the same answer on a machine without one. No link into
+                 the javadoc of the other modules either: it is not built at this point,
+                 and every module would report the miss -->
+            <detectJavaApiLink>false</detectJavaApiLink>
+            <detectOfflineLinks>false</detectOfflineLinks>
+            <!-- javadoc stops after 100 warnings per module, and the line it prints
+                 reads like the end of the list. Whoever counts warnings to see how much
+                 work a module still holds counts too few. The number below is high enough
+                 that no module reaches it. The hub parent configures javadoc as well, but
+                 only to switch its checks off, so every option this gate needs stands here.
+                 The run is incremental too: a module whose sources did not move since the
+                 last run is skipped and reports nothing. Delete 'target/reports/apidocs'
+                 before counting, or a clean count only says that nobody recompiled. -->
+            <additionalOptions>
+              <additionalOption>-Xmaxwarns 100000</additionalOption>
+            </additionalOptions>
+          </configuration>
+          <executions>
+            <execution>
+              <id>check-javadoc</id>
+              <goals>
+                <!-- no fork: the sources are there by this phase -->
+                <goal>javadoc-no-fork</goal>
+              </goals>
+              <!-- after the tests, so a javadoc error does not hide a test result, and
+                   still inside a plain 'mvn install' -->
+              <phase>package</phase>
+            </execution>
+          </executions>
+        </plugin>
+      </plugins>
+    </pluginManagement>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-javadoc-plugin</artifactId>
+      </plugin>
+      <!-- the sources jar every build attaches. Without it the snapshots of this
+           repository carried no sources, and an IDE showed decompiled code to everyone
+           developing against one. The hub parent pins an older source plugin and brings an
+           execution with the same id, which merges into this one, so the version stands here
+           to win over it. It is the one the VanillaBP release parent uses for the other
+           repositories, so all of them pack their sources the same way. -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-source-plugin</artifactId>
+        <version>3.4.0</version>
+        <executions>
+          <execution>
+            <id>attach-sources</id>
+            <goals>
+              <goal>jar</goal>
+            </goals>
+            <phase>package</phase>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.jacoco</groupId>
+        <artifactId>jacoco-maven-plugin</artifactId>
+        <version>${jacoco.version}</version>
+        <configuration>
+          <propertyName>jacoco.agent</propertyName>
+          <excludes>
+            <exclude>**/it/**</exclude>
+            <exclude>**/test/**</exclude>
+          </excludes>
+        </configuration>
+        <executions>
+          <execution>
+            <goals>
+              <goal>prepare-agent</goal>
+            </goals>
+          </execution>
+          <execution>
+            <id>report</id>
+            <goals>
+              <goal>report</goal>
+            </goals>
+            <phase>verify</phase>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>com.diffplug.spotless</groupId>
+        <artifactId>spotless-maven-plugin</artifactId>
+        <version>3.10.3</version>
+        <configuration>
+          <pom>
+            <includes>
+              <include>**/pom.xml</include>
+            </includes>
+            <excludes>
+              <exclude>**/target/**/</exclude>
+              <exclude>**/node_modules/**/</exclude>
+              <!-- the workflows carry comments, and the YAML formatter round-trips
+                   through Jackson, which drops them -->
+              <exclude>**/.github/**/</exclude>
+            </excludes>
+            <sortPom>
+              <quiet>true</quiet>
+            </sortPom>
+          </pom>
+          <markdown>
+            <includes>
+              <include>**/*.md</include>
+            </includes>
+            <excludes>
+              <exclude>**/target/**/</exclude>
+              <exclude>**/node_modules/**/</exclude>
+              <!-- the workflows carry comments, and the YAML formatter round-trips
+                   through Jackson, which drops them -->
+              <exclude>**/.github/**/</exclude>
+            </excludes>
+            <flexmark/>
+          </markdown>
+          <yaml>
+            <includes>
+              <include>**/*.yaml</include>
+            </includes>
+            <excludes>
+              <exclude>**/target/**/</exclude>
+              <exclude>**/node_modules/**/</exclude>
+              <!-- the workflows carry comments, and the YAML formatter round-trips
+                   through Jackson, which drops them -->
+              <exclude>**/.github/**/</exclude>
+            </excludes>
+            <jackson>
+              <yamlFeatures>
+                <MINIMIZE_QUOTES>true</MINIMIZE_QUOTES>
+                <WRITE_DOC_START_MARKER>false</WRITE_DOC_START_MARKER>
+                <INDENT_ARRAYS_WITH_INDICATOR>true</INDENT_ARRAYS_WITH_INDICATOR>
+              </yamlFeatures>
+            </jackson>
+          </yaml>
+          <java>
+            <eclipse>
+              <!-- https://help.eclipse.org/latest/index.jsp?topic=%2Forg.eclipse.jdt.doc.isv%2Freference%2Fapi%2Forg%2Feclipse%2Fjdt%2Fcore%2Fformatter%2FDefaultCodeFormatterConstants.html -->
+              <file>${maven.multiModuleProjectDirectory}/formatting_conventions.xml</file>
+              <version>4.35</version>
+            </eclipse>
+            <removeUnusedImports/>
+            <importOrder>
+              <order>java,javax,org,com,at.phactum</order>
+            </importOrder>
+          </java>
+        </configuration>
+        <executions>
+          <execution>
+            <goals>
+              <goal>check</goal>
+            </goals>
+            <phase>process-sources</phase>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
 </project>

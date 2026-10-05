@@ -1,0 +1,10 @@
+spring:
+  datasource:
+    username: sa
+    password: ""
+vanillabp:
+  adapters:
+    camunda7:
+      type: camunda7
+  prioritized-adapters:
+    - camunda7

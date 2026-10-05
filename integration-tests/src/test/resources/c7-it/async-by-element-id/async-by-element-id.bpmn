@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- A task wired by 'camunda:expression', like 'async-by-expression/async-by-expression.bpmn',
+     but the method which has to keep it open is wired by the ELEMENT id rather than by the
+     task definition. The application must not start on this model either. -->
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" id="Definitions_AsyncByElementId" targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:process id="AsyncByElementIdProcess" isExecutable="true">
+    <bpmn:startEvent id="ABI_Start">
+      <bpmn:outgoing>ABI_f1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:sequenceFlow id="ABI_f1" sourceRef="ABI_Start" targetRef="ABI_Task" />
+    <bpmn:serviceTask id="ABI_Task" camunda:expression="${signTheContract}">
+      <bpmn:incoming>ABI_f1</bpmn:incoming>
+      <bpmn:outgoing>ABI_f2</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="ABI_f2" sourceRef="ABI_Task" targetRef="ABI_End" />
+    <bpmn:endEvent id="ABI_End">
+      <bpmn:incoming>ABI_f2</bpmn:incoming>
+    </bpmn:endEvent>
+  </bpmn:process>
+</bpmn:definitions>

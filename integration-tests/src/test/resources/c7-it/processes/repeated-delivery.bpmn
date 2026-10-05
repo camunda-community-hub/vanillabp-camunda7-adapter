@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:camunda="http://camunda.org/schema/1.0/bpmn"
+                  id="Definitions_RepeatedDelivery"
+                  targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:process id="RepeatedDeliveryProcess" isExecutable="true">
+    <bpmn:startEvent id="RD_Start">
+      <bpmn:outgoing>RD_ToTask</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:sequenceFlow id="RD_ToTask" sourceRef="RD_Start" targetRef="RD_Task" />
+    <!-- the end listener throws once, after the handler and its transaction are done:
+         the engine rolls the job back and hands the very same job out again, which is
+         the redelivery this scenario is about. The adapter's parse listener makes the
+         task async-before, so that job exists in the first place. -->
+    <bpmn:serviceTask id="RD_Task" camunda:expression="${repeatedDeliveryTask}">
+      <bpmn:extensionElements>
+        <camunda:executionListener event="end" delegateExpression="${failTheJobOnce}" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>RD_ToTask</bpmn:incoming>
+      <bpmn:outgoing>RD_ToEnd</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="RD_ToEnd" sourceRef="RD_Task" targetRef="RD_End" />
+    <bpmn:endEvent id="RD_End">
+      <bpmn:incoming>RD_ToEnd</bpmn:incoming>
+    </bpmn:endEvent>
+  </bpmn:process>
+</bpmn:definitions>

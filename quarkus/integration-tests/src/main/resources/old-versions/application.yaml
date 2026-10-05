@@ -1,0 +1,26 @@
+quarkus:
+  datasource:
+    db-kind: h2
+  hibernate-orm:
+    schema-management:
+      strategy: drop-and-create
+vanillabp:
+  outbox:
+    poll-interval: PT0.5S
+    attempt-frequency: PT1S
+  adapters:
+    c7:
+      type: camunda7
+      name-clash-avoidance: by-adapter
+  prioritized-adapters:
+    - c7
+  workflow-modules:
+    c7-versions:
+      adapters:
+        c7:
+          resources-location: classpath:c7-versions/v1
+      workflows:
+        OldProcessVersionsProcess:
+          allow-full-sync-with-bpms: true
+          declared-aggregate-values:
+            - '*'

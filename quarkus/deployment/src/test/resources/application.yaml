@@ -1,0 +1,37 @@
+quarkus:
+  datasource:
+    db-kind: h2
+    jdbc:
+      url: jdbc:h2:mem:c7-quarkus-test;DB_CLOSE_DELAY=-1
+  hibernate-orm:
+    schema-management:
+      strategy: drop-and-create
+vanillabp:
+  adapters:
+    c7:
+      type: camunda7
+      name-clash-avoidance: by-adapter
+  prioritized-adapters:
+    - c7
+  workflow-modules:
+    c7-test:
+      adapters:
+        c7:
+          resources-location: classpath:c7-test/processes
+      workflows:
+        CallingProcess:
+          allow-full-sync-with-bpms: true
+          declared-aggregate-values:
+            - '*'
+        EndedProcess:
+          allow-full-sync-with-bpms: true
+          declared-aggregate-values:
+            - '*'
+        QTaskProcess:
+          allow-full-sync-with-bpms: true
+          declared-aggregate-values:
+            - '*'
+        TestProcess:
+          allow-full-sync-with-bpms: true
+          declared-aggregate-values:
+            - '*'

@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+    xmlns:camunda="http://camunda.org/schema/1.0/bpmn"
+    id="Definitions_MiCalled" targetNamespace="http://vanillabp.io/test">
+
+  <bpmn:process id="ApprovalProcess" isExecutable="true">
+    <bpmn:startEvent id="ApprovalProcessStart" />
+    <bpmn:sequenceFlow id="ApprovalProcessStartFlow" sourceRef="ApprovalProcessStart" targetRef="Approve" />
+    <bpmn:userTask id="Approve" />
+    <bpmn:sequenceFlow id="ApproveFlow" sourceRef="Approve" targetRef="ApprovalProcessEnd" />
+    <bpmn:endEvent id="ApprovalProcessEnd" />
+  </bpmn:process>
+
+  <bpmn:process id="OwnLoopProcess" isExecutable="true">
+    <bpmn:startEvent id="OwnLoopProcessStart" />
+    <bpmn:sequenceFlow id="OwnLoopProcessStartFlow" sourceRef="OwnLoopProcessStart" targetRef="Items" />
+    <bpmn:subProcess id="Items">
+      <bpmn:multiInstanceLoopCharacteristics isSequential="true" camunda:collection="items" camunda:elementVariable="item" />
+      <bpmn:startEvent id="ItemsStart" />
+      <bpmn:sequenceFlow id="ItemsStartFlow" sourceRef="ItemsStart" targetRef="ApproveItem" />
+      <bpmn:userTask id="ApproveItem" />
+      <bpmn:sequenceFlow id="ApproveItemFlow" sourceRef="ApproveItem" targetRef="ItemsEnd" />
+      <bpmn:endEvent id="ItemsEnd" />
+    </bpmn:subProcess>
+    <bpmn:sequenceFlow id="ItemsFlow" sourceRef="Items" targetRef="OwnLoopProcessEnd" />
+    <bpmn:endEvent id="OwnLoopProcessEnd" />
+  </bpmn:process>
+
+  <bpmn:process id="OwnAggregateProcess" isExecutable="true">
+    <bpmn:startEvent id="OwnAggregateProcessStart" />
+    <bpmn:sequenceFlow id="OwnAggregateProcessStartFlow" sourceRef="OwnAggregateProcessStart" targetRef="Pack" />
+    <bpmn:userTask id="Pack" />
+    <bpmn:sequenceFlow id="PackFlow" sourceRef="Pack" targetRef="OwnAggregateProcessEnd" />
+    <bpmn:endEvent id="OwnAggregateProcessEnd" />
+  </bpmn:process>
+
+</bpmn:definitions>

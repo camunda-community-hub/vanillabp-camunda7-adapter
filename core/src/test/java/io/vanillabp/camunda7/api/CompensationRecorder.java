@@ -1,0 +1,225 @@
+package io.vanillabp.camunda7.api;
+
+import java.util.List;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import org.camunda.bpm.engine.delegate.DelegateExecution;
+import org.camunda.bpm.engine.delegate.JavaDelegate;
+
+/**
+ * Records what the engine does with the compensation handlers of
+ * <code>api/compensation-facts.bpmn</code>: how many of them are inside their delegate at
+ * the same moment, on which threads, and in which order they were entered.
+ * <p>
+ * A handler waits for the other one after it entered. Where the engine runs both at the
+ * same time the second arrival releases the first immediately; where it runs them one after
+ * the other the wait runs out and the overlap it was looking for never happened. So the
+ * measurement answers with a fact either way instead of with a timing which might have been
+ * luck.
+ */
+public final class CompensationRecorder {
+
+  /** How long a handler waits for the other one before it accepts it is alone. */
+  private static final long WAIT_FOR_THE_OTHER_HANDLER_MILLIS = 2000;
+
+  private static final AtomicInteger insideAHandler = new AtomicInteger();
+
+  private static final AtomicInteger mostHandlersInsideAtOnce = new AtomicInteger();
+
+  private static final List<String> entered = new CopyOnWriteArrayList<>();
+
+  private static final List<String> threads = new CopyOnWriteArrayList<>();
+
+  private static final List<Integer> siblings = new CopyOnWriteArrayList<>();
+
+  /**
+   * The transaction each handler ran in, as the identity of the command context the engine
+   * opened for it. One command context is one transaction here: the engine builds it per
+   * command it executes, and a job is one such command.
+   */
+  private static final List<Integer> handlerTransactions = new CopyOnWriteArrayList<>();
+
+  /** The same for the two activities which are compensated later. */
+  private static final List<Integer> compensatedTransactions = new CopyOnWriteArrayList<>();
+
+  /** The transactions a handler already put a commit watch on, so each is watched once. */
+  private static final Set<Integer> watchedTransactions = ConcurrentHashMap.newKeySet();
+
+  private static final AtomicInteger commitsCoveringAHandler = new AtomicInteger();
+
+  /** Whether the handler entered second is to fail, once. */
+  private static final java.util.concurrent.atomic.AtomicBoolean oneHandlerStillHasToFail = new java.util.concurrent.atomic.AtomicBoolean();
+
+  private static volatile CountDownLatch bothHandlersEntered = new CountDownLatch(2);
+
+  private CompensationRecorder() {
+  }
+
+  /**
+   * Forgets the previous run, so every measurement starts from nothing.
+   */
+  static void reset() {
+
+    insideAHandler.set(0);
+    mostHandlersInsideAtOnce.set(0);
+    entered.clear();
+    threads.clear();
+    siblings.clear();
+    handlerTransactions.clear();
+    compensatedTransactions.clear();
+    watchedTransactions.clear();
+    commitsCoveringAHandler.set(0);
+    oneHandlerStillHasToFail.set(false);
+    bothHandlersEntered = new CountDownLatch(2);
+
+  }
+
+  /**
+   * @return The element IDs of the handlers, in the order the engine entered them
+   */
+  static List<String> handlersInTheOrderTheyWereEntered() {
+
+    return List.copyOf(entered);
+
+  }
+
+  /**
+   * @return The highest number of handlers which were inside their delegate at one moment
+   */
+  static int mostHandlersInsideAtOnce() {
+
+    return mostHandlersInsideAtOnce.get();
+  }
+
+  static List<Integer> siblingExecutions() {
+
+    return List.copyOf(siblings);
+
+  }
+
+  /**
+   * Lets the handler which is entered SECOND throw once, so what a failing handler costs the
+   * other one can be read. Which handler that is follows the order the engine picks, which is
+   * not stable, and the measurement does not depend on it.
+   */
+  static void makeTheHandlerEnteredSecondFailOnce() {
+
+    oneHandlerStillHasToFail.set(true);
+
+  }
+
+  /**
+   * @return One entry per handler, naming the transaction it ran in
+   */
+  static List<Integer> transactionsTheHandlersRanIn() {
+
+    return List.copyOf(handlerTransactions);
+
+  }
+
+  /**
+   * @return One entry per compensated activity, naming the transaction it ran in
+   */
+  static List<Integer> transactionsTheCompensatedActivitiesRanIn() {
+
+    return List.copyOf(compensatedTransactions);
+
+  }
+
+  /**
+   * @return How many transactions holding a handler committed
+   */
+  static int commitsCoveringAHandler() {
+
+    return commitsCoveringAHandler.get();
+
+  }
+
+  /**
+   * The transaction the engine runs the current delegate in. The command context is the
+   * engine's own unit of work: it carries the transaction, and the engine opens one per
+   * command, which for a job is the execution of that job.
+   *
+   * @return An identity which is equal for two delegates sharing a transaction
+   */
+  private static int transactionOfTheMoment() {
+
+    return System
+        .identityHashCode(org.camunda.bpm.engine.impl.context.Context.getCommandContext());
+
+  }
+
+  /**
+   * @return The names of the threads the handlers ran on, in the order they were entered
+   */
+  static List<String> threadsTheHandlersRanOn() {
+
+    return List.copyOf(threads);
+
+  }
+
+  /**
+   * The delegate of an activity which is compensated later - it does nothing, it only has to
+   * complete so that the engine remembers it for the compensation throw event.
+   */
+  public static class DoingNothing implements JavaDelegate {
+
+    @Override
+    public void execute(
+        final DelegateExecution execution) {
+
+      compensatedTransactions.add(transactionOfTheMoment());
+
+    }
+
+  }
+
+  /**
+   * The delegate of a compensation handler - it records itself and then waits for the other
+   * handler as long as {@link #WAIT_FOR_THE_OTHER_HANDLER_MILLIS} allows.
+   */
+  public static class Handler implements JavaDelegate {
+
+    @Override
+    public void execute(
+        final DelegateExecution execution) throws Exception {
+
+      entered.add(execution.getCurrentActivityId());
+      final var transaction = transactionOfTheMoment();
+      handlerTransactions.add(transaction);
+      if (watchedTransactions.add(transaction)) {
+        // counted once per transaction, so two handlers inside one transaction answer with
+        // one commit rather than with two
+        org.camunda.bpm.engine.impl.context.Context
+            .getCommandContext()
+            .getTransactionContext()
+            .addTransactionListener(
+                org.camunda.bpm.engine.impl.cfg.TransactionState.COMMITTED,
+                committed -> commitsCoveringAHandler.incrementAndGet());
+      }
+      final var parent = ((org.camunda.bpm.engine.impl.persistence.entity.ExecutionEntity) execution).getParent();
+      siblings.add(parent == null ? -1 : parent.getExecutions().size());
+      threads.add(Thread.currentThread().getName());
+      if ((entered.size() % 2 == 0) && oneHandlerStillHasToFail.compareAndSet(true, false)) {
+        throw new IllegalStateException("this handler could not undo its work");
+      }
+      final var inside = insideAHandler.incrementAndGet();
+      mostHandlersInsideAtOnce.accumulateAndGet(inside, Math::max);
+      final var latch = bothHandlersEntered;
+      latch.countDown();
+      try {
+        latch.await(WAIT_FOR_THE_OTHER_HANDLER_MILLIS, TimeUnit.MILLISECONDS);
+      } finally {
+        insideAHandler.decrementAndGet();
+      }
+
+    }
+
+  }
+
+}

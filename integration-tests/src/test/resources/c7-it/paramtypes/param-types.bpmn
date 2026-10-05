@@ -1,0 +1,162 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" id="Definitions_ParamTypes" targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:process id="ParamTypes" isExecutable="true">
+    <bpmn:startEvent id="PT_Start">
+      <bpmn:outgoing>PT_f_start</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:sequenceFlow id="PT_f_start" sourceRef="PT_Start" targetRef="PT_Fork" />
+    <bpmn:parallelGateway id="PT_Fork">
+      <bpmn:incoming>PT_f_start</bpmn:incoming>
+      <bpmn:outgoing>PT_total_Double_in</bpmn:outgoing>
+      <bpmn:outgoing>PT_total_BigDecimal_in</bpmn:outgoing>
+      <bpmn:outgoing>PT_total_int_in</bpmn:outgoing>
+      <bpmn:outgoing>PT_nested_Double_in</bpmn:outgoing>
+      <bpmn:outgoing>PT_rate_Double_in</bpmn:outgoing>
+      <bpmn:outgoing>PT_count_long_in</bpmn:outgoing>
+      <bpmn:outgoing>PT_count_int_in</bpmn:outgoing>
+      <bpmn:outgoing>PT_huge_long_in</bpmn:outgoing>
+      <bpmn:outgoing>PT_huge_Double_in</bpmn:outgoing>
+      <bpmn:outgoing>PT_text_int_in</bpmn:outgoing>
+    </bpmn:parallelGateway>
+    <bpmn:serviceTask id="PT_total_Double" camunda:expression="${totalIntoDouble}">
+      <bpmn:extensionElements>
+        <camunda:inputOutput>
+          <camunda:inputParameter name="total">${total}</camunda:inputParameter>
+        </camunda:inputOutput>
+      </bpmn:extensionElements>
+      <bpmn:incoming>PT_total_Double_in</bpmn:incoming>
+      <bpmn:outgoing>PT_total_Double_out</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="PT_total_BigDecimal" camunda:expression="${totalIntoBigDecimal}">
+      <bpmn:extensionElements>
+        <camunda:inputOutput>
+          <camunda:inputParameter name="total">${total}</camunda:inputParameter>
+        </camunda:inputOutput>
+      </bpmn:extensionElements>
+      <bpmn:incoming>PT_total_BigDecimal_in</bpmn:incoming>
+      <bpmn:outgoing>PT_total_BigDecimal_out</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="PT_total_int" camunda:expression="${totalIntoInt}">
+      <bpmn:extensionElements>
+        <camunda:inputOutput>
+          <camunda:inputParameter name="total">${total}</camunda:inputParameter>
+        </camunda:inputOutput>
+      </bpmn:extensionElements>
+      <bpmn:incoming>PT_total_int_in</bpmn:incoming>
+      <bpmn:outgoing>PT_total_int_out</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="PT_nested_Double" camunda:expression="${nestedTotalIntoDouble}">
+      <bpmn:extensionElements>
+        <camunda:inputOutput>
+          <camunda:inputParameter name="orderTotal">${order.total}</camunda:inputParameter>
+        </camunda:inputOutput>
+      </bpmn:extensionElements>
+      <bpmn:incoming>PT_nested_Double_in</bpmn:incoming>
+      <bpmn:outgoing>PT_nested_Double_out</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="PT_rate_Double" camunda:expression="${rateIntoDouble}">
+      <bpmn:extensionElements>
+        <camunda:inputOutput>
+          <camunda:inputParameter name="rate">${rate}</camunda:inputParameter>
+        </camunda:inputOutput>
+      </bpmn:extensionElements>
+      <bpmn:incoming>PT_rate_Double_in</bpmn:incoming>
+      <bpmn:outgoing>PT_rate_Double_out</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="PT_count_long" camunda:expression="${countIntoLong}">
+      <bpmn:extensionElements>
+        <camunda:inputOutput>
+          <camunda:inputParameter name="count">${count}</camunda:inputParameter>
+        </camunda:inputOutput>
+      </bpmn:extensionElements>
+      <bpmn:incoming>PT_count_long_in</bpmn:incoming>
+      <bpmn:outgoing>PT_count_long_out</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="PT_count_int" camunda:expression="${countIntoInt}">
+      <bpmn:extensionElements>
+        <camunda:inputOutput>
+          <camunda:inputParameter name="count">${count}</camunda:inputParameter>
+        </camunda:inputOutput>
+      </bpmn:extensionElements>
+      <bpmn:incoming>PT_count_int_in</bpmn:incoming>
+      <bpmn:outgoing>PT_count_int_out</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="PT_huge_long" camunda:expression="${hugeIntoLong}">
+      <bpmn:extensionElements>
+        <camunda:inputOutput>
+          <camunda:inputParameter name="huge">${huge}</camunda:inputParameter>
+        </camunda:inputOutput>
+      </bpmn:extensionElements>
+      <bpmn:incoming>PT_huge_long_in</bpmn:incoming>
+      <bpmn:outgoing>PT_huge_long_out</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="PT_huge_Double" camunda:expression="${hugeIntoDouble}">
+      <bpmn:extensionElements>
+        <camunda:inputOutput>
+          <camunda:inputParameter name="huge">${huge}</camunda:inputParameter>
+        </camunda:inputOutput>
+      </bpmn:extensionElements>
+      <bpmn:incoming>PT_huge_Double_in</bpmn:incoming>
+      <bpmn:outgoing>PT_huge_Double_out</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="PT_text_int" camunda:expression="${textIntoInt}">
+      <bpmn:extensionElements>
+        <camunda:inputOutput>
+          <camunda:inputParameter name="totalText">${total.toString()}</camunda:inputParameter>
+        </camunda:inputOutput>
+      </bpmn:extensionElements>
+      <bpmn:incoming>PT_text_int_in</bpmn:incoming>
+      <bpmn:outgoing>PT_text_int_out</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="PT_total_Double_in" sourceRef="PT_Fork" targetRef="PT_total_Double" />
+    <bpmn:sequenceFlow id="PT_total_Double_out" sourceRef="PT_total_Double" targetRef="PT_total_Double_end" />
+    <bpmn:endEvent id="PT_total_Double_end">
+      <bpmn:incoming>PT_total_Double_out</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="PT_total_BigDecimal_in" sourceRef="PT_Fork" targetRef="PT_total_BigDecimal" />
+    <bpmn:sequenceFlow id="PT_total_BigDecimal_out" sourceRef="PT_total_BigDecimal" targetRef="PT_total_BigDecimal_end" />
+    <bpmn:endEvent id="PT_total_BigDecimal_end">
+      <bpmn:incoming>PT_total_BigDecimal_out</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="PT_total_int_in" sourceRef="PT_Fork" targetRef="PT_total_int" />
+    <bpmn:sequenceFlow id="PT_total_int_out" sourceRef="PT_total_int" targetRef="PT_total_int_end" />
+    <bpmn:endEvent id="PT_total_int_end">
+      <bpmn:incoming>PT_total_int_out</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="PT_nested_Double_in" sourceRef="PT_Fork" targetRef="PT_nested_Double" />
+    <bpmn:sequenceFlow id="PT_nested_Double_out" sourceRef="PT_nested_Double" targetRef="PT_nested_Double_end" />
+    <bpmn:endEvent id="PT_nested_Double_end">
+      <bpmn:incoming>PT_nested_Double_out</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="PT_rate_Double_in" sourceRef="PT_Fork" targetRef="PT_rate_Double" />
+    <bpmn:sequenceFlow id="PT_rate_Double_out" sourceRef="PT_rate_Double" targetRef="PT_rate_Double_end" />
+    <bpmn:endEvent id="PT_rate_Double_end">
+      <bpmn:incoming>PT_rate_Double_out</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="PT_count_long_in" sourceRef="PT_Fork" targetRef="PT_count_long" />
+    <bpmn:sequenceFlow id="PT_count_long_out" sourceRef="PT_count_long" targetRef="PT_count_long_end" />
+    <bpmn:endEvent id="PT_count_long_end">
+      <bpmn:incoming>PT_count_long_out</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="PT_count_int_in" sourceRef="PT_Fork" targetRef="PT_count_int" />
+    <bpmn:sequenceFlow id="PT_count_int_out" sourceRef="PT_count_int" targetRef="PT_count_int_end" />
+    <bpmn:endEvent id="PT_count_int_end">
+      <bpmn:incoming>PT_count_int_out</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="PT_huge_long_in" sourceRef="PT_Fork" targetRef="PT_huge_long" />
+    <bpmn:sequenceFlow id="PT_huge_long_out" sourceRef="PT_huge_long" targetRef="PT_huge_long_end" />
+    <bpmn:endEvent id="PT_huge_long_end">
+      <bpmn:incoming>PT_huge_long_out</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="PT_huge_Double_in" sourceRef="PT_Fork" targetRef="PT_huge_Double" />
+    <bpmn:sequenceFlow id="PT_huge_Double_out" sourceRef="PT_huge_Double" targetRef="PT_huge_Double_end" />
+    <bpmn:endEvent id="PT_huge_Double_end">
+      <bpmn:incoming>PT_huge_Double_out</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="PT_text_int_in" sourceRef="PT_Fork" targetRef="PT_text_int" />
+    <bpmn:sequenceFlow id="PT_text_int_out" sourceRef="PT_text_int" targetRef="PT_text_int_end" />
+    <bpmn:endEvent id="PT_text_int_end">
+      <bpmn:incoming>PT_text_int_out</bpmn:incoming>
+    </bpmn:endEvent>
+  </bpmn:process>
+</bpmn:definitions>

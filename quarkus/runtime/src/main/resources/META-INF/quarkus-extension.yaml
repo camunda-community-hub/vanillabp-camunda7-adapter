@@ -1,0 +1,9 @@
+name: vanillabp-camunda7
+artifact: "${project.groupId}:${project.artifactId}:${project.version}"
+description: VanillaBP adapter for Camunda 7 (embedded plain engine). JVM mode only
+  - no native-image support.
+dependencies:
+  - vanillabp
+capabilities:
+  provides:
+    - io.vanillabp.adapter.camunda7

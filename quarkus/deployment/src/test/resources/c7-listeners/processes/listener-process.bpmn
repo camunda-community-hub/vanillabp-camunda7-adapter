@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" id="Definitions_ModelledListeners" targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:process id="ModelledListenerProcess" isExecutable="true">
+    <bpmn:startEvent id="ML_Start">
+      <bpmn:outgoing>ML_f1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:sequenceFlow id="ML_f1" sourceRef="ML_Start" targetRef="ML_Work" />
+    <bpmn:serviceTask id="ML_Work" camunda:delegateExpression="${doTheWork}">
+      <bpmn:incoming>ML_f1</bpmn:incoming>
+      <bpmn:outgoing>ML_f2</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="ML_f2" sourceRef="ML_Work" targetRef="ML_End" />
+    <bpmn:endEvent id="ML_End">
+      <bpmn:extensionElements>
+        <camunda:executionListener event="start" expression="${theEndIsReached}" />
+        <camunda:executionListener event="end" delegateExpression="${theEndIsDone}" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>ML_f2</bpmn:incoming>
+    </bpmn:endEvent>
+  </bpmn:process>
+</bpmn:definitions>

@@ -1,0 +1,35 @@
+quarkus:
+  datasource:
+    db-kind: h2
+    jdbc:
+      url: jdbc:h2:mem:c7-listeners-test;DB_CLOSE_DELAY=-1
+  hibernate-orm:
+    schema-management:
+      strategy: drop-and-create
+vanillabp:
+  adapters:
+    c7:
+      type: camunda7
+      name-clash-avoidance: by-adapter
+      allow-listeners: true
+  prioritized-adapters:
+    - c7
+  workflow-modules:
+    c7-test:
+      adapters:
+        c7:
+          resources-location: classpath:c7-test/processes
+          allow-listeners: false
+      workflows:
+        TestProcess:
+          allow-full-sync-with-bpms: true
+          declared-aggregate-values:
+            - '*'
+          adapters:
+            c7:
+              allow-listeners: true
+          tasks:
+            archiveTheOrder:
+              adapters:
+                c7:
+                  allow-listeners: true

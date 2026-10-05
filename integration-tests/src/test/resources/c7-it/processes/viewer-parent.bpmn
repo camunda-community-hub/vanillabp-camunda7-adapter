@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" id="Definitions_ViewerParentProcess" targetNamespace="http://bpmn.io/schema/bpmn">
+  <!-- viewer/history API: a workflow using a call activity, so the test
+       can dig into the called process via the secondary history context -->
+  <bpmn:process id="ViewerParentProcess" isExecutable="true">
+    <bpmn:startEvent id="TheStartEvent">
+      <bpmn:outgoing>Flow_start_to_call</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:sequenceFlow id="Flow_start_to_call" sourceRef="TheStartEvent" targetRef="TheCallActivity" />
+    <bpmn:callActivity id="TheCallActivity" calledElement="ViewerSubProcess" camunda:calledElementBinding="latest">
+      <bpmn:incoming>Flow_start_to_call</bpmn:incoming>
+      <bpmn:outgoing>Flow_call_to_end</bpmn:outgoing>
+    </bpmn:callActivity>
+    <bpmn:sequenceFlow id="Flow_call_to_end" sourceRef="TheCallActivity" targetRef="TheEndEvent" />
+    <bpmn:endEvent id="TheEndEvent">
+      <bpmn:incoming>Flow_call_to_end</bpmn:incoming>
+    </bpmn:endEvent>
+  </bpmn:process>
+</bpmn:definitions>

@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" id="Definitions_MiUserTask" targetNamespace="http://bpmn.io/schema/bpmn">
+  <!-- the model of the test about the levels a USER TASK is told about. A multi-instance
+       subprocess holding a user task which is multi-instance itself, so the chain is two
+       levels deep and the inner level belongs to the task. Both iterate in parallel, so
+       every round creates its task in the same transaction and no completion stands
+       between the test and its measurement. -->
+  <bpmn:process id="MiUserTaskLevels" isExecutable="true">
+    <bpmn:startEvent id="MUT_Start">
+      <bpmn:outgoing>MUT_f1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:sequenceFlow id="MUT_f1" sourceRef="MUT_Start" targetRef="MUT_Group" />
+    <bpmn:subProcess id="MUT_Group">
+      <bpmn:incoming>MUT_f1</bpmn:incoming>
+      <bpmn:outgoing>MUT_f2</bpmn:outgoing>
+      <bpmn:multiInstanceLoopCharacteristics camunda:collection="${groups}" camunda:elementVariable="group" />
+      <bpmn:startEvent id="MUT_GroupStart">
+        <bpmn:outgoing>MUT_gf1</bpmn:outgoing>
+      </bpmn:startEvent>
+      <bpmn:sequenceFlow id="MUT_gf1" sourceRef="MUT_GroupStart" targetRef="MUT_Review" />
+      <bpmn:userTask id="MUT_Review">
+        <bpmn:incoming>MUT_gf1</bpmn:incoming>
+        <bpmn:outgoing>MUT_gf2</bpmn:outgoing>
+        <bpmn:multiInstanceLoopCharacteristics camunda:collection="${positions}" camunda:elementVariable="position" />
+      </bpmn:userTask>
+      <bpmn:sequenceFlow id="MUT_gf2" sourceRef="MUT_Review" targetRef="MUT_GroupEnd" />
+      <bpmn:endEvent id="MUT_GroupEnd">
+        <bpmn:incoming>MUT_gf2</bpmn:incoming>
+      </bpmn:endEvent>
+    </bpmn:subProcess>
+    <bpmn:sequenceFlow id="MUT_f2" sourceRef="MUT_Group" targetRef="MUT_End" />
+    <bpmn:endEvent id="MUT_End">
+      <bpmn:incoming>MUT_f2</bpmn:incoming>
+    </bpmn:endEvent>
+  </bpmn:process>
+</bpmn:definitions>

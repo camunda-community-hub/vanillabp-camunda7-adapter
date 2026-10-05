@@ -4,68 +4,13 @@
 
   <parent>
     <groupId>org.camunda.community.vanillabp</groupId>
-    <artifactId>camunda7-adapter</artifactId>
-    <version>1.6.1-SNAPSHOT</version>
+    <artifactId>camunda7-adapter-parent</artifactId>
+    <version>2.0.0-SNAPSHOT</version>
   </parent>
 
-  <artifactId>camunda7-spring-boot-adapter</artifactId>
-  <name>VanillaBP SPI adapter for Camunda 7.x for Spring Boot</name>
-
-  <properties>
-    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-  </properties>
-
-  <build>
-    <plugins>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-source-plugin</artifactId>
-      </plugin>
-    </plugins>
-  </build>
-
-  <dependencies>
-    <dependency>
-      <groupId>io.vanillabp</groupId>
-      <artifactId>spring-boot-support</artifactId>
-      <version>1.4.0</version>
-    </dependency>
-    <dependency>
-      <groupId>org.camunda.bpm.springboot</groupId>
-      <!-- the "-4" variant is the Spring Boot 4 build; the unsuffixed one targets Spring Boot 3 -->
-      <artifactId>camunda-bpm-spring-boot-starter-4</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.camunda.bpm.springboot</groupId>
-      <!--
-        There is no "-4" variant of the webapp starter. It reaches the unsuffixed, Spring Boot 3 core
-        starter transitively through camunda-bpm-spring-boot-starter-webapp-core, and both core starters
-        contain the very same 100 class names - including CamundaBpmAutoConfiguration. Having both on the
-        classpath would leave it to class path order which one wins, so the Spring Boot 3 one is excluded.
-      -->
-      <artifactId>camunda-bpm-spring-boot-starter-webapp</artifactId>
-      <exclusions>
-        <exclusion>
-          <groupId>org.springframework.boot</groupId>
-          <artifactId>spring-boot-starter-tomcat</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>org.camunda.bpm.springboot</groupId>
-          <artifactId>camunda-bpm-spring-boot-starter</artifactId>
-        </exclusion>
-      </exclusions>
-    </dependency>
-    <dependency>
-      <!-- version from the Spring Boot BOM: Jakarta EE 11 means Servlet 6.1 -->
-      <groupId>jakarta.servlet</groupId>
-      <artifactId>jakarta.servlet-api</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.springframework.boot</groupId>
-      <artifactId>spring-boot-starter-test</artifactId>
-      <scope>test</scope>
-    </dependency>
-  </dependencies>
+  <artifactId>camunda7-adapter-spring-boot</artifactId>
+  <name>VanillaBP Camunda 7 adapter - Spring Boot</name>
+  <description>Spring Boot auto-configuration registering the VanillaBP Camunda 7 adapter.</description>
 
   <licenses>
     <license>
@@ -83,4 +28,74 @@
     </developer>
   </developers>
 
+  <dependencies>
+    <dependency>
+      <groupId>org.projectlombok</groupId>
+      <artifactId>lombok</artifactId>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.vanillabp</groupId>
+      <artifactId>test-utils</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.camunda.community.vanillabp</groupId>
+      <artifactId>camunda7-adapter</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.vanillabp</groupId>
+      <artifactId>vanillabp-spring-boot-integration</artifactId>
+    </dependency>
+    <!-- Spring 6 flavour of the embedded engine's Spring integration
+         (SpringProcessEngineConfiguration). The spring-* dependencies it declares are
+         'provided', so the Spring Boot 4.1 (Spring Framework 7) baseline is used at
+         runtime. The camunda-bpm-spring-boot-starter is deliberately NOT used - it
+         targets Spring Boot 3.5.x. -->
+    <dependency>
+      <groupId>org.camunda.bpm</groupId>
+      <artifactId>camunda-engine-spring-6</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-autoconfigure</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework</groupId>
+      <artifactId>spring-tx</artifactId>
+    </dependency>
+    <!-- ThreadPoolTaskExecutor backing the SpringJobExecutor -->
+    <dependency>
+      <groupId>org.springframework</groupId>
+      <artifactId>spring-context</artifactId>
+    </dependency>
+    <!-- DataSourceTransactionManager for engines on a named datasource
+         (vanillabp.adapters.<id>.data-source-name; the datasource itself is
+         application-provided - the adapter never builds its own pool) -->
+    <dependency>
+      <groupId>org.springframework</groupId>
+      <artifactId>spring-jdbc</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-test</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-jdbc</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.h2database</groupId>
+      <artifactId>h2</artifactId>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
 </project>

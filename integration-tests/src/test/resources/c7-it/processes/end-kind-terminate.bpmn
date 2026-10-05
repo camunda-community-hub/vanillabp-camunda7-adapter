@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:camunda="http://camunda.org/schema/1.0/bpmn"
+                  id="Definitions_EndKindTerminate"
+                  targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:process id="EndKindTerminateProcess" isExecutable="true">
+    <bpmn:startEvent id="Event_Start">
+      <bpmn:outgoing>Flow_ToRun</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:sequenceFlow id="Flow_ToRun" sourceRef="Event_Start" targetRef="Activity_Run" />
+    <bpmn:serviceTask id="Activity_Run" camunda:asyncBefore="true"
+                      camunda:expression="${runBeforeTerminating}">
+      <bpmn:incoming>Flow_ToRun</bpmn:incoming>
+      <bpmn:outgoing>Flow_ToTerminate</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="Flow_ToTerminate" sourceRef="Activity_Run" targetRef="Event_Terminate" />
+    <bpmn:endEvent id="Event_Terminate">
+      <bpmn:incoming>Flow_ToTerminate</bpmn:incoming>
+      <bpmn:terminateEventDefinition id="TerminateEventDefinition_1" />
+    </bpmn:endEvent>
+  </bpmn:process>
+</bpmn:definitions>

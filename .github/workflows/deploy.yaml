@@ -136,6 +136,9 @@ jobs:
           LOGS="$RUNNER_TEMP/logs"
           mkdir -p "$LOGS" "$RUNNER_TEMP/rehearsal"
           echo "LOGS=$LOGS" >> "$GITHUB_ENV"
+          # setup-java@v6 exports MAVEN_ARGS=-ntp, which hides every transfer. The check at
+          # the end reads the transfers, so the rehearsal turns it off again.
+          echo "MAVEN_ARGS=" >> "$GITHUB_ENV"
           # what the action's step 'Initialize' does
           cp -v .release-action/resources/settings.xml "$HOME/.m2/"
           echo "The action is at $(git -C .release-action rev-parse HEAD)"
@@ -197,7 +200,12 @@ jobs:
             <(unzip -l target/central-publishing/central-bundle.zip | awk '{print $4}' | grep -E '\.(pom|jar)$' | sed 's|.*/||' | sort) \
             || { echo "Artifactory and Central would not get the same files." >&2; exit 1; }
           echo "Uploads per target:"
-          grep -h "Uploaded to" "$LOGS"/*.log | sed -E 's|.*Uploaded to ([^:]+): ([a-z]+)://.*|\1 \2|' | sort | uniq -c
+          grep -h "Uploaded to" "$LOGS"/*.log | sed -E 's|.*Uploaded to ([^:]+): ([a-z]+)://.*|\1 \2|' | sort | uniq -c || true
+          # without any upload in the log the check below would prove nothing
+          if ! grep -qE "Uploaded to [^:]+: file://" "$LOGS/3-artifactory.log"; then
+            echo "The log shows no transfer at all, so it cannot show where files went." >&2
+            exit 1
+          fi
           if grep -hE "Upload(ing|ed) to [^:]+: https?://" "$LOGS"/*.log; then
             echo "Something was sent to a remote repository." >&2
             exit 1

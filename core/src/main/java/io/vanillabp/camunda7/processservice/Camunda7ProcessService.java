@@ -320,8 +320,11 @@ public class Camunda7ProcessService<A> implements MigratableProcessService<A> {
    * The correlation names the process definition. Without it the engine would start every
    * process whose start event waits for that message, which is what version 1 did. The core
    * refuses such a message before phase one wherever this adapter could report the messages
-   * of the model, and naming the definition keeps the rule where the core could not check,
-   * for example because a message name is an expression.
+   * of the model. Naming the definition keeps the rule where the core could not check.
+   * <p>
+   * The definition is the newest version of the process, the same one {@code startWorkflow}
+   * starts. A version somebody deployed from outside after the application started is the
+   * newest one, too. See {@code Camunda7StartByMessageIT}.
    * <p>
    * Camunda 7 refuses a correlation which names a process definition and a tenant at the
    * same time. The definition was looked up within the module's tenant, so it carries the
@@ -346,10 +349,10 @@ public class Camunda7ProcessService<A> implements MigratableProcessService<A> {
   }
 
   /**
-   * The process definition a message start creates its instance of: the one this adapter
-   * deployed for that process while the application started, or the newest one where the
-   * engine deployed nothing because the model did not change. Only where this boot recorded
-   * none, the engine is asked for the newest definition in the module's tenant.
+   * The process definition a message start creates its instance of: the newest version of
+   * the process in the module's tenant. Usually this is the version the application deployed
+   * while it started. A version deployed later from outside replaces it, exactly as it does
+   * for a start without a message.
    *
    * @param workflowModuleId The workflow module ID
    * @param bpmnProcessId The PLAIN BPMN process ID
@@ -360,12 +363,6 @@ public class Camunda7ProcessService<A> implements MigratableProcessService<A> {
       final String workflowModuleId,
       final String bpmnProcessId) {
 
-    final var deployed = taskRegistry == null
-        ? null
-        : taskRegistry.definitionIdDeployedOf(workflowModuleId, bpmnProcessId);
-    if (deployed != null) {
-      return deployed;
-    }
     final var tenantId = tenantIdOf(workflowModuleId);
     var query = repositoryService
         .createProcessDefinitionQuery()
@@ -390,7 +387,9 @@ public class Camunda7ProcessService<A> implements MigratableProcessService<A> {
   /**
    * Whether the model of a process definition has a start event for this message, read the
    * way the engine reads it when a correlation names that definition: the start events the
-   * process itself holds, and the message name as the model writes it.
+   * process itself holds, and the message name as the model writes it. Camunda 7 refuses to
+   * deploy a message start event whose name is an expression, so the name in the model is
+   * always the plain name. See {@code Camunda7MessageNamedByExpressionTest}.
    */
   private boolean startsByMessage(
       final String processDefinitionId,
@@ -690,9 +689,9 @@ public class Camunda7ProcessService<A> implements MigratableProcessService<A> {
           """
               BPMN process '%s' of workflow module '%s' has no message start event named '%s' in \
               the model adapter '%s' starts! A message starts only the process of the process \
-              service you called. Check the message name against the model of that process. A \
-              message name which is an expression never matches, because the engine compares the \
-              name as the model writes it."""
+              service you called. Check the message name against the model of that process. \
+              Camunda 7 does not support an expression as the name of a message start event, so \
+              the name you pass has to be the plain name the model writes."""
               .formatted(request.bpmnProcessId(), request.workflowModuleId(), request.messageName(), adapterId));
     }
 

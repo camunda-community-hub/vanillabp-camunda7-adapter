@@ -623,18 +623,24 @@ doctrine. `Camunda7TaskProcessingIT#correlateMessageResumesProcess`,
 **A message starts only the process of its own process service.** While it wires a model,
 the adapter reports the plain names of the message start events of each process
 (`BpmsInitiatedStartInvoker#reportStartMessages`), and the core refuses any other message
-before phase one. A process with a message name the adapter cannot read, an expression, is
-not reported, and the core does not check it. The adapter keeps the rule itself as well:
-phase one reads the model of the process definition, and phase two names that definition in
-the correlation (`processDefinitionId`). The definition is the one this boot deployed, or
-the newest one where the model had not changed. Without the definition id Camunda 7 would
-start every process which waits for the message, which is what version 1 did. A
-correlation which names a definition must not name a tenant as well, and it does not need
-to, because the definition was looked up in the module's tenant. The engine compares the
-message name as the model writes it, so a message start event whose name is an expression
-cannot be started this way at all.
+before phase one. A process with a message name the adapter cannot read is not reported, and
+the core does not check it. The adapter keeps the rule itself as well: phase one reads the
+model of the process definition, and phase two names that definition in the correlation
+(`processDefinitionId`). Without the definition id Camunda 7 would start every process
+which waits for the message, which is what version 1 did. A correlation which names a
+definition must not name a tenant as well, and it does not need to, because the definition
+was looked up in the module's tenant.
 `Camunda7TaskProcessingIT#startWorkflowByMessageRefusesTheMessageOfAnotherProcess` and
 `#bothPhasesOfAStartByMessageStayWithTheOwnProcess` hold this.
+
+The definition is the newest version of the process in the module's tenant, the same one
+`startWorkflow` starts. A version somebody deploys from outside while the application runs
+is the newest one, too. `Camunda7StartByMessageIT` holds this.
+
+Both phases compare the message name with the name the model writes. That name is always
+plain: Camunda 7 refuses to deploy a message start event whose name is an expression, even
+one which needs no variables. The check before phase one says so in its message.
+`Camunda7MessageNamedByExpressionTest` measured this on Camunda 7.24.0.
 
 BPMN expressions like gateway conditions or multi-instance collections
 (`${riskAcceptable}`, `${items}`) resolve against the workflow aggregate

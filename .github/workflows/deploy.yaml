@@ -32,6 +32,16 @@ jobs:
         with:
           release-version: ${{ github.event.release.tag_name }}
           branch: main
+          # The action's deploy calls pass -DskipTests, which failsafe 3.6.0 no longer
+          # reads. Without -DskipITs both deploys run the integration tests again, so a
+          # flaky test could stop the Central half after Artifactory took the release.
+          # The checks of every pull request ran them against this commit.
+          maven-release-options: -DskipITs
+          # The release assets come from the staging directory of the Central deploy. The
+          # action's default is the directory of the nexus staging plugin, which this
+          # repository turns off (see 'skip.camunda.release' in pom.xml), and the zip of an
+          # empty list fails the job after everything was published.
+          artifacts-pattern: ./target/central-staging/**/*.jar
           nexus-usr: ${{ secrets.NEXUS_USR }}
           nexus-psw: ${{ secrets.NEXUS_PSW }}
           sonatype-central-portal-usr: ${{ secrets.COMMUNITY_HUB_MAVEN_CENTRAL_CP_USR }}

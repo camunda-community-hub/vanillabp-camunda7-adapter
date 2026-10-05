@@ -75,6 +75,17 @@
     <!-- our snapshots go out through a plain 'mvn deploy', see the deploy plugin below.
          A module which is not published sets this to true in its own properties. -->
     <maven.deploy.skip>false</maven.deploy.skip>
+    <!-- The release to Maven Central does not read 'maven.deploy.skip'. A module which is not
+         published names itself here as well, see central-publishing-maven-plugin below. -->
+    <central.publishing.excluded>none</central.publishing.excluded>
+    <!-- Turns off the nexus staging plugin which the hub parent's profile 'camunda-repository'
+         adds, and with it nothing else: the release still goes to Camunda's Artifactory,
+         through the deploy plugin above and the 'camunda-nexus' repository of the parent.
+         The staging plugin does not read 'maven.deploy.skip' and runs next to the deploy
+         plugin, not instead of it. Measured on 2026-10-05 with the calls of
+         community-action-maven-release@v2: it sent all 12 modules, the test modules and
+         the coverage reports included, and the 6 published modules a second time. -->
+    <skip.camunda.release>true</skip.camunda.release>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
     <maven.compiler.release>21</maven.compiler.release>
     <version.java>21</version.java>
@@ -223,6 +234,22 @@
                  jar. The property cannot be left alone either, because the parent writes its
                  'true' as configuration and beats the property the same way. -->
             <skip>${maven.deploy.skip}</skip>
+          </configuration>
+        </plugin>
+        <plugin>
+          <!-- The hub parent's profile 'central-sonatype-publish' brings this plugin, and it
+               bundles every module of the reactor, because it does not read
+               'maven.deploy.skip'. Measured on 2026-10-05 with '-Dskip.central.release=true',
+               which builds the bundle and uploads nothing: 12 modules in the bundle, 6 of
+               them test modules or reports. A version on Central cannot be taken back, so
+               the module set has to be right before the first release. A module which is
+               not published sets 'central.publishing.excluded' to its own artifactId. -->
+          <groupId>org.sonatype.central</groupId>
+          <artifactId>central-publishing-maven-plugin</artifactId>
+          <configuration>
+            <excludeArtifacts>
+              <excludeArtifact>${central.publishing.excluded}</excludeArtifact>
+            </excludeArtifacts>
           </configuration>
         </plugin>
         <plugin>

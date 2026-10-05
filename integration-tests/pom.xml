@@ -32,6 +32,7 @@
     <!-- test-only module: no artifact to publish -->
     <maven.install.skip>true</maven.install.skip>
     <maven.deploy.skip>true</maven.deploy.skip>
+    <central.publishing.excluded>${project.artifactId}</central.publishing.excluded>
     <!-- and therefore no javadoc to check: the goal is bound in every module of this
          build, and a module which publishes nothing has no reader to write for -->
     <maven.javadoc.skip>true</maven.javadoc.skip>

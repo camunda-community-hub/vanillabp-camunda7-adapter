@@ -20,6 +20,12 @@
     <module>coverage-gate</module>
   </modules>
 
+  <properties>
+    <!-- nothing here goes to Maven Central either, see the deploy plugin below. The modules
+         above inherit it, and each one names itself -->
+    <central.publishing.excluded>${project.artifactId}</central.publishing.excluded>
+  </properties>
+
   <build>
     <plugins>
       <plugin>

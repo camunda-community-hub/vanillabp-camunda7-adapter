@@ -1351,3 +1351,43 @@ said that nothing is written down where the truth is that nothing is deduplicate
 
 `Camunda7UserTaskDeliveryRecordIT` holds what a user-task notification leaves behind, and
 `Camunda7RepeatedDeliveryIT` holds the two datasource modes side by side.
+
+### 40. A workflow is served from the model of its own version
+
+Camunda 7 evaluates the expressions of the model a workflow was started with. Two versions of a
+process may name different expressions at the same element. For a process the application
+deploys, the adapter used to know the tasks of that one model and nothing else. A workflow of an
+older version then asked for the old name, the adapter did not know it, and the lookup by element
+found the task of the newer version at the same id. That workflow ran a method its own model never named. It did
+so when the old method was still there, and it did so when the old method was removed, where the
+startup check had just said that the workflow would end in an incident instead.
+`Camunda7HandlersOfTheOwnVersionIT` measured it for a task wired by `camunda:expression`, a task
+wired by `camunda:delegateExpression` and a listener written as `camunda:expression`. All three ran
+the method of the newer version.
+
+So the lookup asks for the tasks of the process definition a workflow runs on. The registry reads
+that model the first time a workflow of the definition asks, with the extraction a deployed model
+goes through, and keeps the answer. A definition never changes, so the answer never goes stale.
+The model comes from the execution itself, out of the engine's deployment cache. The task
+listener of a user task and the listener which reports a cancellation ask the same way.
+
+Two other ways were possible. Wiring every version the engine holds while the application starts,
+as `wireTheVersionsHeldUnder` does for a declared process id, would register the old names, so the
+lookup by name would find them. But it keeps every version in one list, so the lookup by element
+can still cross versions, and decision 10 asks a start not to grow with the number of versions.
+Putting the version into the key of the registry needs the same model read and ends up as this
+decision with more code. Reading per definition is exact, costs one read per version a workflow
+really runs on, and also covers a version another node deployed after this one started.
+
+A model the extraction refuses gets no task at all and one warning, the way decision 13 handles a
+held version under a declared id. Its workflows then end in an incident at their next task.
+
+What the application sees when a method of an older version is missing does not change: the core's
+check of held versions reports it while the application starts, and the workflow ends in an
+incident at that task. The incident names the task definition, the element and the version. Only
+the method of the newer version no longer runs in its place. A listener whose method is gone is no
+VanillaBP listener any more, so the engine evaluates its expression itself and the incident names
+the expression.
+
+`Camunda7TasksOfTheOwnVersionTest` holds the lookup, and `Camunda7HandlersOfTheOwnVersionIT` holds
+the upgrade against a running engine.

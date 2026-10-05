@@ -83,16 +83,19 @@ public class Camunda7TaskCancellationListener implements ExecutionListener {
         .resolveWorkflowModuleId(processDefinition.getTenantId(), scopedBpmnProcessId);
     final var bpmnProcessId = taskRegistry.plainBpmnProcessId(workflowModuleId, scopedBpmnProcessId);
 
-    final var connectable = taskRegistry
-        // the SCOPED id, because that is what the registry is keyed by. The plain id
-        // belongs into the delivery and into the log, never into a lookup: with
-        // prefixed identifiers the two differ, the lookup finds nothing and the
-        // cancellation stays silent
-        .resolve(
+    // the SCOPED id, because that is what the registry is keyed by. The plain id
+    // belongs into the delivery and into the log, never into a lookup: with
+    // prefixed identifiers the two differ, the lookup finds nothing and the
+    // cancellation stays silent. And the tasks of the version this workflow runs on,
+    // because another version may wire another task to the same element
+    final var tasksOfTheOwnVersion = taskRegistry
+        .tasksOf(
             workflowModuleId,
             scopedBpmnProcessId,
-            execution.getCurrentActivityId(),
-            null)
+            processDefinition.getId(),
+            executionEntity::getBpmnModelInstance);
+    final var connectable = tasksOfTheOwnVersion
+        .resolve(execution.getCurrentActivityId(), null)
         // a TASK of the element and nothing else. A user task is told about its cancellation by
         // Camunda7UserTaskEventListener, through the engine's DELETE task-listener event, and a
         // listener of the element is told below - both would hear it twice from here, because a
@@ -114,8 +117,8 @@ public class Camunda7TaskCancellationListener implements ExecutionListener {
         .listenersNeedingACancellation(workflowModuleId, scopedBpmnProcessId)
         .stream()
         .filter(listener -> listener.elementId().equals(execution.getCurrentActivityId()))
-        .forEach(listener -> taskRegistry
-            .resolve(workflowModuleId, scopedBpmnProcessId, null, listener.taskDefinition())
+        .forEach(listener -> tasksOfTheOwnVersion
+            .resolve(null, listener.taskDefinition())
             // the registry answers by name first and falls back to the element, which is not
             // what is asked for here: a listener is meant, and its task definition names it
             .filter(candidate -> listener.taskDefinition().equals(candidate.taskDefinition()))

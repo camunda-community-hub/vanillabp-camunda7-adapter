@@ -1640,8 +1640,11 @@ described under [Transaction caveat](#behaviour) above.
 A service task wired by `camunda:topic` is not served. The adapter delivers tasks through
 the engine's own execution (`camunda:expression`/`camunda:delegateExpression`, see
 [Task processing](#task-processing-execution-model)), and the external-task API is a
-second delivery mechanism with its own lock, retry and completion model. Nobody asked for
-it yet, so there is no timeline.
+second delivery mechanism with its own lock, retry and completion model. VanillaBP does not
+need it for asynchronous work. A `@TaskId` method leaves the task open, and
+`ProcessService#completeTask` completes it later. Such a task is wired by
+`camunda:delegateExpression`. For an engine which is only reachable over its REST API, a separate
+adapter `camunda7-external` is planned.
 
 Deploying such a task is refused with a guiding message. Meeting one in a version the engine
 ALREADY holds is a warning naming the version instead: that model is only being read, on

@@ -252,6 +252,13 @@ public class Camunda7PhaseOneChecksTest {
             io.vanillabp.integration.spi.PhaseOperation.START_WORKFLOW_BY_MESSAGE,
             java.util.Map.of(io.vanillabp.integration.spi.PhaseTwoCall.ARG_MESSAGE_NAME, "LoanRequested")));
     assertTrue(failure.getMessage().contains("LoanRequested"), failure.getMessage());
+    // the engine refuses such a model, see Camunda7MessageNamedByExpressionTest, so the
+    // developer learns that an expression is no way out
+    assertTrue(
+        failure
+            .getMessage()
+            .contains("Camunda 7 does not support an expression as the name of a message start event"),
+        failure.getMessage());
 
     assertDoesNotThrow(
         () -> phaseOne(

@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Version 1 of the process. Version 2 names other expressions at the same three
+     elements: a task wired by 'camunda:expression', a listener written as
+     'camunda:expression' and a task wired by 'camunda:delegateExpression'. A workflow
+     started on this version waits for its message while the application is upgraded.
+     After that it has to reach the methods named HERE. -->
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" id="Definitions_OwnVersionOld" targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:message id="Msg_OwnVersionContinue" name="OwnVersionContinue" />
+  <bpmn:process id="OwnVersionProcess" isExecutable="true">
+    <bpmn:startEvent id="OV_Start">
+      <bpmn:outgoing>OV_f1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:sequenceFlow id="OV_f1" sourceRef="OV_Start" targetRef="OV_Wait" />
+    <!-- where a workflow of version 1 stands while the application is upgraded -->
+    <bpmn:intermediateCatchEvent id="OV_Wait">
+      <bpmn:incoming>OV_f1</bpmn:incoming>
+      <bpmn:outgoing>OV_f2</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="OV_MsgDef" messageRef="Msg_OwnVersionContinue" />
+    </bpmn:intermediateCatchEvent>
+    <bpmn:sequenceFlow id="OV_f2" sourceRef="OV_Wait" targetRef="OV_Fork" />
+    <!-- three branches, so each element is measured on its own: every branch starts
+         with a job of its own, and a failure in one leaves the others alone -->
+    <bpmn:parallelGateway id="OV_Fork">
+      <bpmn:incoming>OV_f2</bpmn:incoming>
+      <bpmn:outgoing>OV_f3</bpmn:outgoing>
+      <bpmn:outgoing>OV_f4</bpmn:outgoing>
+      <bpmn:outgoing>OV_f5</bpmn:outgoing>
+    </bpmn:parallelGateway>
+    <bpmn:sequenceFlow id="OV_f3" sourceRef="OV_Fork" targetRef="OV_Expression" />
+    <bpmn:sequenceFlow id="OV_f4" sourceRef="OV_Fork" targetRef="OV_Listener" />
+    <bpmn:sequenceFlow id="OV_f5" sourceRef="OV_Fork" targetRef="OV_Delegate" />
+    <bpmn:serviceTask id="OV_Expression" camunda:asyncBefore="true" camunda:expression="${ownVersionOldExpression}">
+      <bpmn:incoming>OV_f3</bpmn:incoming>
+      <bpmn:outgoing>OV_f6</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:intermediateThrowEvent id="OV_Listener" camunda:asyncBefore="true">
+      <bpmn:extensionElements>
+        <camunda:executionListener event="start" expression="${ownVersionOldListener}" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>OV_f4</bpmn:incoming>
+      <bpmn:outgoing>OV_f7</bpmn:outgoing>
+    </bpmn:intermediateThrowEvent>
+    <bpmn:serviceTask id="OV_Delegate" camunda:asyncBefore="true" camunda:delegateExpression="${ownVersionOldDelegate}">
+      <bpmn:incoming>OV_f5</bpmn:incoming>
+      <bpmn:outgoing>OV_f8</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="OV_f6" sourceRef="OV_Expression" targetRef="OV_Join" />
+    <bpmn:sequenceFlow id="OV_f7" sourceRef="OV_Listener" targetRef="OV_Join" />
+    <bpmn:sequenceFlow id="OV_f8" sourceRef="OV_Delegate" targetRef="OV_Join" />
+    <bpmn:parallelGateway id="OV_Join">
+      <bpmn:incoming>OV_f6</bpmn:incoming>
+      <bpmn:incoming>OV_f7</bpmn:incoming>
+      <bpmn:incoming>OV_f8</bpmn:incoming>
+      <bpmn:outgoing>OV_f9</bpmn:outgoing>
+    </bpmn:parallelGateway>
+    <bpmn:sequenceFlow id="OV_f9" sourceRef="OV_Join" targetRef="OV_End" />
+    <bpmn:endEvent id="OV_End">
+      <bpmn:incoming>OV_f9</bpmn:incoming>
+    </bpmn:endEvent>
+  </bpmn:process>
+</bpmn:definitions>

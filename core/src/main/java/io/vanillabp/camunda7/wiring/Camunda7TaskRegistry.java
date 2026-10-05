@@ -5,6 +5,9 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.function.Supplier;
+
+import org.camunda.bpm.model.bpmn.BpmnModelInstance;
 
 /**
  * The task connectables of ONE Camunda 7 engine (= one adapter id), registered by
@@ -13,6 +16,11 @@ import java.util.concurrent.CopyOnWriteArrayList;
  * Keyed by (workflow module ID, BPMN process ID) - one engine serves several workflow
  * modules. A caller which only has what the engine reports hands the tenant over and
  * gets the module back, see {@link #resolveWorkflowModuleId(String, String)}.
+ * <p>
+ * A running workflow asks for the tasks of its OWN process definition, see
+ * {@link #tasksOf(String, String, String, Supplier)}. Two versions of a process may name
+ * different expressions at the same element, and only the version a workflow runs on says
+ * which of them it means.
  */
 // see decision 4 in the repository's DECISIONS.md
 @SuppressWarnings({
@@ -631,12 +639,16 @@ public class Camunda7TaskRegistry {
   /**
    * Resolves the connectable serving the given EL name - matching by the BPMN
    * element the expression is evaluated at, or by the task definition (the EL
-   * name itself).
+   * name itself) - among the tasks of EVERY model wired under the process.
    * <p>
    * The process id is the SCOPED one, the key the engine reports, because that is what
    * {@link #register(Camunda7TaskConnectable)} stores under. Handing the plain id over
    * works as long as nothing is prefixed and answers nothing as soon as something is,
    * and nothing answers is the one outcome a caller cannot tell from "no handler here".
+   * <p>
+   * A caller holding an execution asks {@link #tasksOf(String, String, String, Supplier)}
+   * instead: two versions of the process may wire different tasks to the same element, and
+   * this lookup cannot tell them apart.
    *
    * @param workflowModuleId The workflow module (= tenant) ID
    * @param scopedBpmnProcessId The process definition key the engine knows
@@ -652,27 +664,14 @@ public class Camunda7TaskRegistry {
       final String currentElementId,
       final String propertyName) {
 
-    // by NAME first: a name which IS a task definition means that task, wherever it
-    // is evaluated. Only then by element, which matches any name evaluated there
-    final var byName = connectables
-        .getOrDefault(new RegistryKey(workflowModuleId, scopedBpmnProcessId), List.of())
-        .stream()
-        .filter(connectable -> connectable.appliesByName(propertyName))
-        .findFirst();
-    if (byName.isPresent()) {
-      return byName;
-    }
-    return connectables
-        .getOrDefault(new RegistryKey(workflowModuleId, scopedBpmnProcessId), List.of())
-        .stream()
-        .filter(connectable -> connectable.appliesByElement(currentElementId))
-        .findFirst();
+    return tasksOfEveryWiredModel(workflowModuleId, scopedBpmnProcessId).resolve(currentElementId, propertyName);
 
   }
 
   /**
    * Whether a connectable serves this EL name by NAME (its task definition), as
-   * opposed to serving whatever is evaluated at its BPMN element.
+   * opposed to serving whatever is evaluated at its BPMN element. Asked among the tasks of
+   * every model wired under the process, like {@link #resolve(String, String, String, String)}.
    *
    * @param workflowModuleId The workflow module ID
    * @param scopedBpmnProcessId The process definition key the engine knows
@@ -684,10 +683,162 @@ public class Camunda7TaskRegistry {
       final String scopedBpmnProcessId,
       final String propertyName) {
 
-    return connectables
-        .getOrDefault(new RegistryKey(workflowModuleId, scopedBpmnProcessId), List.of())
-        .stream()
-        .anyMatch(connectable -> connectable.appliesByName(propertyName));
+    return tasksOfEveryWiredModel(workflowModuleId, scopedBpmnProcessId).isTaskDefinitionName(propertyName);
+
+  }
+
+  private TasksOfAModel tasksOfEveryWiredModel(
+      final String workflowModuleId,
+      final String scopedBpmnProcessId) {
+
+    return new TasksOfAModel(
+        connectables.getOrDefault(new RegistryKey(workflowModuleId, scopedBpmnProcessId), List.of()));
+
+  }
+
+  /**
+   * Reads the tasks of the model one process definition carries, through the same extraction
+   * the deployment runs over a model it brings.
+   */
+  public interface DefinitionReading {
+
+    /**
+     * The tasks of one process definition, as connectables.
+     *
+     * @param workflowModuleId The workflow module ID
+     * @param bpmnProcessId The PLAIN BPMN process ID
+     * @param scopedBpmnProcessId The process definition key the engine knows
+     * @param processDefinitionId The engine's process definition id
+     * @param model The model of that definition
+     * @return Its connectables, empty where the model cannot be read
+     */
+    List<Camunda7TaskConnectable> connectablesOf(
+        String workflowModuleId,
+        String bpmnProcessId,
+        String scopedBpmnProcessId,
+        String processDefinitionId,
+        BpmnModelInstance model);
+
+  }
+
+  /**
+   * Who reads the model of a process definition. Handed over by the deployment service, which
+   * owns the extraction. May be <code>null</code> (tests): every definition is then answered
+   * with the tasks of every wired model.
+   */
+  private DefinitionReading definitionReading;
+
+  /**
+   * Hands over who reads the tasks of a process definition's model.
+   *
+   * @param definitionReading The extraction of the deployment service
+   */
+  public void setDefinitionReading(
+      final DefinitionReading definitionReading) {
+
+    this.definitionReading = definitionReading;
+
+  }
+
+  /**
+   * The tasks of each process definition a workflow ran on, read once per definition. A
+   * definition never changes, so the answer never goes stale, and the number of entries is the
+   * number of versions in use.
+   */
+  private final Map<String, TasksOfAModel> tasksByDefinition = new ConcurrentHashMap<>();
+
+  /**
+   * The tasks of the process definition a workflow runs on, and nothing of any other version.
+   * <p>
+   * Camunda 7 evaluates the expressions of the model a workflow was STARTED with. An older
+   * version may name another expression at the same element than the version this application
+   * deploys, so a lookup over every model of the process finds the newer task by its element
+   * and hands the workflow a method its own model never named. The model is read when a
+   * workflow of that definition first asks, and kept for every later question, so a start
+   * pays nothing for the versions the engine holds (see decision 40 in the repository's
+   * DECISIONS.md).
+   *
+   * @param workflowModuleId The workflow module ID
+   * @param scopedBpmnProcessId The process definition key the engine knows
+   * @param processDefinitionId The engine's process definition id of the workflow
+   * @param model The model of that definition, read only on the first question about it
+   * @return The tasks of that definition
+   */
+  public TasksOfAModel tasksOf(
+      final String workflowModuleId,
+      final String scopedBpmnProcessId,
+      final String processDefinitionId,
+      final Supplier<BpmnModelInstance> model) {
+
+    final var bpmnProcessId = plainProcessIdsByScopedProcessId
+        .get(new RegistryKey(workflowModuleId, scopedBpmnProcessId));
+    if ((definitionReading == null) || (processDefinitionId == null) || (bpmnProcessId == null)) {
+      // nothing to read the definition with, or a process this application never wired:
+      // the second answers nothing either way, the first only happens in tests
+      return tasksOfEveryWiredModel(workflowModuleId, scopedBpmnProcessId);
+    }
+    return tasksByDefinition
+        .computeIfAbsent(
+            processDefinitionId,
+            definitionId -> new TasksOfAModel(
+                List
+                    .copyOf(definitionReading
+                        .connectablesOf(
+                            workflowModuleId, bpmnProcessId, scopedBpmnProcessId, definitionId, model.get()))));
+
+  }
+
+  /**
+   * The tasks of one model, and the two questions an evaluated EL name asks about them.
+   *
+   * @param connectables The tasks of the model
+   */
+  public record TasksOfAModel(
+                              List<Camunda7TaskConnectable> connectables) {
+
+    /**
+     * The connectable serving the given EL name, by NAME first: a name which IS a task
+     * definition means that task, wherever it is evaluated. Only then by element, which
+     * matches any name evaluated there.
+     *
+     * @param currentElementId The BPMN element the expression evaluates at (may be
+     *          <code>null</code>)
+     * @param propertyName The top-level EL name (may be <code>null</code>)
+     * @return The connectable or empty
+     */
+    public Optional<Camunda7TaskConnectable> resolve(
+        final String currentElementId,
+        final String propertyName) {
+
+      final var byName = connectables
+          .stream()
+          .filter(connectable -> connectable.appliesByName(propertyName))
+          .findFirst();
+      if (byName.isPresent()) {
+        return byName;
+      }
+      return connectables
+          .stream()
+          .filter(connectable -> connectable.appliesByElement(currentElementId))
+          .findFirst();
+
+    }
+
+    /**
+     * Whether a task of this model is named like this, as opposed to merely sitting at the
+     * element the name is evaluated at.
+     *
+     * @param propertyName The EL name
+     * @return Whether a connectable is named like this
+     */
+    public boolean isTaskDefinitionName(
+        final String propertyName) {
+
+      return connectables
+          .stream()
+          .anyMatch(connectable -> connectable.appliesByName(propertyName));
+
+    }
 
   }
 

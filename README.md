@@ -1319,6 +1319,22 @@ deploy command names the version the engine assigned to every model, tag include
 `Camunda7ProcessVersionIT#theVersionDecidesWhichMethodRuns` holds the routing and
 `Camunda7StartupQuestionCostTest` the number of questions a start asks.
 
+### A workflow is served from the model of its own version
+
+Camunda 7 evaluates the expressions of the model a workflow was started with. When version 2 of a
+process names `${checkTheNewWay}` at an element where version 1 named `${checkTheOldWay}`, a
+workflow of version 1 still asks for `checkTheOldWay`. So every lookup which starts from an
+execution, the EL resolver and the two task listeners, asks `Camunda7TaskRegistry#tasksOf` for
+the tasks of the execution's own process definition. The registry reads that model once per
+definition, through the extraction `wireBpmn` runs, and keeps it.
+
+The list of tasks per process still exists. It is what `wireBpmn` fills, and it answers where no
+definition is at hand. It must not answer a running workflow: it holds the tasks of every model
+wired under the process, and its lookup by element would hand a workflow of version 1 the task
+version 2 wires at the same id. That is what happened before, see
+[decision 40](./DECISIONS.md#40-a-workflow-is-served-from-the-model-of-its-own-version).
+`Camunda7HandlersOfTheOwnVersionIT` runs the upgrade against an engine.
+
 The models of those versions are read for more than the tasks they carry. A workflow on an older
 version loses an update exactly as one on the newest model does: two tokens in one workflow are
 two branches writing one workflow aggregate, and without a version attribute on that aggregate

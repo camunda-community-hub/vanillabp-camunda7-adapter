@@ -455,7 +455,65 @@ public class Camunda7DeploymentService implements AdapterDeploymentService<BpmnM
       // the EL resolver builds the task behavior and needs both to raise a BPMN error
       // the deployed model still carries; it cannot be handed anything itself
       taskRegistry.setScoping(scoping);
+      // a running workflow is served from the model of its own version, which the registry
+      // reads through the extraction a deployed model goes through
+      taskRegistry.setDefinitionReading(this::connectablesOfDefinition);
     }
+
+  }
+
+  /**
+   * The tasks of the model one process definition carries, read when a workflow of that
+   * definition first asks for one of them. Camunda 7 evaluates the expressions of the model a
+   * workflow was started with, so the version a workflow runs on decides which method an
+   * expression means, not the version this boot deploys (see decision 40 in the repository's
+   * DECISIONS.md).
+   * <p>
+   * A model the extraction refuses gets no task at all, the way a version the engine holds
+   * under a declared id does. Its workflows then end in an incident at their next task, which
+   * names the expression. Serving them from another version instead is what this lookup
+   * exists to prevent.
+   *
+   * @param workflowModuleId The workflow module ID
+   * @param bpmnProcessId The PLAIN BPMN process ID
+   * @param scopedBpmnProcessId The process definition key the engine knows
+   * @param processDefinitionId The engine's process definition id
+   * @param model The model of that definition
+   * @return The connectables of that model, empty where it cannot be read
+   */
+  private List<Camunda7TaskConnectable> connectablesOfDefinition(
+      final String workflowModuleId,
+      final String bpmnProcessId,
+      final String scopedBpmnProcessId,
+      final String processDefinitionId,
+      final BpmnModelInstance model) {
+
+    final var connectables = new LinkedList<Camunda7TaskConnectable>();
+    try {
+      collectTasks(
+          model,
+          workflowModuleId,
+          bpmnProcessId,
+          scopedBpmnProcessId,
+          "process definition '%s'".formatted(processDefinitionId),
+          new LinkedList<>(),
+          connectables,
+          null);
+    } catch (final RuntimeException e) {
+      log.warn(
+          """
+              Camunda7[{}]: the model of process definition '{}' of BPMN process '{}' (workflow \
+              module '{}') cannot be wired, so no task of it is served. A workflow running on that \
+              definition ends in an incident at its next task. Either deploy that model again \
+              with the problem fixed, or complete those workflows by other means.""",
+          adapterId,
+          processDefinitionId,
+          bpmnProcessId,
+          workflowModuleId,
+          e);
+      return List.of();
+    }
+    return connectables;
 
   }
 

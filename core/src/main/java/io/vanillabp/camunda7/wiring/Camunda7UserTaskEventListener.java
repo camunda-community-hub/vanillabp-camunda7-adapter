@@ -70,12 +70,15 @@ public class Camunda7UserTaskEventListener implements TaskListener {
         .resolveWorkflowModuleId(processDefinition.getTenantId(), scopedBpmnProcessId);
     final var bpmnProcessId = taskRegistry.plainBpmnProcessId(workflowModuleId, scopedBpmnProcessId);
 
+    // the user tasks of the version this workflow runs on: another version may carry another
+    // form key at the same element
     final var connectable = taskRegistry
-        .resolve(
+        .tasksOf(
             workflowModuleId,
             scopedBpmnProcessId,
-            delegateTask.getTaskDefinitionKey(),
-            null)
+            processDefinition.getId(),
+            execution::getBpmnModelInstance)
+        .resolve(delegateTask.getTaskDefinitionKey(), null)
         .filter(candidate -> candidate.type() == Camunda7TaskConnectable.Type.USER_TASK);
     if (connectable.isEmpty()) {
       // not a VanillaBP-wired user task of this engine

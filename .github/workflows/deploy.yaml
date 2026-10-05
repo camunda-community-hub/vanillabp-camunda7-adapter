@@ -1,9 +1,47 @@
 name: Deploy artifacts with Maven
+# Started by hand, this workflow is a dry run of the version 1 release. The job 'rehearse'
+# runs instead of 'publish'. It publishes nothing and uses up no version number.
+#
+# 'publish' releases through community-action-maven-release@v2. That action cannot be
+# started for a rehearsal: it moves tags with actions-tagger, and after the deploy it
+# commits, tags and pushes the next development version. So this workflow checks out the
+# action at the same ref, copies its settings.xml the way the action does, and runs the
+# same Maven calls with the same profiles and options, in the same order:
+#
+#   1. package
+#   2. versions:set to the release version
+#   3. deploy with community-action-maven-release and camunda-repository (Artifactory)
+#   4. deploy with community-action-maven-release and central-sonatype-publish (Central)
+#   5. the version bump of prepare-next-development-version.sh, as a local commit only
+#   6. the zip of the release assets, listed and not attached anywhere
+#
+# Why nothing can leave the runner:
+#   - Artifactory: both the deploy plugin and the nexus staging plugin write to the
+#     repository named in the parent's distributionManagement. That URL comes from the
+#     properties 'nexus.release.repository' and 'nexus.snapshot.repository', and here they
+#     point at a directory of the runner. '-DaltDeploymentRepository' would not do: the
+#     nexus staging plugin does not read it.
+#   - Central: 'skip.central.release=true' makes the plugin build its bundle and upload
+#     nothing.
+#   - No credentials: the Artifactory and Central secrets are not read at all. The servers
+#     get the word 'rehearsal' as user and password, so even a forgotten URL would be
+#     refused. Only the signing key is real, because signing is part of what is rehearsed.
+#   - The token is read-only, so no step can push a commit or a tag.
+#   - Every Maven call prints its transfers, and the last step fails if any of them went
+#     to an http or https URL.
 on:
   release:
     types: [published]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: The version a release would have. Empty means the version in the
+          POM without '-SNAPSHOT'. Nothing is published, so any version is safe here.
+        required: false
+        default: ""
 jobs:
   publish:
+    if: github.event_name == 'release'
     runs-on: ubuntu-latest
     permissions:
       contents: write # needed to push Git tags
@@ -52,3 +90,117 @@ jobs:
           asset_path: ${{ steps.release.outputs.artifacts_archive_path }}
           asset_name: ${{ steps.release.outputs.artifacts_archive_path }}
           asset_content_type: application/zip
+  rehearse:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read # read-only, so no step can push a commit or a tag
+    env:
+      # the same values 'publish' passes to the action
+      MAVEN_ADDITIONAL_OPTIONS: -s ${{ github.workspace }}/.github/workflows/release-settings.xml
+      CAMUNDA_EE_USR: ${{ secrets.CAMUNDA_EE_USR }}
+      CAMUNDA_EE_PSW: ${{ secrets.CAMUNDA_EE_PSW }}
+      MAVEN_GPG_PASSPHRASE: ${{ secrets.MAVEN_CENTRAL_GPG_SIGNING_KEY_PASSPHRASE }}
+      # never the real ones, see the header
+      NEXUS_USR: rehearsal
+      NEXUS_PSW: rehearsal
+      MAVEN_USR: rehearsal
+      MAVEN_PSW: rehearsal
+    defaults:
+      run:
+        # with an explicit shell GitHub adds pipefail, so a failing mvn is not hidden by tee
+        shell: bash
+    steps:
+      - name: Checks out code
+        uses: actions/checkout@v4
+      - name: Checks out the release action at the ref deploy.yaml uses
+        uses: actions/checkout@v4
+        with:
+          repository: camunda-community-hub/community-action-maven-release
+          ref: v2
+          path: .release-action
+      - name: Set up Java environment
+        uses: actions/setup-java@v4
+        with:
+          java-version: 21
+          distribution: temurin
+          cache: maven
+          gpg-private-key: ${{ secrets.MAVEN_CENTRAL_GPG_SIGNING_KEY_SEC }}
+          gpg-passphrase: MAVEN_CENTRAL_GPG_PASSPHRASE
+      - name: Prepare
+        id: prepare
+        env:
+          INPUT: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          LOGS="$RUNNER_TEMP/logs"
+          mkdir -p "$LOGS" "$RUNNER_TEMP/rehearsal"
+          echo "LOGS=$LOGS" >> "$GITHUB_ENV"
+          # what the action's step 'Initialize' does
+          cp -v .release-action/resources/settings.xml "$HOME/.m2/"
+          echo "The action is at $(git -C .release-action rev-parse HEAD)"
+          version="$INPUT"
+          if [ -z "$version" ]; then
+            version=$(mvn -B -q $MAVEN_ADDITIONAL_OPTIONS help:evaluate -Dexpression=project.version -DforceStdout)
+            version="${version%-SNAPSHOT}"
+          fi
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+          echo "Rehearsing release ${version}" | tee -a "$GITHUB_STEP_SUMMARY"
+          # the Maven options which bend every upload into the runner
+          {
+            echo "REHEARSAL=-Dnexus.release.repository=file://$RUNNER_TEMP/rehearsal/artifactory -Dnexus.snapshot.repository=file://$RUNNER_TEMP/rehearsal/artifactory-snapshots -Dnexus.staging.deploy.url=http://127.0.0.1:9/artifactory"
+          } >> "$GITHUB_ENV"
+      - name: The action's profile check
+        run: mvn help:all-profiles | grep -E 'community-action-maven-release|camunda-repository|central-sonatype-publish'
+      - name: Run maven (the action's build)
+        run: mvn -B $MAVEN_ADDITIONAL_OPTIONS package -DskipTests 2>&1 | tee "$LOGS/1-package.log"
+      - name: Set the release version
+        run: mvn -B $MAVEN_ADDITIONAL_OPTIONS versions:set
+          org.codehaus.mojo:versions-maven-plugin:2.8.1:update-child-modules
+          -DnewVersion=${{ steps.prepare.outputs.version }} 2>&1 | tee "$LOGS/2-versions.log"
+      # The action passes --no-transfer-progress here. The rehearsal leaves it out, so
+      # every upload shows in the log and the last step can check where it went.
+      - name: Deploy to Camunda Repository (into the runner)
+        run: mvn -B $MAVEN_ADDITIONAL_OPTIONS -DskipTests $REHEARSAL
+          -Pcommunity-action-maven-release -Pcamunda-repository deploy 2>&1 | tee "$LOGS/3-artifactory.log"
+      - name: Deploy to Maven Central (bundle only)
+        run: mvn -B $MAVEN_ADDITIONAL_OPTIONS -DskipTests $REHEARSAL
+          -DautoReleaseAfterClose=true -DnexusUrl="https://oss.sonatype.org/"
+          -Dskip.central.release=true
+          -Pcommunity-action-maven-release -Pcentral-sonatype-publish deploy 2>&1 | tee "$LOGS/4-central.log"
+      - name: Prepare next development version (local commit, no tag, no push)
+        run: |
+          set -euo pipefail
+          git config user.name "Release Bot"
+          git config user.email "actions@github.com"
+          git commit -qam "release(v${{ steps.prepare.outputs.version }})"
+          mvn -B $MAVEN_ADDITIONAL_OPTIONS org.apache.maven.plugins:maven-release-plugin:update-versions \
+            -DgenerateBackupPoms=false 2>&1 | tee "$LOGS/5-next-version.log"
+          git commit -qam "release(v${{ steps.prepare.outputs.version }}): prepare for next development iteration"
+          echo "Next development version: $(mvn -B -q $MAVEN_ADDITIONAL_OPTIONS help:evaluate -Dexpression=project.version -DforceStdout)" \
+            | tee -a "$GITHUB_STEP_SUMMARY"
+          git log --oneline -3
+      - name: The release assets the action would attach
+        run: |
+          set -euo pipefail
+          # the action's default artifacts-pattern
+          find . -path './target/nexus-staging/**/*.jar' | sort | tee -a "$GITHUB_STEP_SUMMARY"
+      - name: What went where
+        run: |
+          set -euo pipefail
+          echo "Artifactory, as written into the runner:"
+          find "$RUNNER_TEMP/rehearsal/artifactory" -name '*.jar' -o -name '*.pom' | sed 's|.*/||' | sort
+          echo "Central bundle, built and not uploaded:"
+          unzip -l target/central-publishing/central-bundle.zip | awk '{print $4}' | grep -E '\.(pom|jar)$' | sed 's|.*/||' | sort
+          diff \
+            <(find "$RUNNER_TEMP/rehearsal/artifactory" -name '*.jar' -o -name '*.pom' | sed 's|.*/||' | sort) \
+            <(unzip -l target/central-publishing/central-bundle.zip | awk '{print $4}' | grep -E '\.(pom|jar)$' | sed 's|.*/||' | sort) \
+            || { echo "Artifactory and Central would not get the same files." >&2; exit 1; }
+          echo "Uploads per target:"
+          grep -h "Uploaded to" "$LOGS"/*.log | sed -E 's|.*Uploaded to ([^:]+): ([a-z]+)://.*|\1 \2|' | sort | uniq -c
+          if grep -hE "Upload(ing|ed) to [^:]+: https?://" "$LOGS"/*.log; then
+            echo "Something was sent to a remote repository." >&2
+            exit 1
+          fi
+          grep -F "Skipping Central Release Publishing at user's request." "$LOGS/4-central.log"
+          echo "Nothing left the runner." | tee -a "$GITHUB_STEP_SUMMARY"

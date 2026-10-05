@@ -31,6 +31,9 @@ jobs:
           # server has to come in through -s. See the header of release-settings.xml.
           maven-additional-options: -s ${{ github.workspace }}/.github/workflows/release-settings.xml
           release-version: ${{ github.event.release.tag_name }}
+          # Version 1 lives on this branch. The action commits the next development version
+          # here, not to main, which carries version 2.
+          branch: maintenance/1.x
           nexus-usr: ${{ secrets.NEXUS_USR }}
           nexus-psw: ${{ secrets.NEXUS_PSW }}
           sonatype-central-portal-usr: ${{ secrets.COMMUNITY_HUB_MAVEN_CENTRAL_CP_USR }}

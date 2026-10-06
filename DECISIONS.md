@@ -43,10 +43,11 @@ next line.
 
 Camunda 7 has tenants, but a workflow module may also prefix its identifiers instead, and
 then there is no tenant to ask. The engine is therefore always addressed with the SCOPED
-identifiers - process ids, decision ids, message and signal names, error codes and task
-definitions - while the core's registries stay keyed by the plain ones, and a delivery coming
-back from the engine is translated before the core sees it. The mode is configured per
-workflow module, which is why no code may assume either shape.
+identifiers - process ids, decision ids, message and signal names, error and escalation codes -
+while the core's registries stay keyed by the plain ones, and a delivery coming back from the
+engine is translated before the core sees it. A task definition is not on that list: Camunda 7
+keeps it inside the process, so it stays as the model wrote it (decision 17). The mode is
+configured per workflow module, which is why no code may assume either shape.
 See [Keeping workflow modules apart](./README.md#keeping-workflow-modules-apart).
 
 ### 4. A class opens its fields one by one, not as a whole
@@ -62,19 +63,21 @@ coming back.
 ### 5. The adapter changes the BPMN it deploys, and only in ways the model's author can predict
 
 An embedded engine offers no other seam. What a remote BPMS gets for free from its own protocol
-this adapter has to put into the model before it is deployed, so `prepareBpmn` and `wireBpmn`
-add: the `asyncBefore`/`asyncAfter` flags which make a service-like task a transaction boundary,
-except for a compensation handler, where the engine ignores them (decision 35), built-in task
-listeners for the user-task events, execution listeners for the workflow starts the engine
-initiates and for the end of a workflow, the business key handed into a call activity which runs
-on the SAME workflow aggregate together with the note saying so (decision 22), and the scoped
-identifiers of decision 3.
+this adapter has to put into the model before it is deployed. `prepareBpmn` and `wireBpmn` write
+two things into the deployed BPMN: the business key handed into a call activity which runs on the
+SAME workflow aggregate together with the note saying so (decision 22), and the scoped identifiers
+of decision 3. The parse listener adds the rest while the engine parses the model, so the deployed
+XML does not show it: the `asyncBefore`/`asyncAfter` flags which make a service-like task a
+transaction boundary, except for a compensation handler, where the engine ignores them
+(decision 35), built-in task listeners for the user-task events, and execution listeners for the
+start and for the end of a workflow.
 
-Each of those is bounded by a rule which keeps the deployed model predictable. A listener is
-added only where a handler exists, the business key is not injected where the called process has
-an aggregate of its own or where the application modelled a `camunda:in businessKey` itself, and
-the scoping rewrite runs once per FILE rather than once per process, because all processes of one
-file share a model. What the adapter adds is listed in
+Each of those is bounded by a rule which keeps the deployed model predictable. The end listener is
+added only where a `@WorkflowEnded` method exists, the start listener goes onto every start event
+the process itself holds and onto no other (decisions 27 and 28), the business key is not injected
+where the called process has an aggregate of its own or where the application modelled a
+`camunda:in businessKey` itself, and the scoping rewrite runs once per FILE rather than once per
+process, because all processes of one file share a model. What the adapter adds is listed in
 [What the adapter changes in the BPMN it deploys](https://github.com/camunda-community-hub/vanillabp-camunda7-adapter/wiki/Home#what-the-adapter-changes-in-the-bpmn-it-deploys)
 in the wiki.
 
@@ -1169,12 +1172,11 @@ answer into a place an application can read and overwrite, and Camunda 8 pays fo
 test cases about a model which writes that variable itself. The core's answer is the one source of
 this truth, so it is asked rather than copied.
 
-Two readers of the walk still end at such a call activity, because they hold no registry. One is
-any caller of `Camunda7MultiInstances.of(execution)` or `of(engine, executionId)` outside this
-adapter, where the overloads taking a registry are the ones to use. The other is the Camunda 7
-adapter of the business cockpit, which reads the walk for the details of a user task and has the
-registry at hand through `Camunda7EngineFacts`. Passing it there is one argument in one call, and it
-belongs to that repository rather than to this one.
+A reader of the walk which holds no registry still ends at such a call activity. That is any
+caller of `Camunda7MultiInstances.of(execution)` or `of(engine, executionId)` outside this adapter,
+where the overloads taking a registry are the ones to use. The Camunda 7 adapter of the business
+cockpit was the second such reader when this was decided. It reads the walk for the details of a
+user task and now passes the registry it gets through `Camunda7EngineFacts`.
 
 ### 35. A compensation runs in one transaction, and the deployment says so
 

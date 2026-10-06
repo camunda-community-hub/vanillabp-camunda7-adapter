@@ -1251,6 +1251,75 @@ public class Camunda7ProcessService<A> implements MigratableProcessService<A> {
   }
 
   /**
+   * Counts only the workflows of the aggregate which started at or after the moment the start
+   * was planned.
+   * <p>
+   * An aggregate may carry a second workflow once its first one ended. Say the first attempt to
+   * dispatch the second start failed before it created anything. The history still holds the
+   * first workflow, and counting it would skip the start: the second workflow would never run.
+   * So the history is asked only for instances started since <code>plannedAt</code>. Camunda
+   * compares the start time inclusively, and it keeps milliseconds, as the moment does.
+   * <p>
+   * The engine runs inside the application, so the start time comes from the clock of one of
+   * the application's nodes, like the moment itself. Where two nodes' clocks differ by more than
+   * the time between planning and dispatching, this entry's own workflow looks older than the
+   * entry, and the answer is "unknown". The start then runs again, and {@code startWorkflow}
+   * finds the instance as long as it runs; at worst it is a duplicate. The moment is never moved
+   * back to allow for the skew, because a moment moved back counts the first workflow again.
+   * <p>
+   * Without history (level <code>none</code>) the query finds nothing, and the same check in
+   * {@code startWorkflow} keeps a running instance from being started twice.
+   */
+  @Override
+  public WorkflowAwareness awarenessOfWorkflowForRedispatch(
+      final io.vanillabp.integration.adapter.spi.WorkflowScope scope,
+      final io.vanillabp.integration.spi.AggregatePersistenceAware<A> aggregatePersistence,
+      final Object workflowAggregateId,
+      final java.time.Instant plannedAt) {
+
+    if (plannedAt == null) {
+      // an entry planned before the moment was recorded: every workflow of the aggregate counts
+      return awarenessOfWorkflow(scope, aggregatePersistence, workflowAggregateId);
+    }
+    try {
+      final var businessKey = String.valueOf(workflowAggregateId);
+      final var since = java.util.Date.from(plannedAt);
+      final var running = withinHistory(
+          historyService
+              .createHistoricProcessInstanceQuery()
+              .processInstanceBusinessKey(businessKey)
+              .startedAfter(since)
+              .unfinished(),
+          scope)
+          .count() > 0;
+      if (running) {
+        return WorkflowAwareness.ACTIVE;
+      }
+      final var ended = withinHistory(
+          historyService
+              .createHistoricProcessInstanceQuery()
+              .processInstanceBusinessKey(businessKey)
+              .startedAfter(since)
+              .finished(),
+          scope)
+          .count() > 0;
+      return ended
+          ? WorkflowAwareness.COMPLETED
+          : WorkflowAwareness.UNKNOWN_TO_BPMS;
+    } catch (final org.camunda.bpm.engine.ProcessEngineException e) {
+      log.warn(
+          "Camunda7[{}]: could not determine whether a workflow of aggregate '{}' started since {} - "
+              + "reporting BPMS_UNAVAILABLE",
+          adapterId,
+          workflowAggregateId,
+          plannedAt,
+          e);
+      return WorkflowAwareness.BPMS_UNAVAILABLE;
+    }
+
+  }
+
+  /**
    * Whether the process instance behind a task belongs to the scope the probe was asked
    * about AND carries the expected business key. Both are needed:
    * the business key rules out an unrelated aggregate, the scope rules out the same

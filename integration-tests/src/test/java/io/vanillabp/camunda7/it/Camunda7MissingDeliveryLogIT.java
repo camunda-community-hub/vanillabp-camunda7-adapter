@@ -7,6 +7,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.boot.WebApplicationType;
 import org.springframework.boot.builder.SpringApplicationBuilder;
 
+import io.vanillabp.integration.adapter.migration.processservice.DeliveryRecords;
 import io.vanillabp.integration.test.utils.CapturedOutput;
 import io.vanillabp.integration.test.utils.SuppressOutputExtension;
 
@@ -28,10 +29,11 @@ import io.vanillabp.integration.test.utils.SuppressOutputExtension;
 public class Camunda7MissingDeliveryLogIT {
 
   /**
-   * The message the core writes, recognized by the sentence naming the adapter and the
-   * missing log rather than by the whole text.
+   * The message the core writes, recognized by the words naming the missing log rather
+   * than by the whole text. The core publishes those words, so a rewording there changes
+   * nothing here.
    */
-  private static final String MISSING_DELIVERY_LOG = "no TaskDeliveryLog is available";
+  private static final String MISSING_DELIVERY_LOG = DeliveryRecords.NO_DELIVERY_LOG;
 
   /**
    * Boots the test application without the platform's JDBC delivery log. Command-line

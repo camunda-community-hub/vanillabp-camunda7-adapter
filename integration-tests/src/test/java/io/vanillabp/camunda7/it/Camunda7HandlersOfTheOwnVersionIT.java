@@ -1,5 +1,7 @@
 package io.vanillabp.camunda7.it;
 
+import static io.vanillabp.integration.adapter.migration.workflowtask.DeployedProcessVersionsCheck.A_VERSION_OF_A_PROCESS;
+import static io.vanillabp.integration.adapter.migration.workflowtask.DeployedProcessVersionsCheck.SERVED_BY_NO_METHOD;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -142,7 +144,7 @@ public class Camunda7HandlersOfTheOwnVersionIT {
       // the start already says what version 1 is missing, before any workflow runs into it
       final var reported = output.getAll().substring(beforeTheBoot);
       assertTrue(
-          reported.contains("version '1' of process 'OwnVersionProcess'"),
+          reported.contains(A_VERSION_OF_A_PROCESS.formatted("1", "OwnVersionProcess")),
           () -> "the start has to name the version which misses methods: "
               + reported);
       assertTrue(
@@ -150,7 +152,7 @@ public class Camunda7HandlersOfTheOwnVersionIT {
           () -> "and the task definitions nothing serves any more: "
               + reported);
       assertTrue(
-          reported.contains("served by NO @WorkflowTask method"),
+          reported.contains(SERVED_BY_NO_METHOD),
           () -> "and that no method serves them: "
               + reported);
 

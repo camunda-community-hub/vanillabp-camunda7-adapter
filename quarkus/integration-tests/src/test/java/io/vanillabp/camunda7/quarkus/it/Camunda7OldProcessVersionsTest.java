@@ -1,5 +1,7 @@
 package io.vanillabp.camunda7.quarkus.it;
 
+import static io.vanillabp.integration.adapter.migration.workflowtask.DeployedProcessVersionsCheck.A_VERSION_OF_A_PROCESS;
+import static io.vanillabp.integration.adapter.migration.workflowtask.DeployedProcessVersionsCheck.STILL_RUN_ON_THIS_VERSION;
 import static io.vanillabp.integration.test.utils.TestCoverageUtils.testCoverageJavaAgent;
 import static io.vanillabp.integration.test.utils.TestJvmArgs.quarkusProdModeTestDefaults;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -138,11 +140,11 @@ public class Camunda7OldProcessVersionsTest {
     final var reported = prodModeTest.getStartupConsoleOutput();
 
     assertTrue(
-        reported.contains("version '1' of process 'OldProcessVersionsProcess'"),
+        reported.contains(A_VERSION_OF_A_PROCESS.formatted("1", "OldProcessVersionsProcess")),
         () -> "the check has to report the version the parked workflow runs on: "
             + reported);
     assertTrue(
-        reported.contains("still run on this version"),
+        reported.contains(STILL_RUN_ON_THIS_VERSION),
         () -> "and it has to count the workflows sitting on that version: "
             + reported);
     assertTrue(

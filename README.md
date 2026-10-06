@@ -585,14 +585,27 @@ secondary processes of the same `@WorkflowService` included) plus the tenant its
 workflow module runs in (`tenantIdIn`, or `withoutTenantId` where the mode uses
 none). That holds for running instances and for the history query behind a
 `COMPLETED`, the two task probes verify the instance the same way in addition to
-the business key, and `awarenessOfWorkflowForRedispatch` inherits it through the
-SPI default. So a workflow of another workflow module, of another tenant or of a
+the business key, and `awarenessOfWorkflowForRedispatch` narrows its history query the
+same way. So a workflow of another workflow module, of another tenant or of a
 process this application never wired is `UNKNOWN_TO_BPMS`, and the election
 continues to the BPMS which really holds it. `Camunda7AwarenessScopeTest` holds every one
 of those narrowings (`aForeignWorkflowIsNotClaimed`, `theTenantIsPartOfTheScope`,
 `anotherModuleOfTheSameAdapterIsNotClaimed`, `aSecondaryProcessIsClaimed`,
 `theHistoryIsScopedAsWell`), and `Camunda7AwarenessTest` what an unreachable engine
 answers.
+
+**What a retried start counts:** an aggregate may carry a second workflow once its first
+one ended. The core asks `awarenessOfWorkflowForRedispatch` before it dispatches a start
+again, and it hands over the moment the start was planned. The adapter counts only the
+instances in the history which started at or after that moment (`startedAfter`, which
+Camunda compares inclusively). Otherwise the ended first workflow would answer for the
+second one, and the retry would be skipped. The start time comes from the clock of the
+node which ran the start, and the moment from the clock of the node which planned it.
+Where those clocks differ by more than the time between planning and dispatching, the
+answer is "unknown" and the start runs again. The check for a running instance in
+`startWorkflow` catches that, and the same check covers an engine without history.
+An entry planned before the moment was recorded carries none, and then every workflow
+counts. `Camunda7SecondWorkflowOfAnAggregateTest` holds it.
 
 The write behind `aggregateChanged` answers for the same scope. It is
 the half where getting it wrong costs more than a wrong answer: in Camunda 7 a
@@ -1611,7 +1624,8 @@ neither an eventual-consistency lag nor an application-version boundary.
 - Because history is queried, this adapter also reports ENDED workflows as `COMPLETED` to
   VanillaBP's BPMS election (instead of "unknown") - which is what makes viewing ended
   workflows work and keeps a re-dispatched start from starting a second instance of a workflow
-  which already ran to its end.
+  which already ran to its end. For a re-dispatched start only the workflows started since the
+  start was planned count, see "What a retried start counts" above.
 
 `Camunda7ViewerApiIT` holds the read path against the engine
 (`endedWorkflowsStayViewable`, `processDefinitionsIncludeCalledProcesses`,

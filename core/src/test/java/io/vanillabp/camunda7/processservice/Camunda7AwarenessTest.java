@@ -78,6 +78,7 @@ public class Camunda7AwarenessTest {
     Mockito.when(taskService.createTaskQuery()).thenReturn(taskQuery);
 
     final var historyService = Mockito.mock(HistoryService.class);
+    Mockito.when(historyService.createHistoricProcessInstanceQuery()).thenThrow(failure);
 
     return new Camunda7ProcessService<>(
         "camunda7", runtimeService, taskService, null, historyService, io.vanillabp.camunda7.TestCollaborators
@@ -96,6 +97,9 @@ public class Camunda7AwarenessTest {
     assertEquals(WorkflowAwareness.BPMS_UNAVAILABLE, testee.awarenessOfTask(SCOPE, "4711", "execution-1"));
     assertEquals(WorkflowAwareness.BPMS_UNAVAILABLE, testee.awarenessOfUserTask(SCOPE, "4711", "user-task-1"));
     assertEquals(WorkflowAwareness.BPMS_UNAVAILABLE, testee.awarenessOfWorkflow(SCOPE, persistence(), "4711"));
+    assertEquals(
+        WorkflowAwareness.BPMS_UNAVAILABLE,
+        testee.awarenessOfWorkflowForRedispatch(SCOPE, persistence(), "4711", java.time.Instant.now()));
 
   }
 

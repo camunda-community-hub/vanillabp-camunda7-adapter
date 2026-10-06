@@ -43,10 +43,10 @@ next line.
 
 Camunda 7 has tenants, but a workflow module may also prefix its identifiers instead, and
 then there is no tenant to ask. The engine is therefore always addressed with the SCOPED
-identifiers - process ids, message and signal names, error codes and task definitions - while
-the core's registries stay keyed by the plain ones, and a delivery coming back from the
-engine is translated before the core sees it. The mode is configured per workflow module,
-which is why no code may assume either shape.
+identifiers - process ids, decision ids, message and signal names, error codes and task
+definitions - while the core's registries stay keyed by the plain ones, and a delivery coming
+back from the engine is translated before the core sees it. The mode is configured per
+workflow module, which is why no code may assume either shape.
 See [Keeping workflow modules apart](./README.md#keeping-workflow-modules-apart).
 
 ### 4. A class opens its fields one by one, not as a whole
@@ -64,9 +64,10 @@ coming back.
 An embedded engine offers no other seam. What a remote BPMS gets for free from its own protocol
 this adapter has to put into the model before it is deployed, so `prepareBpmn` and `wireBpmn`
 add: the `asyncBefore`/`asyncAfter` flags which make a service-like task a transaction boundary,
-built-in task listeners for the user-task events, execution listeners for the workflow starts the
-engine initiates and for the end of a workflow, the business key handed into a call activity which
-runs on the SAME workflow aggregate together with the note saying so (decision 22), and the scoped
+except for a compensation handler, where the engine ignores them (decision 35), built-in task
+listeners for the user-task events, execution listeners for the workflow starts the engine
+initiates and for the end of a workflow, the business key handed into a call activity which runs
+on the SAME workflow aggregate together with the note saying so (decision 22), and the scoped
 identifiers of decision 3.
 
 Each of those is bounded by a rule which keeps the deployed model predictable. A listener is

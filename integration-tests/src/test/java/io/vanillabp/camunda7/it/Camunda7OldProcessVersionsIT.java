@@ -1,5 +1,9 @@
 package io.vanillabp.camunda7.it;
 
+import static io.vanillabp.integration.adapter.migration.workflowtask.DeployedProcessVersionsCheck.A_VERSION_OF_A_PROCESS;
+import static io.vanillabp.integration.adapter.migration.workflowtask.DeployedProcessVersionsCheck.SERVED_BY_NO_METHOD;
+import static io.vanillabp.integration.adapter.migration.workflowtask.DeployedProcessVersionsCheck.STILL_RUN_ON_AN_OUTFADED_VERSION;
+import static io.vanillabp.integration.adapter.migration.workflowtask.DeployedProcessVersionsCheck.STILL_RUN_ON_THIS_VERSION;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -85,12 +89,12 @@ public class Camunda7OldProcessVersionsIT {
         reported.contains("definition(s) 'servedForAnUnknownVersion'"),
         "the unserved task of version 1 is named");
     assertTrue(
-        reported.contains("served by NO @WorkflowTask method"),
+        reported.contains(SERVED_BY_NO_METHOD),
         "and the finding says what is missing for it");
     assertTrue(
-        reported.contains("version '1' of process 'OldProcessVersionsProcess'"),
+        reported.contains(A_VERSION_OF_A_PROCESS.formatted("1", "OldProcessVersionsProcess")),
         "the finding is about version 1 of that process");
-    assertTrue(reported.contains("still run on this version"), "the workflow of version 1 is counted");
+    assertTrue(reported.contains(STILL_RUN_ON_THIS_VERSION), "the workflow of version 1 is counted");
     assertTrue(reported.contains("OldProcessVersionsProcess"), "the process is named");
     assertTrue(reported.contains("outfaded-versions"), "the way out is named");
     // the method kept for version 1 serves its task, so that one is not demanded
@@ -114,9 +118,10 @@ public class Camunda7OldProcessVersionsIT {
         "v2",
         "--vanillabp.workflow-modules.c7-it.adapters.c7.outfaded-versions=<2");
     assertTrue(
-        !reported.contains("served by NO @WorkflowTask method"),
+        !reported.contains(SERVED_BY_NO_METHOD),
         "an outfaded version is not checked for unserved tasks");
-    assertTrue(reported.contains("still run on version '1'"), "the workflow left behind is reported");
+    assertTrue(reported.contains(STILL_RUN_ON_AN_OUTFADED_VERSION.formatted("1")),
+        "the workflow left behind is reported");
     assertTrue(reported.contains("outfaded-versions-in-use"), "and how to make that stop the start");
     // the method kept for version 1 serves nothing once that version is faded out
     assertTrue(reported.contains("droppedInVersionTwo"), "the method for the faded-out version is named");
@@ -136,7 +141,7 @@ public class Camunda7OldProcessVersionsIT {
             "--vanillabp.workflow-modules.c7-it.adapters.c7.outfaded-versions=<2",
             "--vanillabp.adapters.c7.outfaded-versions-in-use=FAIL"));
 
-    assertTrue(rootMessage(failure).contains("still run on version '1'"), rootMessage(failure));
+    assertTrue(rootMessage(failure).contains(STILL_RUN_ON_AN_OUTFADED_VERSION.formatted("1")), rootMessage(failure));
 
   }
 
@@ -166,9 +171,9 @@ public class Camunda7OldProcessVersionsIT {
         reported.contains("'servedForAnUnknownVersion'"),
         "suspending version 1 does not answer what it still needs");
     assertTrue(
-        reported.contains("version '1' of process 'OldProcessVersionsProcess'"),
+        reported.contains(A_VERSION_OF_A_PROCESS.formatted("1", "OldProcessVersionsProcess")),
         "the finding is still about version 1");
-    assertTrue(reported.contains("still run on this version"), "and its workflow is counted as before");
+    assertTrue(reported.contains(STILL_RUN_ON_THIS_VERSION), "and its workflow is counted as before");
 
   }
 
@@ -187,10 +192,10 @@ public class Camunda7OldProcessVersionsIT {
           reported.contains("version(s) 1 of BPMN process 'OldProcessVersionsProcess'"),
           "and names the version it left out");
       assertTrue(
-          !reported.contains("served by NO @WorkflowTask method"),
+          !reported.contains(SERVED_BY_NO_METHOD),
           "nothing is demanded of the suspended version any more");
       assertTrue(
-          !reported.contains("still run on this version"),
+          !reported.contains(STILL_RUN_ON_THIS_VERSION),
           "and its workflow is not counted either");
       // what the switch costs on the code side: version 1 is not among the versions the
       // check believes the engine holds, so the method kept for it looks dead

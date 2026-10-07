@@ -762,6 +762,26 @@ public class Camunda7DeploymentService implements AdapterDeploymentService<BpmnM
     // them), while the core is keyed by the plain ones - so the model is searched
     // by the scoped id and the invoker is called with the plain one
     final var scopedBpmnProcessId = scopedProcessId(workflowModuleId, bpmnProcessId);
+
+    // The engine runs an activity carrying a standard loop once and says nothing. Asked
+    // first, because no other finding about this model matters while it does not do what
+    // was drawn. A process nobody claims is somebody else's model, so it only gets a WARN,
+    // like every other finding of that kind
+    final var standardLoops = Camunda7StandardLoops.elementIdsOf(model, scopedBpmnProcessId);
+    if (!standardLoops.isEmpty()) {
+      if (theApplicationClaims(workflowModuleId, bpmnProcessId)) {
+        throw new IllegalStateException(
+            Camunda7StandardLoops.refusal(standardLoops, bpmnProcessId, workflowModuleId));
+      }
+      log.warn(
+          "Camunda7[{}]: {}",
+          adapterId,
+          Camunda7StandardLoops.warningAboutAnUnclaimedProcess(standardLoops, bpmnProcessId, workflowModuleId));
+    }
+    processesWiredByModule
+        .computeIfAbsent(workflowModuleId, id -> java.util.concurrent.ConcurrentHashMap.newKeySet())
+        .add(bpmnProcessId);
+
     collectTasks(
         model,
         workflowModuleId,
@@ -774,7 +794,7 @@ public class Camunda7DeploymentService implements AdapterDeploymentService<BpmnM
 
     // both directions with guiding messages; throwing here honors the
     // deployment-failure policy for non-first-priority adapter ids
-    workflowTaskWiring.validateTaskWiring(workflowModuleId, bpmnProcessId, specs);
+    workflowTaskWiring.validateTaskWiring(adapterId, workflowModuleId, bpmnProcessId, specs);
 
     // What follows judges the model this boot brings, and the checks whose finding a
     // modeller can still act on belong here and nowhere else: an asynchronous task wired
@@ -914,11 +934,6 @@ public class Camunda7DeploymentService implements AdapterDeploymentService<BpmnM
     warnAboutCallActivitiesLeavingTheWorkflowModule(workflowModuleId, bpmnProcessId, scopedBpmnProcessId, model);
 
     wireBpmsInitiatedStarts(workflowModuleId, bpmnProcessId, scopedBpmnProcessId, model);
-
-    // A user task nothing serves is a model which runs, and the notification the application
-    // drew into it is the one thing missing. Said once per process while the model is wired,
-    // where every other finding about this model is said
-    nameTheUserTasksNothingServes(workflowModuleId, bpmnProcessId, scopedBpmnProcessId, model);
 
     log.info(
         "Camunda7[{}]: wired {} task(s) of BPMN process '{}' (file '{}', workflow module '{}')",
@@ -1406,13 +1421,31 @@ public class Camunda7DeploymentService implements AdapterDeploymentService<BpmnM
                   topic);
               return;
             }
+            // an external task is served by whatever polls its topic, which is not VanillaBP. Where
+            // the application says so, the task goes to the core like any other one - the core
+            // holds the rule for every task and refuses a method next to the line - and nothing
+            // here subscribes to the topic
+            final var externalTask = new BpmnTaskSpec(
+                task.getId(), topic, false, null, Camunda7MultiInstanceItems.elementsWithoutAnItemAround(task));
+            if (workflowTaskWiring.isImplementedExternally(adapterId, workflowModuleId, bpmnProcessId, externalTask)) {
+              specs.add(externalTask);
+              return;
+            }
             throw new IllegalStateException(
                 """
                     Task '%s' of BPMN process '%s' (%s, workflow module '%s') is implemented \
-                    as an external task (camunda:topic) which is not supported by VanillaBP yet! \
+                    as an external task (camunda:topic '%s'), which VanillaBP does not serve! \
                     Wire the task by 'camunda:expression' or 'camunda:delegateExpression' naming the \
-                    @WorkflowTask method's task definition, e.g. ${%s}."""
-                    .formatted(task.getId(), bpmnProcessId, describedSource, workflowModuleId, topic));
+                    @WorkflowTask method's task definition, e.g. ${%s}. %s"""
+                    .formatted(
+                        task.getId(),
+                        bpmnProcessId,
+                        describedSource,
+                        workflowModuleId,
+                        topic,
+                        topic,
+                        io.vanillabp.integration.adapter.spi.workflowtask.ImplementedExternally
+                            .howToMark(workflowModuleId, bpmnProcessId, externalTask)));
           }
           // a business rule task calling a DECISION is served by the engine, not by the
           // application: the decision was deployed with this process, and asking for a
@@ -1479,9 +1512,9 @@ public class Camunda7DeploymentService implements AdapterDeploymentService<BpmnM
           }
         });
 
-    // user tasks: the task definition is the camunda:formKey; a
-    // matching @WorkflowTask method is OPTIONAL (notification only) - the spec
-    // still marks matching methods as wired
+    // user tasks: the task definition is the camunda:formKey. A user task needs a
+    // @WorkflowTask method like every other task, or the property saying that something
+    // else serves it - the core asks for one of the two, as version 1 asked for the method
     model
         .getModelElementsByType(org.camunda.bpm.model.bpmn.instance.UserTask.class)
         .stream()
@@ -1591,8 +1624,8 @@ public class Camunda7DeploymentService implements AdapterDeploymentService<BpmnM
           // element rather than passed along with the listener, because the collection above
           // reads the BPMN for the id and the id is all it needs
           specs
-              .add(new BpmnTaskSpec(
-                  listener.elementId(), listener.taskDefinition(), false, null, Camunda7MultiInstanceItems
+              .add(BpmnTaskSpec.listener(
+                  listener.elementId(), listener.taskDefinition(), Camunda7MultiInstanceItems
                       .elementsWithoutAnItemAround(model.getModelElementById(listener.elementId()))));
           if (context != null) {
             context.recordModelledListener(listener);
@@ -2330,53 +2363,6 @@ public class Camunda7DeploymentService implements AdapterDeploymentService<BpmnM
   }
 
   /**
-   * Names the user tasks of one process which no <code>&#64;WorkflowTask</code> method serves.
-   * <p>
-   * Nothing is refused and nothing is warned about. This engine creates the user task, it
-   * appears in a task list, somebody finishes it and the workflow runs on, which is why the core
-   * hands a user task over as an OPTIONAL spec. The one thing missing is the notification, and a
-   * model whose user tasks are worked through a task list alone is a model which is meant that
-   * way. That is where this stops being the same case as the Camunda 8 adapter's: there a user
-   * task a job worker serves leaves the workflow standing, and the boot ends over it.
-   * <p>
-   * Only for a process a <code>&#64;WorkflowService</code> class of this application claims. The
-   * core answers the name of the workflow aggregate's id for such a process and refuses to
-   * answer for one nobody claimed, which is the same question the Camunda 8 adapter asks for the
-   * same split. Where nobody claims the process, no method of this application was meant to
-   * serve its tasks and there is nothing to say.
-   *
-   * @param workflowModuleId The workflow module
-   * @param bpmnProcessId The PLAIN BPMN process id
-   * @param scopedBpmnProcessId The process id as the engine knows it, which is what the model
-   *          carries
-   * @param model The model this boot deploys
-   */
-  private void nameTheUserTasksNothingServes(
-      final String workflowModuleId,
-      final String bpmnProcessId,
-      final String scopedBpmnProcessId,
-      final BpmnModelInstance model) {
-
-    if (!theApplicationClaims(workflowModuleId, bpmnProcessId)) {
-      return;
-    }
-    final var unserved = io.vanillabp.camunda7.wiring.Camunda7UnservedUserTasks
-        .of(
-            model,
-            scopedBpmnProcessId,
-            key -> workflowTaskInvoker.workflowTaskHandlerExists(workflowModuleId, bpmnProcessId, key));
-    if (unserved.isEmpty()) {
-      return;
-    }
-    log.info(
-        "Camunda7[{}]: {}",
-        adapterId,
-        io.vanillabp.camunda7.wiring.Camunda7UnservedUserTasks
-            .report(unserved, bpmnProcessId, workflowModuleId));
-
-  }
-
-  /**
    * Whether a <code>&#64;WorkflowService</code> class of this application claims the given BPMN
    * process. Asked of the core, which knows the workflow aggregate of a claimed process and
    * nothing about an unclaimed one.
@@ -2856,6 +2842,10 @@ public class Camunda7DeploymentService implements AdapterDeploymentService<BpmnM
     // holds under the old id - before the executor may hand any of their tasks out
     wireTheProcessesNobodyDeployed(workflowModuleId);
 
+    // a version deployed by an earlier generation of the application may carry a standard
+    // loop, and the workflows on it repeat nothing
+    warnAboutStandardLoopsOfHeldVersions(workflowModuleId);
+
     // asynchronous continuations (async-before/after, timers) run on the engine's
     // job executor - its activation is deferred to this point (the platform builds
     // the engine with the executor inactive)
@@ -2961,6 +2951,55 @@ public class Camunda7DeploymentService implements AdapterDeploymentService<BpmnM
         definitionIdsByVersion.size(),
         bpmnProcessId,
         workflowModuleId);
+
+  }
+
+  /**
+   * The BPMN processes of each workflow module this boot wired a model for, by their PLAIN
+   * ids. The versions the engine holds under them are read once the module starts.
+   */
+  private final Map<String, java.util.Set<String>> processesWiredByModule = new java.util.concurrent.ConcurrentHashMap<>();
+
+  /**
+   * Warns about each version the engine holds which carries a standard loop while workflows
+   * still run on it. Such a model was deployed before this adapter refused it, by version 1 or
+   * by an older snapshot, and nobody can change it any more, so this is a warning and not a
+   * refusal. A version no workflow runs on any more is passed over: it cannot do any harm.
+   * <p>
+   * The models are read first and counted only where one carries the marker. The engine caches
+   * a model it was asked for, and the startup check of the core reads the same versions anyway.
+   *
+   * @param workflowModuleId The workflow module which is about to process workflows
+   */
+  private void warnAboutStandardLoopsOfHeldVersions(
+      final String workflowModuleId) {
+
+    final var bpmnProcessIds = new java.util.TreeSet<String>(
+        processesWiredByModule.getOrDefault(workflowModuleId, java.util.Set.of()));
+    bpmnProcessIds.addAll(workflowTaskWiring.taskWiringOfProcessesNobodyDeployed(workflowModuleId).keySet());
+    for (final var bpmnProcessId : bpmnProcessIds) {
+      final var scopedBpmnProcessId = scopedProcessId(workflowModuleId, bpmnProcessId);
+      processVersions
+          .definitionIdsHeldUnder(workflowModuleId, bpmnProcessId)
+          .forEach((
+              version,
+              definitionId) -> {
+            final var standardLoops = Camunda7StandardLoops
+                .elementIdsOf(repositoryService.getBpmnModelInstance(definitionId), scopedBpmnProcessId);
+            if (standardLoops.isEmpty()) {
+              return;
+            }
+            final var running = processVersions.activeInstanceCountOf(workflowModuleId, bpmnProcessId, version);
+            if ((running != null) && (running == 0L)) {
+              return;
+            }
+            log.warn(
+                "Camunda7[{}]: {}",
+                adapterId,
+                Camunda7StandardLoops
+                    .warningAboutAHeldVersion(standardLoops, version, bpmnProcessId, workflowModuleId, running));
+          });
+    }
 
   }
 

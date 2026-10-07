@@ -391,6 +391,28 @@ asks for its item, and so does a collection whose handler reads the index and th
 method naming an element of another branch of the process is not refused either: that item never
 reaches it, so the model it is deployed with is not the place to say anything about it.
 
+### A standard loop in your model ends the boot
+
+Camunda 7 does not run a standard loop. An activity carrying `standardLoopCharacteristics`, drawn to
+repeat it while a condition holds, deploys without a word, runs once, and the workflow moves on.
+Version 1 deployed such a model the same way, so a model which counts on the loop has done its work
+once all along.
+
+Version 2 refuses the model while it deploys it, where one of your `@WorkflowService` classes
+claims the process, and the boot ends there. The message names the activity, the BPMN process and
+the workflow module. A model which deployed in version 1 does not deploy any more, and this is on
+purpose: the upgrade is where you learn that the loop never ran. A process nobody claims gets a
+WARN with the same words, and the boot goes on, because the model is somebody else's.
+
+Change the model to one of the two forms which do repeat an activity. Either draw a loop in the
+sequence flow, with a gateway after the activity which leads back to it while the condition holds.
+Or make the activity a multi-instance element; a handler then reads its round with
+`@MultiInstanceElement`, `@MultiInstanceIndex` and `@MultiInstanceTotal`.
+
+A version the engine already holds is not refused, because nobody can change it any more. Where
+workflows still run on it, the start logs a WARN naming the version, the activity and how many
+workflows are on it.
+
 ### A task which has to stay open but is wired by *Expression* ends the boot
 
 A method declaring `@TaskId` keeps its task open until the application completes it. An
@@ -407,18 +429,18 @@ or by `@WorkflowTask(id = ...)`. The reverse pairing stays silent: a *Delegate e
 method without `@TaskId` just as well, because the behavior leaves the activity when the handler
 returns.
 
-### A user task without a `@WorkflowTask` method is named at boot
+### A task somebody else serves can say so
 
-Version 1 said nothing about a user task which no method serves, and version 2 says one line about
-it: once per BPMN process, at INFO, while the workflow module boots, and only for a process one of
-your `@WorkflowService` classes claims. The line names each element, its form key or that it has
-none, and the method which would serve it.
+Version 1 ended the boot over a user task which no method serves: its parse listener wired every
+user task with `allowNoMethodFound=false`. Version 2 does the same, for every task of a process one
+of your `@WorkflowService` classes claims. What is new is the way out, for a user task you leave to
+a task list on purpose:
 
-Nothing is refused and nothing changes about how such a model runs. The engine creates the user
-task, a task list shows it and whoever finishes it moves the workflow on. The line exists for the
-other case: a notification somebody drew into the model and never wired, which used to be
-invisible until a workflow reached the task and nothing happened.
+```properties
+vanillabp.workflow-modules.<module>.workflows.<process>.tasks.<element-id>.implemented-externally=true
+```
 
-Where your user tasks are worked through Camunda's Tasklist alone, the line is the whole story and
-there is nothing to do about it. The Camunda 8 adapter ends the boot over a user task a job worker
-serves, and this engine has no such shape: every user task here is the engine's own.
+The task may also be named by its form key. The same line lets an external task (`camunda:topic`)
+through, which this adapter otherwise refuses, for a worker you run beside the
+application. A task with a method AND this line at the task ends the boot, because both would answer it.
+A line for a whole workflow covers only the tasks without a method.

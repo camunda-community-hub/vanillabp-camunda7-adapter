@@ -20,6 +20,14 @@ vanillabp:
         c7:
           resources-location: classpath*:c7-it/processes
       workflows:
+        MixedProcess:
+          tasks:
+            MX_User:
+              implemented-externally: true
+        SilentUserTaskProcess:
+          tasks:
+            SU_Task:
+              implemented-externally: true
         AggregateChangedMultiInstanceProcess:
           allow-full-sync-with-bpms: true
           declared-aggregate-values:
@@ -94,6 +102,9 @@ vanillabp:
             - '*'
         ModelledListenerProcess:
           allow-full-sync-with-bpms: true
+          tasks:
+            ML_Wait:
+              implemented-externally: true
           declared-aggregate-values:
             - '*'
         OldProcessVersionsProcess:

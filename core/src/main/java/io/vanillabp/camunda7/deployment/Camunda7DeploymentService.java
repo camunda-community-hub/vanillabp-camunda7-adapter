@@ -2363,6 +2363,34 @@ public class Camunda7DeploymentService implements AdapterDeploymentService<BpmnM
   }
 
   /**
+   * Whether a <code>&#64;WorkflowService</code> class of this application claims the given BPMN
+   * process. Asked of the core, which knows the workflow aggregate of a claimed process and
+   * nothing about an unclaimed one.
+   *
+   * @param workflowModuleId The workflow module
+   * @param bpmnProcessId The PLAIN BPMN process id
+   * @return Whether the application stands in for the process
+   */
+  private boolean theApplicationClaims(
+      final String workflowModuleId,
+      final String bpmnProcessId) {
+
+    try {
+      return workflowTaskWiring.resolveWorkflowAggregateIdName(workflowModuleId, bpmnProcessId) != null;
+    } catch (final RuntimeException e) {
+      log.debug(
+          "Camunda7[{}]: no @WorkflowService class of this application claims BPMN process '{}' of "
+              + "workflow module '{}'",
+          adapterId,
+          bpmnProcessId,
+          workflowModuleId,
+          e);
+      return false;
+    }
+
+  }
+
+  /**
    * Reports the start events the engine fires on its own (timer, signal,
    * conditional) to the core, which validates the application's
    * <code>&#64;WorkflowStartedByBpms</code> methods against them, and remembers the

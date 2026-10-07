@@ -62,6 +62,8 @@ coming back.
 
 ### 5. The adapter changes the BPMN it deploys, and only in ways the model's author can predict
 
+*Bounded further by `DECISIONS.pending/937.md`: the parse listener and `wireBpmn` change a process only where a `@WorkflowService` class of this application claims it. A process nobody claims and a process somebody else deployed keep their model as it is, flags included.*
+
 An embedded engine offers no other seam. What a remote BPMS gets for free from its own protocol
 this adapter has to put into the model before it is deployed. `prepareBpmn` and `wireBpmn` write
 two things into the deployed BPMN: the business key handed into a call activity which runs on the
@@ -907,8 +909,8 @@ workflow which already runs.
 
 A process this application does not serve is left alone. An embedded engine holds every definition
 deployed against its database, this application's unclaimed processes and another application's
-processes included. The listener sits on the start events of all of them, because the parse
-listener sees a model and not a claim, so it asks before it reports: a process no workflow service
+processes included. Since `DECISIONS.pending/937.md` the parse listener puts the start listener on
+the start events of a claimed process only. The listener still asks before it reports: a process no workflow service
 of this application serves is none of VanillaBP's business and the listener returns. Without that
 question the core would be asked to name a workflow it has no workflow service for, and the engine
 would retry the start into an incident.
@@ -1216,6 +1218,8 @@ cluster, and only a run against a cluster would settle it.
 
 *Superseded by decision 42: a user task of a claimed process now needs a `@WorkflowTask` method or the line `implemented-externally=true`, the INFO line is gone, and the core holds the rule for all adapters. Version 1 did ask for the method, so the sentence above saying that nobody used to say a word about it was wrong as well.*
 
+*The split it draws between a claimed process and one nobody claims goes further with `DECISIONS.pending/937.md`: the parse listener does not add the user-task listeners to a process nobody claims either.*
+
 A user task of this engine runs without a `@WorkflowTask` method. The engine creates the task, it
 stands in a task list, somebody finishes it and the workflow moves on. That is why the core hands a
 user task over as an OPTIONAL spec, and `validateTaskWiring` filters those out before it asks for a
@@ -1398,6 +1402,8 @@ the expression.
 the upgrade against a running engine.
 
 ### 41. A standard loop is refused in a claimed process, warned about in one nobody claims, and a held version is warned about while workflows run on it
+
+*Superseded in part by `DECISIONS.pending/937.md`: a standard loop in a process nobody claims gets no WARN any more. Such a process is not looked at.*
 
 #### What was decided
 

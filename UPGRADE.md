@@ -401,8 +401,8 @@ once all along.
 Version 2 refuses the model while it deploys it, where one of your `@WorkflowService` classes
 claims the process, and the boot ends there. The message names the activity, the BPMN process and
 the workflow module. A model which deployed in version 1 does not deploy any more, and this is on
-purpose: the upgrade is where you learn that the loop never ran. A process nobody claims gets a
-WARN with the same words, and the boot goes on, because the model is somebody else's.
+purpose: the upgrade is where you learn that the loop never ran. A process nobody claims is not
+looked at, because the model is somebody else's.
 
 Change the model to one of the two forms which do repeat an activity. Either draw a loop in the
 sequence flow, with a gateway after the activity which leads back to it while the condition holds.
@@ -444,3 +444,26 @@ The task may also be named by its form key. The same line lets an external task 
 through, which this adapter otherwise refuses, for a worker you run beside the
 application. A task with a method AND this line at the task ends the boot, because both would answer it.
 A line for a whole workflow covers only the tasks without a method.
+
+### A process none of your classes claims, and a process somebody else deployed
+
+Version 1 ended the boot over a BPMN process no `@WorkflowService` class declared: its parse listener
+asked for a workflow service for every process the engine parsed. Version 2 does the same for a
+process your workflow module deploys, and offers a way out for one somebody else serves:
+
+```properties
+vanillabp.workflow-modules.<module>.workflows.<process>.implemented-externally=true
+```
+
+Such a process is deployed with its file and left as you modelled it: no transaction flag, no
+listener, no check.
+
+**A process somebody else deploys into the same engine runs as modelled now.** The parse listener of
+version 1 ran for every model the engine parsed, also for one another application or a script
+deployed into the same database. It set `asyncBefore` and `asyncAfter` on its service-like tasks,
+`asyncAfter` on its user and receive tasks, and took a modelled `asyncBefore` off its user tasks.
+Then it asked for a workflow service for that process, found none and failed the parse, so in
+practice such a process did not run on an engine version 1 shared. Version 2 does not touch it at
+all: the flags it carries are the ones its modeller set, and its transactions end where that model
+says. If a process of that kind runs on your engine and counts on the boundaries version 1 put into
+it, model them yourself.

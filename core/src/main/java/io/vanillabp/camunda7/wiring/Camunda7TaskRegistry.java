@@ -266,6 +266,70 @@ public class Camunda7TaskRegistry {
   }
 
   /**
+   * Answers whether a <code>&#64;WorkflowService</code> class of the application claims a BPMN
+   * process: the core's {@code WorkflowTaskWiring#isClaimedByAWorkflowService}.
+   * <code>null</code> until the deployment service hands it over.
+   */
+  private java.util.function.BiPredicate<String, String> claimedProcesses;
+
+  /**
+   * Hands over who answers whether the application claims a BPMN process. That is the core,
+   * and the deployment service hands its answer over while it is built, before anything is
+   * deployed or parsed.
+   *
+   * @param claimedProcesses Answers for a workflow module and a PLAIN BPMN process id
+   */
+  public void setClaimedProcesses(
+      final java.util.function.BiPredicate<String, String> claimedProcesses) {
+
+    this.claimedProcesses = claimedProcesses;
+
+  }
+
+  /**
+   * Whether a <code>&#64;WorkflowService</code> class of the application claims the BPMN
+   * process. Only a claimed process gets anything from this adapter beyond being deployed with
+   * its file: no flag, no listener, no check. See {@code DECISIONS.pending/937.md}.
+   *
+   * @param workflowModuleId The workflow module id
+   * @param bpmnProcessId The PLAIN BPMN process id
+   * @return Whether the application claims the process; <code>true</code> where nobody handed
+   *         over an answer, which is an engine built for a test without a deployment service
+   */
+  public boolean isClaimedByAWorkflowService(
+      final String workflowModuleId,
+      final String bpmnProcessId) {
+
+    return (claimedProcesses == null) || claimedProcesses.test(workflowModuleId, bpmnProcessId);
+
+  }
+
+  /**
+   * Whether the application claims the process definition the engine reports. The engine holds
+   * every definition deployed against its database: the ones of this application, the ones it
+   * deploys without claiming them, and the ones somebody else deployed. Only the first kind is
+   * claimed. A definition this adapter did not deploy has no workflow module to be found under,
+   * and it is not claimed whatever its key is.
+   *
+   * @param tenantId The tenant of the definition, <code>null</code> where it has none
+   * @param processDefinitionKey The key of the definition, as the engine knows it
+   * @return Whether the application claims it
+   */
+  public boolean claimsTheProcessDefinition(
+      final String tenantId,
+      final String processDefinitionKey) {
+
+    final var workflowModuleId = resolveWorkflowModuleId(tenantId, processDefinitionKey);
+    if (workflowModuleId == null) {
+      return false;
+    }
+    return isClaimedByAWorkflowService(
+        workflowModuleId,
+        plainBpmnProcessId(workflowModuleId, processDefinitionKey));
+
+  }
+
+  /**
    * Which workflow module a process definition key belongs to - the way back when
    * there is no tenant to ask (prefixed identifiers, see decision 3 in the
    * repository's DECISIONS.md).

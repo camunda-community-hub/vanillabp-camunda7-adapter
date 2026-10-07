@@ -20,6 +20,8 @@ vanillabp:
         c7:
           resources-location: classpath*:c7-it/processes
       workflows:
+        ViewerSubProcess:
+          implemented-externally: true
         MixedProcess:
           tasks:
             MX_User:

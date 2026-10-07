@@ -18,6 +18,11 @@ import org.camunda.bpm.engine.impl.util.xml.Element;
  * <p>
  * Why this adapter edits the model it deploys at all, and what bounds each edit, is decision 5 in
  * the repository's DECISIONS.md.
+ * <p>
+ * The engine runs this for every model it parses, whoever deployed it. Only a process a
+ * <code>&#64;WorkflowService</code> class of this application claims gets anything: a process
+ * this application deploys without claiming it, and a process somebody else deployed into the
+ * same engine, stay as modelled, flags included. See {@code DECISIONS.pending/937.md}.
  */
 public class Camunda7AsyncBpmnParseListener extends AbstractBpmnParseListener {
 
@@ -74,11 +79,36 @@ public class Camunda7AsyncBpmnParseListener extends AbstractBpmnParseListener {
 
   }
 
+  /**
+   * Whether the application claims the process the element belongs to. Without a registry,
+   * which only an engine built for a test lacks, every process counts as claimed.
+   *
+   * @param scope The scope the engine is parsing
+   * @return Whether this listener may change anything of the process
+   */
+  private boolean theApplicationClaims(
+      final ScopeImpl scope) {
+
+    final var registry = cancellationListener != null
+        ? cancellationListener.taskRegistry()
+        : null;
+    if (registry == null) {
+      return true;
+    }
+    final var processDefinition = (org.camunda.bpm.engine.impl.persistence.entity.ProcessDefinitionEntity) scope
+        .getProcessDefinition();
+    return registry.claimsTheProcessDefinition(processDefinition.getTenantId(), processDefinition.getKey());
+
+  }
+
   @Override
   public void parseProcess(
       final Element processElement,
       final org.camunda.bpm.engine.impl.persistence.entity.ProcessDefinitionEntity processDefinition) {
 
+    if (!theApplicationClaims(processDefinition)) {
+      return;
+    }
     attachCancellationToElementsCarryingAServedListener(processDefinition);
     if ((workflowEndedListener == null) || (workflowEndedHandlerExists == null)) {
       return;
@@ -211,7 +241,7 @@ public class Camunda7AsyncBpmnParseListener extends AbstractBpmnParseListener {
       final ScopeImpl scope,
       final ActivityImpl activity) {
 
-    if (bpmsInitiatedStartListenerFactory == null) {
+    if ((bpmsInitiatedStartListenerFactory == null) || !theApplicationClaims(scope)) {
       return;
     }
     // a start event of an event subprocess fires inside a workflow which is already
@@ -255,7 +285,9 @@ public class Camunda7AsyncBpmnParseListener extends AbstractBpmnParseListener {
       final ScopeImpl scope,
       final ActivityImpl activity) {
 
-    asyncBeforeAndAfter(activity);
+    if (theApplicationClaims(scope)) {
+      asyncBeforeAndAfter(activity);
+    }
 
   }
 
@@ -265,7 +297,9 @@ public class Camunda7AsyncBpmnParseListener extends AbstractBpmnParseListener {
       final ScopeImpl scope,
       final ActivityImpl activity) {
 
-    asyncBeforeAndAfter(activity);
+    if (theApplicationClaims(scope)) {
+      asyncBeforeAndAfter(activity);
+    }
 
   }
 
@@ -275,7 +309,9 @@ public class Camunda7AsyncBpmnParseListener extends AbstractBpmnParseListener {
       final ScopeImpl scope,
       final ActivityImpl activity) {
 
-    asyncBeforeAndAfter(activity);
+    if (theApplicationClaims(scope)) {
+      asyncBeforeAndAfter(activity);
+    }
 
   }
 
@@ -285,7 +321,9 @@ public class Camunda7AsyncBpmnParseListener extends AbstractBpmnParseListener {
       final ScopeImpl scope,
       final ActivityImpl activity) {
 
-    asyncBeforeAndAfter(activity);
+    if (theApplicationClaims(scope)) {
+      asyncBeforeAndAfter(activity);
+    }
 
   }
 
@@ -295,6 +333,9 @@ public class Camunda7AsyncBpmnParseListener extends AbstractBpmnParseListener {
       final ScopeImpl scope,
       final ActivityImpl activity) {
 
+    if (!theApplicationClaims(scope)) {
+      return;
+    }
     asyncAfterOnly(activity);
     // user-task lifecycle notifications: the engine's global CREATE
     // and DELETE task-listener events reach optional @WorkflowTask handlers -
@@ -316,7 +357,9 @@ public class Camunda7AsyncBpmnParseListener extends AbstractBpmnParseListener {
       final ScopeImpl scope,
       final ActivityImpl activity) {
 
-    asyncAfterOnly(activity);
+    if (theApplicationClaims(scope)) {
+      asyncAfterOnly(activity);
+    }
 
   }
 

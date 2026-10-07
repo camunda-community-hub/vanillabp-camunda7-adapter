@@ -160,10 +160,7 @@ public class Camunda7QuarkusEngineHolder implements Camunda7WorkflowProcessingLi
                 workflowTaskInvoker, taskRegistry), bpmsInitiatedStartInvoker == null
                     ? null
                     : kind -> new io.vanillabp.camunda7.wiring.Camunda7BpmsInitiatedStartListener(
-                        bpmsInitiatedStartInvoker, taskRegistry, kind, (
-                            workflowModuleId,
-                            bpmnProcessId) -> servesTheProcess(
-                                workflowTaskInvoker, workflowModuleId, bpmnProcessId)));
+                        bpmsInitiatedStartInvoker, taskRegistry, kind, taskRegistry::isClaimedByAWorkflowService));
     if (workflowEndedInvoker != null) {
       parseListener
           .setWorkflowEnded(
@@ -401,34 +398,6 @@ public class Camunda7QuarkusEngineHolder implements Camunda7WorkflowProcessingLi
     jobExecutorLifecycle.shutdown();
     processEngine.close();
     log.info("Camunda7[{}]: engine closed", adapterId);
-
-  }
-
-
-  /**
-   * Whether a workflow service of this application serves that BPMN process. The engine
-   * holds every definition deployed against its database, so a start of a process this
-   * application does not claim reaches the listener as well - and the core has no workflow
-   * service to answer for it.
-   *
-   * @param workflowTaskInvoker The core's entry point, which knows the workflow services
-   * @param workflowModuleId The workflow module
-   * @param bpmnProcessId The plain BPMN process id
-   * @return Whether the core knows a workflow service for it
-   */
-  private static boolean servesTheProcess(
-      final WorkflowTaskInvoker workflowTaskInvoker,
-      final String workflowModuleId,
-      final String bpmnProcessId) {
-
-    if (workflowTaskInvoker == null) {
-      return true;
-    }
-    try {
-      return workflowTaskInvoker.resolveWorkflowAggregateIdName(workflowModuleId, bpmnProcessId) != null;
-    } catch (final RuntimeException e) {
-      return false;
-    }
 
   }
 

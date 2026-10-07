@@ -42,12 +42,16 @@ final class AnEngineRunningCompensation implements AutoCloseable {
     configuration.setHistoryTimeToLive("P1D");
     if (asThisAdapterDeploysIt) {
       // the adapter's own parse listener, so the measurement is about what a VanillaBP
-      // application really runs rather than about a model written for the test
+      // application really runs rather than about a model written for the test. The process
+      // is registered the way the adapter registers a process it deployed, because the
+      // listener leaves a process alone which this application did not deploy
+      final var registry = new Camunda7TaskRegistry();
+      registry.registerProcess("compensation", BPMN_PROCESS_ID, BPMN_PROCESS_ID);
       final var parseListeners = new java.util.ArrayList<org.camunda.bpm.engine.impl.bpmn.parser.BpmnParseListener>();
       parseListeners
           .add(
               new Camunda7AsyncBpmnParseListener(
-                  new Camunda7TaskCancellationListener(null, new Camunda7TaskRegistry()), new Camunda7UserTaskEventListener(null, new Camunda7TaskRegistry())));
+                  new Camunda7TaskCancellationListener(null, registry), new Camunda7UserTaskEventListener(null, registry)));
       configuration.setCustomPostBPMNParseListeners(parseListeners);
     }
     this.processEngine = configuration.buildProcessEngine();

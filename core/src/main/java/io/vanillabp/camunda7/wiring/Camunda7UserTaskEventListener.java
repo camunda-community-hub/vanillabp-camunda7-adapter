@@ -21,9 +21,9 @@ import lombok.extern.slf4j.Slf4j;
  * ({@link Camunda7AsyncBpmnParseListener}) for the engine's global CREATE and
  * DELETE events - CREATE delivers {@link TaskEvent.Event#CREATED} (e.g. to send an
  * email or feed an own task list), DELETE delivers
- * {@link TaskEvent.Event#CANCELED}. The handler is OPTIONAL (a user task without
- * one is simply processed through forms/task lists) and never completes the task
- * on return - completion arrives via <code>ProcessService#completeUserTask</code>.
+ * {@link TaskEvent.Event#CANCELED}. A user task without a handler is skipped: the
+ * startup let it through only where the application marked it as served by something
+ * else, a form or a task list say. A handler never completes the task on return - completion arrives via <code>ProcessService#completeUserTask</code>.
  * The invocation runs INSIDE the engine's transaction
  * ({@code runInCurrentTransaction}): aggregate changes commit or roll back with
  * the task's creation/cancellation itself - unless the engine was given a datasource of
@@ -98,7 +98,8 @@ public class Camunda7UserTaskEventListener implements TaskListener {
         bpmnProcessId,
         workflowModuleId);
 
-    // user-task handlers are OPTIONAL by design - skip silently without one
+    // a user task without a handler is one the application marked as served by something
+    // else, or one whose method does not ask for this event - skip silently
     final var context = new Camunda7UserTaskInvocationContext(
         connectable.get(), delegateTask, event, taskRegistry
             .versionOfDefinition(processDefinition.getId()), taskRegistry);

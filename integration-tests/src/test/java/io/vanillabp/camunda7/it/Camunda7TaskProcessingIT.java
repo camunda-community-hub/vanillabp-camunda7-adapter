@@ -732,11 +732,11 @@ public class Camunda7TaskProcessingIT {
   }
 
   @Test
-  @DisplayName("A user task WITHOUT a handler boots and completes through the SPI (optional notification)")
+  @DisplayName("A user task WITHOUT a handler, marked implemented-externally, boots and completes through the SPI")
   public void userTaskWithoutHandlerIsOptional() throws Exception {
 
-    // SilentUserTaskProcess' user task has NO @WorkflowTask handler - the wiring
-    // validation must not complain (user-task handlers are optional) and the
+    // SilentUserTaskProcess' user task has NO @WorkflowTask handler - the configuration
+    // marks it with implemented-externally, so the wiring validation lets it pass and the
     // task is processed through the SPI like any externally managed task
     final var aggregateId = startSecondaryProcess("SilentUserTaskProcess", true, null);
 

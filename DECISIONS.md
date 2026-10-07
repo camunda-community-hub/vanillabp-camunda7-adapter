@@ -1214,6 +1214,8 @@ cluster, and only a run against a cluster would settle it.
 
 ### 36. A user task nothing serves is named in a claimed process, and nothing is refused
 
+*Superseded by `DECISIONS.pending/834.md`: a user task of a claimed process now needs a `@WorkflowTask` method or the line `implemented-externally=true`, the INFO line is gone, and the core holds the rule for all adapters. Version 1 did ask for the method, so the sentence above saying that nobody used to say a word about it was wrong as well.*
+
 A user task of this engine runs without a `@WorkflowTask` method. The engine creates the task, it
 stands in a task list, somebody finishes it and the workflow moves on. That is why the core hands a
 user task over as an OPTIONAL spec, and `validateTaskWiring` filters those out before it asks for a

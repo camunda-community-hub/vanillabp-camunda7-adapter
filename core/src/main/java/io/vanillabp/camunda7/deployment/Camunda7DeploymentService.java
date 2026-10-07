@@ -762,6 +762,26 @@ public class Camunda7DeploymentService implements AdapterDeploymentService<BpmnM
     // them), while the core is keyed by the plain ones - so the model is searched
     // by the scoped id and the invoker is called with the plain one
     final var scopedBpmnProcessId = scopedProcessId(workflowModuleId, bpmnProcessId);
+
+    // The engine runs an activity carrying a standard loop once and says nothing. Asked
+    // first, because no other finding about this model matters while it does not do what
+    // was drawn. A process nobody claims is somebody else's model, so it only gets a WARN,
+    // like every other finding of that kind
+    final var standardLoops = Camunda7StandardLoops.elementIdsOf(model, scopedBpmnProcessId);
+    if (!standardLoops.isEmpty()) {
+      if (theApplicationClaims(workflowModuleId, bpmnProcessId)) {
+        throw new IllegalStateException(
+            Camunda7StandardLoops.refusal(standardLoops, bpmnProcessId, workflowModuleId));
+      }
+      log.warn(
+          "Camunda7[{}]: {}",
+          adapterId,
+          Camunda7StandardLoops.warningAboutAnUnclaimedProcess(standardLoops, bpmnProcessId, workflowModuleId));
+    }
+    processesWiredByModule
+        .computeIfAbsent(workflowModuleId, id -> java.util.concurrent.ConcurrentHashMap.newKeySet())
+        .add(bpmnProcessId);
+
     collectTasks(
         model,
         workflowModuleId,
@@ -2856,6 +2876,10 @@ public class Camunda7DeploymentService implements AdapterDeploymentService<BpmnM
     // holds under the old id - before the executor may hand any of their tasks out
     wireTheProcessesNobodyDeployed(workflowModuleId);
 
+    // a version deployed by an earlier generation of the application may carry a standard
+    // loop, and the workflows on it repeat nothing
+    warnAboutStandardLoopsOfHeldVersions(workflowModuleId);
+
     // asynchronous continuations (async-before/after, timers) run on the engine's
     // job executor - its activation is deferred to this point (the platform builds
     // the engine with the executor inactive)
@@ -2961,6 +2985,55 @@ public class Camunda7DeploymentService implements AdapterDeploymentService<BpmnM
         definitionIdsByVersion.size(),
         bpmnProcessId,
         workflowModuleId);
+
+  }
+
+  /**
+   * The BPMN processes of each workflow module this boot wired a model for, by their PLAIN
+   * ids. The versions the engine holds under them are read once the module starts.
+   */
+  private final Map<String, java.util.Set<String>> processesWiredByModule = new java.util.concurrent.ConcurrentHashMap<>();
+
+  /**
+   * Warns about each version the engine holds which carries a standard loop while workflows
+   * still run on it. Such a model was deployed before this adapter refused it, by version 1 or
+   * by an older snapshot, and nobody can change it any more, so this is a warning and not a
+   * refusal. A version no workflow runs on any more is passed over: it cannot do any harm.
+   * <p>
+   * The models are read first and counted only where one carries the marker. The engine caches
+   * a model it was asked for, and the startup check of the core reads the same versions anyway.
+   *
+   * @param workflowModuleId The workflow module which is about to process workflows
+   */
+  private void warnAboutStandardLoopsOfHeldVersions(
+      final String workflowModuleId) {
+
+    final var bpmnProcessIds = new java.util.TreeSet<String>(
+        processesWiredByModule.getOrDefault(workflowModuleId, java.util.Set.of()));
+    bpmnProcessIds.addAll(workflowTaskWiring.taskWiringOfProcessesNobodyDeployed(workflowModuleId).keySet());
+    for (final var bpmnProcessId : bpmnProcessIds) {
+      final var scopedBpmnProcessId = scopedProcessId(workflowModuleId, bpmnProcessId);
+      processVersions
+          .definitionIdsHeldUnder(workflowModuleId, bpmnProcessId)
+          .forEach((
+              version,
+              definitionId) -> {
+            final var standardLoops = Camunda7StandardLoops
+                .elementIdsOf(repositoryService.getBpmnModelInstance(definitionId), scopedBpmnProcessId);
+            if (standardLoops.isEmpty()) {
+              return;
+            }
+            final var running = processVersions.activeInstanceCountOf(workflowModuleId, bpmnProcessId, version);
+            if ((running != null) && (running == 0L)) {
+              return;
+            }
+            log.warn(
+                "Camunda7[{}]: {}",
+                adapterId,
+                Camunda7StandardLoops
+                    .warningAboutAHeldVersion(standardLoops, version, bpmnProcessId, workflowModuleId, running));
+          });
+    }
 
   }
 

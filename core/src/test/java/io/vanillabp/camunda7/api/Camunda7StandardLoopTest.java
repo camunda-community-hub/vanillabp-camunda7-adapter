@@ -27,8 +27,10 @@ import io.vanillabp.integration.test.utils.SuppressOutputExtension;
  * <p>
  * So the marker is silently ignored on both Camunda engines, measured on 7.24 here and on
  * 8.8.39, 8.9.21 and 8.10.0-rc1 in the Camunda 8 adapter. A model which counts on it does its
- * work once and moves on, which is the kind of deviation somebody finds in production. Both
- * Deviations pages say so.
+ * work once and moves on, which is the kind of deviation somebody finds in production. This is
+ * why the adapter refuses such a model while deploying it, see
+ * {@code Camunda7StandardLoopRefusalTest}. The test here runs the bare engine, without the
+ * adapter, so it keeps measuring what the refusal is about.
  */
 @ExtendWith(SuppressOutputExtension.class)
 public class Camunda7StandardLoopTest {

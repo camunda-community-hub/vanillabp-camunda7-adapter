@@ -391,6 +391,28 @@ asks for its item, and so does a collection whose handler reads the index and th
 method naming an element of another branch of the process is not refused either: that item never
 reaches it, so the model it is deployed with is not the place to say anything about it.
 
+### A standard loop in your model ends the boot
+
+Camunda 7 does not run a standard loop. An activity carrying `standardLoopCharacteristics`, drawn to
+repeat it while a condition holds, deploys without a word, runs once, and the workflow moves on.
+Version 1 deployed such a model the same way, so a model which counts on the loop has done its work
+once all along.
+
+Version 2 refuses the model while it deploys it, where one of your `@WorkflowService` classes
+claims the process, and the boot ends there. The message names the activity, the BPMN process and
+the workflow module. A model which deployed in version 1 does not deploy any more, and this is on
+purpose: the upgrade is where you learn that the loop never ran. A process nobody claims gets a
+WARN with the same words, and the boot goes on, because the model is somebody else's.
+
+Change the model to one of the two forms which do repeat an activity. Either draw a loop in the
+sequence flow, with a gateway after the activity which leads back to it while the condition holds.
+Or make the activity a multi-instance element; a handler then reads its round with
+`@MultiInstanceElement`, `@MultiInstanceIndex` and `@MultiInstanceTotal`.
+
+A version the engine already holds is not refused, because nobody can change it any more. Where
+workflows still run on it, the start logs a WARN naming the version, the activity and how many
+workflows are on it.
+
 ### A task which has to stay open but is wired by *Expression* ends the boot
 
 A method declaring `@TaskId` keeps its task open until the application completes it. An

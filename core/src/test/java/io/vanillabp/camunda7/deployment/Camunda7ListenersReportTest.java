@@ -226,6 +226,66 @@ public class Camunda7ListenersReportTest {
 
   }
 
+  private static BpmnModelInstance modelWithAnExternalTask() {
+
+    return model("""
+            <bpmn:endEvent id="Event_Done"><bpmn:incoming>toEnd</bpmn:incoming></bpmn:endEvent>
+            <bpmn:serviceTask id="Activity_Poll" camunda:type="external" camunda:topic="pollTheLedger" />
+        """);
+
+  }
+
+  @Test
+  @DisplayName("An external task ends the boot and names the line which lets a worker of the application serve it")
+  public void anExternalTaskIsRefusedNamingTheLine() {
+
+    final var service = adapter(aCoreServingEverything(), allowedBy("vanillabp.adapters.c7.allow-listeners"));
+    final var model = modelWithAnExternalTask();
+
+    final var refused = assertThrows(IllegalStateException.class, () -> {
+      final var context = service.prepareBpmn(MODULE, null, FILE, PROCESS, model);
+      service.wireBpmn(MODULE, FILE, PROCESS, model, context);
+    }).getMessage();
+
+    assertTrue(refused.contains("camunda:topic 'pollTheLedger'"), refused);
+    assertTrue(
+        refused.contains(
+            "vanillabp.workflow-modules.loan-approval.workflows.LoanApproval.tasks.Activity_Poll.implemented-externally=true"),
+        () -> "the third way out, for a worker polling the topic: "
+            + refused);
+
+  }
+
+  @Test
+  @DisplayName("An external task the line marks is handed to the core and subscribes to nothing")
+  public void aMarkedExternalTaskGoesToTheCore() {
+
+    final var wiring = aCoreServingEverything();
+    when(wiring.isImplementedExternally(anyString(), anyString(), anyString(), Mockito.any()))
+        .thenAnswer(invocation -> "Activity_Poll".equals(invocation.<BpmnTaskSpec>getArgument(3).activityId()));
+    final var service = adapter(wiring, allowedBy("vanillabp.adapters.c7.allow-listeners"));
+    final var model = modelWithAnExternalTask();
+
+    final var context = service.prepareBpmn(MODULE, null, FILE, PROCESS, model);
+    service.wireBpmn(MODULE, FILE, PROCESS, model, context);
+
+    @SuppressWarnings("unchecked")
+    final ArgumentCaptor<java.util.Collection<BpmnTaskSpec>> specs = ArgumentCaptor
+        .forClass(java.util.Collection.class);
+    Mockito
+        .verify(wiring)
+        .validateTaskWiring(anyString(), anyString(), anyString(), specs.capture());
+    assertTrue(
+        specs
+            .getValue()
+            .stream()
+            .anyMatch(
+                spec -> "Activity_Poll".equals(spec.activityId()) && "pollTheLedger".equals(spec.taskDefinition())),
+        () -> "the core holds the rule, a method next to the line included: "
+            + specs.getValue());
+
+  }
+
   @Test
   @DisplayName("A switch nobody needs is one line, not a frame")
   public void aSwitchNobodyNeedsIsOneLine(
@@ -386,7 +446,7 @@ public class Camunda7ListenersReportTest {
         .forClass(java.util.Collection.class);
     Mockito
         .verify(wiring)
-        .validateTaskWiring(anyString(), anyString(), specs.capture());
+        .validateTaskWiring(anyString(), anyString(), anyString(), specs.capture());
     final var taskDefinitions = specs
         .getValue()
         .stream()

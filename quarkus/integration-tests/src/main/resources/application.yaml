@@ -22,6 +22,14 @@ vanillabp:
         c7:
           resources-location: classpath:c7-e2e/processes
       workflows:
+        MixedProcess:
+          tasks:
+            MX_User:
+              implemented-externally: true
+        SilentUserTaskProcess:
+          tasks:
+            SU_Task:
+              implemented-externally: true
         AggregateChangedProcess:
           allow-full-sync-with-bpms: true
           declared-aggregate-values:

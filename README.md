@@ -555,7 +555,7 @@ lifecycle events when the open task's activity is canceled (interrupting
 boundary event, instance termination), within the cancellation's transaction.
 
 **User tasks:** the user task's `camunda:formKey` is the task
-definition; a matching `@WorkflowTask` method is an OPTIONAL notification handler
+definition, and a `@WorkflowTask` method for it is the notification handler
 invoked on the engine's global CREATE and DELETE task-listener events (CREATED /
 CANCELED via `@TaskEvent`, the task's ID via `@TaskId`) - attached as BUILT-IN
 listeners at parse time, so they run before modeller-defined ones. The handler
@@ -565,15 +565,13 @@ never completes the task: `ProcessService#completeUserTask` maps to
 checks the task is still there, phase two acts after the commit. `awarenessOfUserTask`
 locates a task by its task ID plus a business-key check and the same scope check.
 
-A user task which no method serves is named while the module boots, once per BPMN process, at
-INFO, and only for a process one of your `@WorkflowService` classes claims. Nothing is refused:
-the engine creates the task, a task list shows it and whoever finishes it moves the workflow on,
-which is why the core hands a user task over as an optional spec. The one thing a model like that
-loses is the notification, and version 1 lost it without a word. The line names each element, its
-form key or that it has none, and the method which would serve it
-(`Camunda7UnservedUserTasksTest`). Where a task list is all those tasks need, there is nothing to
-do about it. The Camunda 8 adapter refuses a user task a job worker serves in a claimed process,
-and this engine has no such shape: every user task here is the engine's own.
+A user task of a claimed process needs such a method, or the line
+`implemented-externally=true` which says that something else serves it, a task list for example.
+Without either the boot ends, as it did in version 1: its parse listener wired every user task
+with `allowNoMethodFound=false`. The rule and the message live in the core, so all adapters say
+the same sentence ([decision 36](./DECISIONS.md#36-a-user-task-nothing-serves-is-named-in-a-claimed-process-and-nothing-is-refused)
+is superseded by `DECISIONS.pending/834.md`). A user task marked that way still gets the
+engine's listener events, and the adapter skips them because no method asks for them.
 
 **What the awareness probes answer for:** the election
 contract of `MigratableProcessService` says an adapter answers only for the scope
@@ -661,7 +659,7 @@ BPMN expressions like gateway conditions or multi-instance collections
 (`${riskAcceptable}`, `${items}`) resolve against the workflow aggregate
 identified by the business key (getter, boolean getter or field - Spring beans
 remain resolvable on Spring Boot). External tasks (`camunda:topic`) are not
-supported yet.
+served by VanillaBP, see [External tasks](#external-tasks).
 
 ### Listeners somebody modelled
 
@@ -1676,7 +1674,10 @@ need it for asynchronous work. A `@TaskId` method leaves the task open, and
 `camunda:delegateExpression`. For an engine which is only reachable over its REST API, a separate
 adapter `camunda7-external` is planned.
 
-Deploying such a task is refused with a guiding message. Meeting one in a version the engine
+Deploying such a task is refused with a guiding message, unless the application says that
+something else serves it, a worker polling the topic: `implemented-externally=true` for the task,
+named by its element id or by its topic. Then the task passes, and nothing of this adapter
+subscribes to the topic. Meeting one in a version the engine
 ALREADY holds is a warning naming the version instead: that model is only being read, on
 behalf of the startup check about older versions, and nobody can change it any more - see
 [decision 15](./DECISIONS.md#15-a-check-reads-the-engines-models-without-asking-who-deployed-them).

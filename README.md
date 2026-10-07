@@ -569,8 +569,8 @@ A user task of a claimed process needs such a method, or the line
 `implemented-externally=true` which says that something else serves it, a task list for example.
 Without either the boot ends, as it did in version 1: its parse listener wired every user task
 with `allowNoMethodFound=false`. The rule and the message live in the core, so all adapters say
-the same sentence ([decision 36](./DECISIONS.md#36-a-user-task-nothing-serves-is-named-in-a-claimed-process-and-nothing-is-refused)
-is superseded by `DECISIONS.pending/834.md`). A user task marked that way still gets the
+the same sentence ([decision 36](./DECISIONS.md#36-a-user-task-nothing-serves-is-named-in-a-claimed-process-and-nothing-is-refused---superseded-by-decision-42)
+is superseded by [decision 42](./DECISIONS.md#42-a-user-task-needs-a-method-or-a-line-and-an-external-task-may-pass-with-the-line)). A user task marked that way still gets the
 engine's listener events, and the adapter skips them because no method asks for them.
 
 **What the awareness probes answer for:** the election

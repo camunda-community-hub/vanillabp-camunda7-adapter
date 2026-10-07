@@ -1212,9 +1212,9 @@ Camunda 8 hands out a job per handler, so the same model is expected to run in a
 handler there. That is read off the model reading of the Camunda 8 adapter and not measured on a
 cluster, and only a run against a cluster would settle it.
 
-### 36. A user task nothing serves is named in a claimed process, and nothing is refused
+### 36. A user task nothing serves is named in a claimed process, and nothing is refused - superseded by decision 42
 
-*Superseded by `DECISIONS.pending/834.md`: a user task of a claimed process now needs a `@WorkflowTask` method or the line `implemented-externally=true`, the INFO line is gone, and the core holds the rule for all adapters. Version 1 did ask for the method, so the sentence above saying that nobody used to say a word about it was wrong as well.*
+*Superseded by decision 42: a user task of a claimed process now needs a `@WorkflowTask` method or the line `implemented-externally=true`, the INFO line is gone, and the core holds the rule for all adapters. Version 1 did ask for the method, so the sentence above saying that nobody used to say a word about it was wrong as well.*
 
 A user task of this engine runs without a `@WorkflowTask` method. The engine creates the task, it
 stands in a task list, somebody finishes it and the workflow moves on. That is why the core hands a
@@ -1396,3 +1396,82 @@ the expression.
 
 `Camunda7TasksOfTheOwnVersionTest` holds the lookup, and `Camunda7HandlersOfTheOwnVersionIT` holds
 the upgrade against a running engine.
+
+### 41. A standard loop is refused in a claimed process, warned about in one nobody claims, and a held version is warned about while workflows run on it
+
+#### What was decided
+
+Camunda 7 does not run a standard loop. An activity carrying `standardLoopCharacteristics` deploys
+without a word, runs once, and the workflow moves on, and the engine writes nothing above DEBUG
+about it. Measured on 7.24 by `Camunda7StandardLoopTest`: `BpmnParse` reads
+`multiInstanceLoopCharacteristics` alone. A model which counts on the loop does its work once, and
+somebody finds out in production.
+
+So the deployment reads the model for the marker before anything else, at any depth of its
+subprocesses, and answers in three ways:
+
+- A BPMN process a `@WorkflowService` class claims does not deploy. The message names the activity,
+  the process, the workflow module, what the engine does with the marker, and the two forms which
+  do repeat an activity: a loop in the sequence flow, or a multi-instance element with
+  `@MultiInstanceElement`, `@MultiInstanceIndex` and `@MultiInstanceTotal`.
+- A process nobody claims gets one WARN with the same words. It is somebody else's model, and ending
+  the boot over it would take the application down for a process it does not run. The Camunda 8
+  adapter makes the same split for the findings of this kind.
+- A version the engine already holds is never refused, because nobody can change it. Where
+  workflows still run on it, the start of the workflow module logs a WARN naming the version, the
+  activity and how many workflows are on it. A version no workflow runs on any more is passed over.
+  The model is read first and the workflows are counted only where it carries the marker.
+
+#### Why
+
+The price is accepted on purpose: a model which deployed in version 1 does not deploy any more. The
+upgrade is the moment somebody can still change the model, and the refusal is how they learn that
+the loop never ran. The Camunda 8 adapter refuses the same model the same way, so both adapters
+agree, and a migration from Camunda 7 to Camunda 8 does not stop at a model which was just as wrong
+here.
+
+This is a rule which refuses a model. Introduced after the 2.0 release it would stop an application
+which boots today, which is why it comes with 2.0.
+
+`Camunda7StandardLoopRefusalTest` holds the refusal, the WARN of an unclaimed process, the
+multi-instance element which must deploy, and the WARN about a held version with and without
+workflows on it.
+
+See [A standard loop is refused while deploying](https://github.com/camunda-community-hub/vanillabp-camunda7-adapter/wiki/Deviations#a-standard-loop-is-refused-while-deploying).
+
+### 42. A user task needs a method or a line, and an external task may pass with the line
+
+Supersedes decision 36. The platform decided on 2026-10-07 that every task of a claimed BPMN process
+needs a `@WorkflowTask` method or the property `implemented-externally=true`, and that the core holds
+that rule for every adapter (decision 119 of `adapter-platform-integration`). This entry says what it means
+for this engine.
+
+**User tasks.** Decision 36 let a user task without a method pass and named it once at INFO. It
+rested on a wrong reading of version 1, which said it never spoke about such a task. Version 1 did:
+`TaskWiringBpmnParseListener.parseUserTask` (1.5.0) made every user task a connectable, and
+`Camunda7TaskWiring.wireTask` called `super.wireTask(connectable, false, ...)`, so the boot ended with
+"No public method annotated with @WorkflowTask is matching task". Version 2 now does the same, and
+offers the property for a user task a task list works off on purpose. The INFO line and
+`Camunda7UnservedUserTasks` are gone. The adapter still hands a user task over with `optional` set,
+which now only says "user task": the core asks no method of it in a version the engine only still
+holds.
+
+The core's message replaces the adapter's. It names the form key as the task definition and both
+ways to mark the task, so what decision 36 said about a concrete message per BPMS still holds.
+
+**External tasks.** A service task wired by `camunda:topic` is served by whatever polls the topic,
+which is never this adapter. Deploying one was refused, with no way out for an application which
+does run such a worker. Now the adapter asks the core whether the task is marked
+(`WorkflowTaskWiring.isImplementedExternally`). A marked task goes to `validateTaskWiring` as a task
+like any other, with the topic as its task definition, so a method next to the line is refused by
+the core and a line no model needs is warned about. Nothing of this adapter subscribes to the topic.
+An unmarked one is refused as before, and the message now names the line as the third way out.
+
+**Listeners.** An execution listener whose expression no method names is resolved by the engine
+itself, a Spring bean say, and stays none of this adapter's business. Only the listeners a method
+serves reach the core, now through `BpmnTaskSpec.listener(...)`, so a method naming the element id
+no longer counts as serving a listener on that element.
+
+`ImplementedExternallyTest` of the platform holds the rule. In this repository
+`Camunda7ListenersReportTest` holds the refused and the marked external task, and the integration
+tests mark the user tasks they leave without a method.

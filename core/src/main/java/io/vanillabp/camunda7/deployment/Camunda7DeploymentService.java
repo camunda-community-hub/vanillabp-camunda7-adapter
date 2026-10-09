@@ -451,7 +451,7 @@ public class Camunda7DeploymentService implements AdapterDeploymentService<BpmnM
       // same question Camunda7CallActivities asks here, and asks it through the registry
       taskRegistry.setWorkflowAggregateSharing(workflowTaskWiring::workflowsShareTheWorkflowAggregate);
       // the parse listener runs for every model the engine parses, and only a process the
-      // application claims gets anything from it (see DECISIONS.pending/937.md)
+      // application claims gets anything from it (see decision 43 of DECISIONS.md)
       taskRegistry.setClaimedProcesses(workflowTaskWiring::isClaimedByAWorkflowService);
       // every inbound delivery reports which adapter it came from
       taskRegistry.setAdapterId(adapterId);
@@ -773,7 +773,7 @@ public class Camunda7DeploymentService implements AdapterDeploymentService<BpmnM
 
     // a process nobody claims travels with its file and is left as it was modelled: no
     // task is collected, no check refuses it, no listener is wired to it, and the parse
-    // listener does not touch it (see DECISIONS.pending/937.md). The core ended the start
+    // listener does not touch it (see decision 43 of DECISIONS.md). The core ended the start
     // over it already unless the application marked it as somebody else's
     if (!workflowTaskWiring.isClaimedByAWorkflowService(workflowModuleId, bpmnProcessId)) {
       log.debug(

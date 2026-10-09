@@ -22,7 +22,7 @@ import org.camunda.bpm.engine.impl.util.xml.Element;
  * The engine runs this for every model it parses, whoever deployed it. Only a process a
  * <code>&#64;WorkflowService</code> class of this application claims gets anything: a process
  * this application deploys without claiming it, and a process somebody else deployed into the
- * same engine, stay as modelled, flags included. See {@code DECISIONS.pending/937.md}.
+ * same engine, stay as modelled, flags included. See decision 43 of {@code DECISIONS.md}.
  */
 public class Camunda7AsyncBpmnParseListener extends AbstractBpmnParseListener {
 

@@ -491,7 +491,7 @@ application deploys without claiming it (the application marked it with `impleme
 and a process somebody else deployed into the same database keep their flags and get no listener.
 `wireBpmn` returns for an unclaimed process before it collects a task, so no check refuses or warns
 about it either. Every such question goes to `WorkflowTaskWiring#isClaimedByAWorkflowService`. Why:
-`DECISIONS.pending/937.md`. `Camunda7UnclaimedProcessesAreLeftAloneTest` holds a claimed, a marked
+[decision 43](./DECISIONS.md#43-the-parse-listener-changes-only-a-process-the-application-claims). `Camunda7UnclaimedProcessesAreLeftAloneTest` holds a claimed, a marked
 and a foreign process in one engine.
 
 A business rule task calling a DECISION (`camunda:decisionRef`) is the one task the

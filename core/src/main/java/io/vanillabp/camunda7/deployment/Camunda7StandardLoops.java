@@ -16,7 +16,7 @@ import org.camunda.bpm.model.bpmn.instance.Activity;
  * activity once and moves on, and it writes no line about it (see
  * {@code Camunda7StandardLoopTest}). So a model this boot deploys is refused where the
  * application claims its process. A process nobody claims is not looked at: it is somebody
- * else's model (see {@code DECISIONS.pending/937.md}). A version the engine
+ * else's model (see decision 43 of {@code DECISIONS.md}). A version the engine
  * already holds is reported where workflows still run on it, because nobody can change that
  * model any more.
  * <p>

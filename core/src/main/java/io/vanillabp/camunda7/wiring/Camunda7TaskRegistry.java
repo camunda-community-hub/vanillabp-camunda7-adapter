@@ -289,7 +289,7 @@ public class Camunda7TaskRegistry {
   /**
    * Whether a <code>&#64;WorkflowService</code> class of the application claims the BPMN
    * process. Only a claimed process gets anything from this adapter beyond being deployed with
-   * its file: no flag, no listener, no check. See {@code DECISIONS.pending/937.md}.
+   * its file: no flag, no listener, no check. See decision 43 of {@code DECISIONS.md}.
    *
    * @param workflowModuleId The workflow module id
    * @param bpmnProcessId The PLAIN BPMN process id

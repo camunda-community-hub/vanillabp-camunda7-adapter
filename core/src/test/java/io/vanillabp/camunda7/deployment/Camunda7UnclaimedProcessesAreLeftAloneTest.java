@@ -155,6 +155,8 @@ public class Camunda7UnclaimedProcessesAreLeftAloneTest {
         .getRepositoryService()
         .createDeployment()
         .name(MODULE)
+        // the tenant the deployment uses in the mode every module has unless configured otherwise
+        .tenantId(MODULE)
         .addModelInstance(FILE, model)
         .deploy();
 

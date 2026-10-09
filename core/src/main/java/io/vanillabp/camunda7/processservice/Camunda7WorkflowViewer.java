@@ -78,8 +78,9 @@ public class Camunda7WorkflowViewer {
   /**
    * The process definitions of the addressed (sub-)workflow: the definition the
    * instance runs/ran on first (its {@code usedByElements} is <code>null</code>),
-   * followed by the definitions its call activities WOULD call next (latest
-   * deployed version, {@code usedByElements} naming the call-activity elements).
+   * followed by the definitions its call activities called ({@code usedByElements}
+   * naming the call-activity elements). A call activity which called nothing yet reports
+   * the version it WOULD call next, the latest deployed one.
    *
    * @param workflowModuleId The workflow module the workflow belongs to. The tenant is a
    *          parameter of its own: a module has one only under {@code by-adapter}
@@ -97,11 +98,12 @@ public class Camunda7WorkflowViewer {
       final Object workflowAggregateId,
       final String historyContext) {
 
-    final var processDefinitionId = resolveProcessDefinitionId(
+    final var addressed = resolveAddressedInstance(
         workflowModuleId, bpmnProcessId, tenantId, workflowAggregateId, historyContext);
-    if (processDefinitionId == null) {
+    if (addressed == null) {
       return List.of();
     }
+    final var processDefinitionId = addressed.processDefinitionId();
 
     final var processDefinition = repositoryService
         .getProcessDefinition(processDefinitionId);
@@ -112,7 +114,7 @@ public class Camunda7WorkflowViewer {
             processDefinition.getId(), processDefinition.getKey(), String
                 .valueOf(processDefinition.getVersion()), null));
     definitions.addAll(
-        calledDefinitions(workflowModuleId, tenantId, processDefinitionId));
+        calledDefinitions(workflowModuleId, tenantId, processDefinitionId, addressed));
     return definitions;
 
   }
@@ -166,9 +168,9 @@ public class Camunda7WorkflowViewer {
       // instance's history was already cleaned up (history-time-to-live). The
       // running instance still allows reporting the definition it runs on - the
       // element history is unavailable, which the SPI expresses as null.
-      final var processDefinitionId = resolveProcessDefinitionId(
+      final var addressed = resolveAddressedInstance(
           workflowModuleId, bpmnProcessId, tenantId, workflowAggregateId, historyContext);
-      if (processDefinitionId == null) {
+      if (addressed == null) {
         return null;
       }
       log.debug(
@@ -176,7 +178,7 @@ public class Camunda7WorkflowViewer {
               + "definition without an element history (history level NONE or history cleaned up)",
           adapterId,
           workflowAggregateId);
-      return new WorkflowHistory(processDefinitionId, null, null, null);
+      return new WorkflowHistory(addressed.processDefinitionId(), null, null, null);
     }
 
     final var activities = historyService
@@ -203,14 +205,31 @@ public class Camunda7WorkflowViewer {
   }
 
   /**
-   * Resolves the process definition the addressed (sub-)workflow runs/ran on -
+   * The process instance a viewer call addresses, and the definition it runs or ran on.
+   *
+   * @param processInstanceId The process instance
+   * @param processDefinitionId The definition it runs or ran on
+   * @param fromHistory Whether the history answered, rather than what is running
+   */
+  private record AddressedInstance(
+                                   String processInstanceId,
+                                   String processDefinitionId,
+                                   boolean fromHistory) {
+  }
+
+  /**
+   * Resolves the (sub-)workflow addressed and the process definition it runs/ran on -
    * from history if available, otherwise from the runtime state (history level
    * NONE).
+   * <p>
+   * The runtime state follows the rule of the history: a called instance is accepted only
+   * where it belongs to the workflow asked about, which is where its root is that workflow's
+   * instance. Without that check a history level of NONE would show a called instance of any
+   * other workflow to whoever passes its id. See decision 45 in the repository's DECISIONS.md.
    *
-   * @return The Camunda process definition ID or <code>null</code> if this engine
-   *         does not know the workflow
+   * @return The instance or <code>null</code> if this engine does not know the workflow
    */
-  private String resolveProcessDefinitionId(
+  private AddressedInstance resolveAddressedInstance(
       final String workflowModuleId,
       final String bpmnProcessId,
       final String tenantId,
@@ -220,19 +239,10 @@ public class Camunda7WorkflowViewer {
     final var historicInstance = resolveHistoricInstance(
         workflowModuleId, bpmnProcessId, tenantId, workflowAggregateId, historyContext);
     if (historicInstance != null) {
-      return historicInstance.getProcessDefinitionId();
+      return new AddressedInstance(historicInstance.getId(), historicInstance.getProcessDefinitionId(), true);
     }
 
     // no history: the runtime state answers for RUNNING instances only
-    if (historyContext != null) {
-      final var calledInstance = runtimeService
-          .createProcessInstanceQuery()
-          .processInstanceId(historyContext)
-          .singleResult();
-      return calledInstance == null
-          ? null
-          : calledInstance.getProcessDefinitionId();
-    }
     var runningQuery = runtimeService
         .createProcessInstanceQuery()
         .processInstanceBusinessKey(String.valueOf(workflowAggregateId))
@@ -243,9 +253,27 @@ public class Camunda7WorkflowViewer {
         ? runningQuery.tenantIdIn(tenantId)
         : runningQuery.withoutTenantId();
     final var instance = runningQuery.singleResult();
-    return instance == null
-        ? null
-        : instance.getProcessDefinitionId();
+    if (instance == null) {
+      return null;
+    }
+    if (historyContext == null) {
+      return new AddressedInstance(instance.getId(), instance.getProcessDefinitionId(), false);
+    }
+    final var calledInstance = runtimeService
+        .createProcessInstanceQuery()
+        .processInstanceId(historyContext)
+        .singleResult();
+    if (calledInstance == null) {
+      return null;
+    }
+    final var rootInstanceId = calledInstance.getRootProcessInstanceId() == null
+        ? calledInstance.getId()
+        : calledInstance.getRootProcessInstanceId();
+    if (!rootInstanceId.equals(instance.getId())) {
+      reportAForeignHistoryContext(workflowModuleId, bpmnProcessId, tenantId, workflowAggregateId, historyContext);
+      return null;
+    }
+    return new AddressedInstance(calledInstance.getId(), calledInstance.getProcessDefinitionId(), false);
 
   }
 
@@ -295,34 +323,50 @@ public class Camunda7WorkflowViewer {
     final var rootInstanceId = io.vanillabp.camunda7.api.Camunda7Executions
         .rootProcessInstanceIdOf(calledInstance);
     if (!rootInstanceId.equals(primaryInstance.getId())) {
-      log.warn(
-          "Camunda7[{}]: the history context '{}' does not belong to the workflow of aggregate "
-              + "'{}' (BPMN process '{}' of workflow module '{}', tenant '{}') - ignoring it",
-          adapterId,
-          historyContext,
-          workflowAggregateId,
-          bpmnProcessId,
-          workflowModuleId,
-          tenantId != null
-              ? tenantId
-              : "<none>");
+      reportAForeignHistoryContext(workflowModuleId, bpmnProcessId, tenantId, workflowAggregateId, historyContext);
       return null;
     }
     return calledInstance;
 
   }
 
+  private void reportAForeignHistoryContext(
+      final String workflowModuleId,
+      final String bpmnProcessId,
+      final String tenantId,
+      final Object workflowAggregateId,
+      final String historyContext) {
+
+    log.warn(
+        "Camunda7[{}]: the history context '{}' does not belong to the workflow of aggregate "
+            + "'{}' (BPMN process '{}' of workflow module '{}', tenant '{}') - ignoring it",
+        adapterId,
+        historyContext,
+        workflowAggregateId,
+        bpmnProcessId,
+        workflowModuleId,
+        tenantId != null
+            ? tenantId
+            : "<none>");
+
+  }
+
   /**
-   * The definitions called by the call activities of the given definition, in the
-   * version which WOULD be executed next (the latest deployed one - see the SPI's
-   * viewer documentation). Call activities addressing their process by an
-   * expression are skipped: which definition they call is only known at execution
-   * time.
+   * The definitions called by the call activities of the given definition. A call activity
+   * which called a process already reports the definition that called instance runs or ran
+   * on, because that is the model a viewer has to draw for this workflow. One which has not
+   * called anything yet reports the version which WOULD be executed next, the latest deployed
+   * one. Where calls of one call activity ran on different versions, the most recent call
+   * counts. See decision 45 in the repository's DECISIONS.md.
+   * <p>
+   * Call activities addressing their process by an expression are skipped: which definition
+   * they call is only known at execution time.
    */
   private List<ProcessDefinition> calledDefinitions(
       final String workflowModuleId,
       final String tenantId,
-      final String processDefinitionId) {
+      final String processDefinitionId,
+      final AddressedInstance addressed) {
 
     final var model = repositoryService
         .getBpmnModelInstance(processDefinitionId);
@@ -350,10 +394,35 @@ public class Camunda7WorkflowViewer {
           .add(callActivity.getId());
     }
 
+    final var ranDefinitionIds = definitionsTheCallActivitiesRan(addressed);
     final var definitions = new ArrayList<ProcessDefinition>();
     elementsByCalledProcess.forEach((
         calledProcessId,
         elementIds) -> {
+      // keep the modelling order, and group the elements calling the same definition
+      final var elementsByRanDefinition = new LinkedHashMap<String, List<String>>();
+      final var elementsWhichDidNotCall = new ArrayList<String>();
+      elementIds.forEach(elementId -> {
+        final var ranDefinitionId = ranDefinitionIds.get(elementId);
+        if (ranDefinitionId == null) {
+          elementsWhichDidNotCall.add(elementId);
+        } else {
+          elementsByRanDefinition
+              .computeIfAbsent(ranDefinitionId, key -> new ArrayList<>())
+              .add(elementId);
+        }
+      });
+      elementsByRanDefinition.forEach((
+          ranDefinitionId,
+          elementsWhichCalled) -> {
+        final var ran = repositoryService.getProcessDefinition(ranDefinitionId);
+        definitions.add(
+            new ProcessDefinition(
+                ran.getId(), ran.getKey(), String.valueOf(ran.getVersion()), List.copyOf(elementsWhichCalled)));
+      });
+      if (elementsWhichDidNotCall.isEmpty()) {
+        return;
+      }
       var definitionQuery = repositoryService
           .createProcessDefinitionQuery()
           .processDefinitionKey(calledProcessId);
@@ -373,14 +442,68 @@ public class Camunda7WorkflowViewer {
             tenantId != null
                 ? tenantId
                 : "<none>",
-            elementIds);
+            elementsWhichDidNotCall);
         return;
       }
       definitions.add(
           new ProcessDefinition(
-              latest.getId(), latest.getKey(), String.valueOf(latest.getVersion()), List.copyOf(elementIds)));
+              latest.getId(), latest.getKey(), String.valueOf(latest.getVersion()), List.copyOf(
+                  elementsWhichDidNotCall)));
     });
     return definitions;
+
+  }
+
+  /**
+   * The definition each call activity of an instance called, by the id of the call activity.
+   * The history answers where there is one. Without it the called instances which still run
+   * answer, each pointing back at the execution which called it.
+   *
+   * @param addressed The instance whose call activities are meant
+   * @return The definition id of the most recent call per call activity
+   */
+  private java.util.Map<String, String> definitionsTheCallActivitiesRan(
+      final AddressedInstance addressed) {
+
+    final var ranDefinitionIds = new java.util.HashMap<String, String>();
+    if (addressed.fromHistory()) {
+      historyService
+          .createHistoricActivityInstanceQuery()
+          .processInstanceId(addressed.processInstanceId())
+          .activityType(org.camunda.bpm.engine.ActivityTypes.CALL_ACTIVITY)
+          .orderByHistoricActivityInstanceStartTime()
+          .asc()
+          .list()
+          .stream()
+          .filter(call -> call.getCalledProcessInstanceId() != null)
+          .forEach(call -> {
+            final var calledInstance = historyService
+                .createHistoricProcessInstanceQuery()
+                .processInstanceId(call.getCalledProcessInstanceId())
+                .singleResult();
+            if (calledInstance != null) {
+              ranDefinitionIds.put(call.getActivityId(), calledInstance.getProcessDefinitionId());
+            }
+          });
+      return ranDefinitionIds;
+    }
+    runtimeService
+        .createProcessInstanceQuery()
+        .superProcessInstanceId(addressed.processInstanceId())
+        .list()
+        .stream()
+        .filter(org.camunda.bpm.engine.impl.persistence.entity.ExecutionEntity.class::isInstance)
+        .map(org.camunda.bpm.engine.impl.persistence.entity.ExecutionEntity.class::cast)
+        .forEach(calledInstance -> {
+          final var callingExecution = runtimeService
+              .createExecutionQuery()
+              .executionId(calledInstance.getSuperExecutionId())
+              .singleResult();
+          if (callingExecution instanceof org.camunda.bpm.engine.impl.persistence.entity.ExecutionEntity calling) {
+            ranDefinitionIds.put(calling.getActivityId(), calledInstance.getProcessDefinitionId());
+          }
+        });
+    return ranDefinitionIds;
 
   }
 

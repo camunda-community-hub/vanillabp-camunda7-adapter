@@ -128,6 +128,7 @@ public class Camunda7CalledProcessStartTest {
       final String workflowAggregateId) {
 
     final var invoker = mock(BpmsInitiatedStartInvoker.class);
+    when(invoker.startsAWorkflowOfItsOwn(any(), any())).thenReturn(true);
     when(invoker.startWorkflowByBpms(eq(MODULE), any(), any()))
         .thenReturn(new BpmsInitiatedStartResult(workflowAggregateId, "id", Map.of(), true));
     return invoker;
@@ -212,6 +213,21 @@ public class Camunda7CalledProcessStartTest {
         theNameReportedToTheCore(invoker),
         "no call activity started this instance, so there is nobody to inherit a name from");
     verify(instance).setProcessBusinessKey("built-by-the-application");
+
+  }
+
+  @Test
+  @DisplayName("A called process gets the caller's name, and its start is not reported")
+  public void aCalledProcessIsNoStartOfItsOwn() {
+
+    final var invoker = aCoreAnswering(CALLERS_NAME);
+    when(invoker.startsAWorkflowOfItsOwn(MODULE, CALLED)).thenReturn(false);
+    final var calledInstance = aCalledInstance();
+
+    aListenerOn(aRegistryWhere(true), invoker).notify(calledInstance);
+
+    verify(calledInstance).setProcessBusinessKey(CALLERS_NAME);
+    verify(invoker, never()).startWorkflowByBpms(any(), any(), any());
 
   }
 

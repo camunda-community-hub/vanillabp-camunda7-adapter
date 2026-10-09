@@ -77,7 +77,25 @@ public final class TestCollaborators {
         .workflowAggregateSync(mock(WorkflowAggregateSync.class))
         .preCommitRegistrar(mock(PreCommitRegistrar.class))
         .workflowEndedInvoker(mock(WorkflowEndedInvoker.class))
-        .bpmsInitiatedStartInvoker(mock(BpmsInitiatedStartInvoker.class));
+        .bpmsInitiatedStartInvoker(aCoreStartingAWorkflowEverywhere());
+
+  }
+
+  /**
+   * The start entry of a core which answers what the core answers for a process that is no
+   * called process. A plain mock would answer <code>false</code> to
+   * <code>startsAWorkflowOfItsOwn</code>, and every process would look like a called one.
+   *
+   * @return The mock
+   */
+  public static BpmsInitiatedStartInvoker aCoreStartingAWorkflowEverywhere() {
+
+    final var bpmsInitiatedStarts = mock(BpmsInitiatedStartInvoker.class);
+    org.mockito.Mockito
+        .when(bpmsInitiatedStarts
+            .startsAWorkflowOfItsOwn(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any()))
+        .thenReturn(true);
+    return bpmsInitiatedStarts;
 
   }
 

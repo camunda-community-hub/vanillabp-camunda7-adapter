@@ -88,6 +88,7 @@ public class Camunda7UnservedProcessStartTest {
   public void aStartOfAServedProcessIsReported() {
 
     final var invoker = mock(BpmsInitiatedStartInvoker.class);
+    when(invoker.startsAWorkflowOfItsOwn(MODULE, PROCESS)).thenReturn(true);
     when(
         invoker
             .startWorkflowByBpms(

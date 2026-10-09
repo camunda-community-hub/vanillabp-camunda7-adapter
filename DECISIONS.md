@@ -1054,6 +1054,9 @@ assembled.
 
 ### 32. A called process named by an expression is asked about while it runs
 
+*Decision 44 adds that the start of a called process is not reported to the core. The listener still hands the
+caller's name on. That decision waits in `DECISIONS.pending/949.md` for its number.*
+
 Camunda 7 hands a called process no business key, and the business key is where this adapter keeps
 the workflow aggregate's id. Decision 5 closes that gap in the model: the deployment writes
 `camunda:in businessKey="#{execution.processBusinessKey}"` onto a call activity whose called

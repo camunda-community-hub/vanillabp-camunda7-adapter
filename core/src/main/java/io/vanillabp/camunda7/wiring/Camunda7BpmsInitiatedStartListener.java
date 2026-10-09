@@ -45,6 +45,13 @@ import io.vanillabp.spi.service.BpmsStartTrigger;
  * given the caller's name. The same model then behaves on this engine the way it behaves on
  * a BPMS which copies the caller's values by itself.
  * <p>
+ * A process the application declares only as a secondary process is no workflow of its own,
+ * and the core says so through
+ * {@link BpmsInitiatedStartInvoker#startsAWorkflowOfItsOwn(String, String)}. For such a
+ * process this listener only hands the caller's name on and reports nothing. It stays on the
+ * start event because a call activity naming its process in an expression leaves the name to
+ * this listener.
+ * <p>
  * One thing stays invisible, with open eyes: a key somebody chose which happens to be the
  * id of an existing workflow aggregate attaches that instance to it without a word. Nothing
  * on Camunda 7 can catch that, because catching it needs two values naming the instance and
@@ -164,6 +171,26 @@ public class Camunda7BpmsInitiatedStartListener implements ExecutionListener {
     final var inheritedBusinessKey = ownBusinessKey == null
         ? theNameOfTheCallingWorkflow(execution)
         : null;
+
+    if (!bpmsInitiatedStartInvoker.startsAWorkflowOfItsOwn(workflowModuleId, bpmnProcessId)) {
+      // a called process is a step of the workflow which called it, so its start is not
+      // reported. What is left to do is the name, which the called instance needs for its
+      // tasks, see DECISIONS.pending/949.md in the repository
+      if (inheritedBusinessKey != null) {
+        ((PvmExecutionImpl) execution).setProcessBusinessKey(inheritedBusinessKey);
+      }
+      log
+          .debug(
+              "Camunda7: '{}' of workflow module '{}' (instance '{}') is a called process and goes by "
+                  + "the name '{}' - its start is a step of the calling workflow and is not reported",
+              bpmnProcessId,
+              workflowModuleId,
+              execution.getProcessInstanceId(),
+              ownBusinessKey != null
+                  ? ownBusinessKey
+                  : inheritedBusinessKey);
+      return;
+    }
     final var businessKey = ownBusinessKey != null
         ? ownBusinessKey
         : inheritedBusinessKey;

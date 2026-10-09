@@ -138,7 +138,7 @@ public class Camunda7ListenersReportTest {
    */
   private static WorkflowTaskWiring aCoreServingEverything() {
 
-    final var wiring = mock(WorkflowTaskWiring.class);
+    final var wiring = io.vanillabp.camunda7.TestCollaborators.aCoreClaimingEveryProcess();
     when(wiring.resolveWorkflowAggregateIdName(anyString(), anyString())).thenReturn("id");
     return wiring;
 

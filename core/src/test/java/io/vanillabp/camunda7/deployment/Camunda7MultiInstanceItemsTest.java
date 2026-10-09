@@ -99,7 +99,7 @@ public class Camunda7MultiInstanceItemsTest {
   private static WorkflowTaskWiring aCoreWantingTheItemOf(
       final Map<String, List<String>> wantedByWiringName) {
 
-    final var wiring = mock(WorkflowTaskWiring.class);
+    final var wiring = io.vanillabp.camunda7.TestCollaborators.aCoreClaimingEveryProcess();
     when(wiring.multiInstanceElementNames(anyString(), anyString(), anyString()))
         .thenAnswer(invocation -> wantedByWiringName.getOrDefault(invocation.getArgument(2), List.of()));
     return wiring;

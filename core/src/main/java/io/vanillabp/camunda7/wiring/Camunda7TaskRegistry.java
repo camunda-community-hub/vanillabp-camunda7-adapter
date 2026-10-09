@@ -266,9 +266,73 @@ public class Camunda7TaskRegistry {
   }
 
   /**
+   * Answers whether a <code>&#64;WorkflowService</code> class of the application claims a BPMN
+   * process: the core's {@code WorkflowTaskWiring#isClaimedByAWorkflowService}.
+   * <code>null</code> until the deployment service hands it over.
+   */
+  private java.util.function.BiPredicate<String, String> claimedProcesses;
+
+  /**
+   * Hands over who answers whether the application claims a BPMN process. That is the core,
+   * and the deployment service hands its answer over while it is built, before anything is
+   * deployed or parsed.
+   *
+   * @param claimedProcesses Answers for a workflow module and a PLAIN BPMN process id
+   */
+  public void setClaimedProcesses(
+      final java.util.function.BiPredicate<String, String> claimedProcesses) {
+
+    this.claimedProcesses = claimedProcesses;
+
+  }
+
+  /**
+   * Whether a <code>&#64;WorkflowService</code> class of the application claims the BPMN
+   * process. Only a claimed process gets anything from this adapter beyond being deployed with
+   * its file: no flag, no listener, no check. See decision 43 of {@code DECISIONS.md}.
+   *
+   * @param workflowModuleId The workflow module id
+   * @param bpmnProcessId The PLAIN BPMN process id
+   * @return Whether the application claims the process; <code>true</code> where nobody handed
+   *         over an answer, which is an engine built for a test without a deployment service
+   */
+  public boolean isClaimedByAWorkflowService(
+      final String workflowModuleId,
+      final String bpmnProcessId) {
+
+    return (claimedProcesses == null) || claimedProcesses.test(workflowModuleId, bpmnProcessId);
+
+  }
+
+  /**
+   * Whether the application claims the process definition the engine reports. The engine holds
+   * every definition deployed against its database: the ones of this application, the ones it
+   * deploys without claiming them, and the ones somebody else deployed. Only the first kind is
+   * claimed. A definition this adapter did not deploy has no workflow module to be found under,
+   * and it is not claimed whatever its key is.
+   *
+   * @param tenantId The tenant of the definition, <code>null</code> where it has none
+   * @param processDefinitionKey The key of the definition, as the engine knows it
+   * @return Whether the application claims it
+   */
+  public boolean claimsTheProcessDefinition(
+      final String tenantId,
+      final String processDefinitionKey) {
+
+    final var workflowModuleId = resolveWorkflowModuleId(tenantId, processDefinitionKey);
+    if (workflowModuleId == null) {
+      return false;
+    }
+    return isClaimedByAWorkflowService(
+        workflowModuleId,
+        plainBpmnProcessId(workflowModuleId, processDefinitionKey));
+
+  }
+
+  /**
    * Which workflow module a process definition key belongs to - the way back when
    * there is no tenant to ask (prefixed identifiers, see decision 3 in the
-   * repository's DECISIONS.md).
+   * repository's DECISIONS.md). Holds only the modules which deploy without a tenant.
    */
   private final Map<String, String> workflowModuleIdsByScopedProcessId = new ConcurrentHashMap<>();
 
@@ -401,8 +465,7 @@ public class Camunda7TaskRegistry {
             new RegistryKey(connectable.workflowModuleId(), connectable.scopedBpmnProcessId()),
             key -> new CopyOnWriteArrayList<>())
         .add(connectable);
-    workflowModuleIdsByScopedProcessId
-        .putIfAbsent(connectable.scopedBpmnProcessId(), connectable.workflowModuleId());
+    rememberTheModuleOfAKeyWithoutATenant(connectable.workflowModuleId(), connectable.scopedBpmnProcessId());
     plainProcessIdsByScopedProcessId
         .putIfAbsent(
             new RegistryKey(connectable.workflowModuleId(), connectable.scopedBpmnProcessId()),
@@ -428,7 +491,36 @@ public class Camunda7TaskRegistry {
 
     plainProcessIdsByScopedProcessId
         .putIfAbsent(new RegistryKey(workflowModuleId, scopedBpmnProcessId), bpmnProcessId);
+    rememberTheModuleOfAKeyWithoutATenant(workflowModuleId, scopedBpmnProcessId);
+
+  }
+
+  /**
+   * Remembers which workflow module a process definition key belongs to, for an execution
+   * which reports no tenant. Only a workflow module which deploys WITHOUT a tenant is
+   * remembered. A definition without a tenant cannot belong to a module which deploys into
+   * one, so such a definition was deployed by somebody else, even where its key is the key of
+   * a process this application claims. The deployment registers the tenant of a module before
+   * any of its processes, which is why the tenant is known here already.
+   *
+   * @param workflowModuleId The workflow module ID
+   * @param scopedBpmnProcessId The process definition key the engine knows
+   */
+  private void rememberTheModuleOfAKeyWithoutATenant(
+      final String workflowModuleId,
+      final String scopedBpmnProcessId) {
+
+    if (deploysIntoATenant(workflowModuleId)) {
+      return;
+    }
     workflowModuleIdsByScopedProcessId.putIfAbsent(scopedBpmnProcessId, workflowModuleId);
+
+  }
+
+  private boolean deploysIntoATenant(
+      final String workflowModuleId) {
+
+    return workflowModuleIdsByTenantId.containsValue(workflowModuleId);
 
   }
 
@@ -514,7 +606,9 @@ public class Camunda7TaskRegistry {
    * The workflow module of a running execution. Camunda's tenant answers it whenever
    * the module is isolated by a tenant; with prefixed identifiers there
    * is no tenant, so the module is looked up by the process definition key the
-   * wiring registered - a KNOWN value, never parsed out of the key.
+   * wiring registered - a KNOWN value, never parsed out of the key. That lookup finds only a
+   * module which deploys without a tenant: a definition without a tenant whose key is the key
+   * of a module deploying into one was deployed by somebody else, and it gets no answer.
    * <p>
    * The tenant is not the module id where the application named the tenant itself. It is
    * therefore translated through what the deployment registered, and only a tenant nobody
@@ -533,7 +627,12 @@ public class Camunda7TaskRegistry {
     if (tenantId != null) {
       return workflowModuleIdsByTenantId.getOrDefault(tenantId, tenantId);
     }
-    return workflowModuleIdsByScopedProcessId.get(processDefinitionKey);
+    final var workflowModuleId = workflowModuleIdsByScopedProcessId.get(processDefinitionKey);
+    // a module whose tenant was registered after its processes still owns no definition
+    // without a tenant
+    return (workflowModuleId == null) || deploysIntoATenant(workflowModuleId)
+        ? null
+        : workflowModuleId;
 
   }
 

@@ -15,7 +15,8 @@ import org.camunda.bpm.model.bpmn.instance.Activity;
  * condition holds. Camunda 7 does not implement it: the engine deploys the model, runs the
  * activity once and moves on, and it writes no line about it (see
  * {@code Camunda7StandardLoopTest}). So a model this boot deploys is refused where the
- * application claims its process, and warned about where nobody does. A version the engine
+ * application claims its process. A process nobody claims is not looked at: it is somebody
+ * else's model (see decision 43 of {@code DECISIONS.md}). A version the engine
  * already holds is reported where workflows still run on it, because nobody can change that
  * model any more.
  * <p>
@@ -81,30 +82,6 @@ public final class Camunda7StandardLoops {
         BPMN process '%s' of workflow module '%s' carries a standard loop \
         (standardLoopCharacteristics) on %s! %s Change the model to one of the two forms and \
         deploy it again."""
-        .formatted(bpmnProcessId, workflowModuleId, described(elementIds), WHAT_THE_ENGINE_DOES);
-
-  }
-
-  /**
-   * The warning about a model this boot deploys for a BPMN process no
-   * <code>&#64;WorkflowService</code> class of the application claims. Such a model is somebody
-   * else's, and the file it stands in travels to the BPMS as a whole, so the boot goes on.
-   *
-   * @param elementIds The activities carrying one, at least one
-   * @param bpmnProcessId The PLAIN BPMN process ID
-   * @param workflowModuleId The workflow module ID
-   * @return The text of the warning
-   */
-  public static String warningAboutAnUnclaimedProcess(
-      final List<String> elementIds,
-      final String bpmnProcessId,
-      final String workflowModuleId) {
-
-    return """
-        BPMN process '%s' of workflow module '%s' carries a standard loop \
-        (standardLoopCharacteristics) on %s. %s No @WorkflowService class of this application \
-        claims this process, so the boot goes on: whoever owns the process has to change it. For a \
-        process this application does claim, the same finding ends the boot."""
         .formatted(bpmnProcessId, workflowModuleId, described(elementIds), WHAT_THE_ENGINE_DOES);
 
   }

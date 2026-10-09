@@ -62,6 +62,8 @@ coming back.
 
 ### 5. The adapter changes the BPMN it deploys, and only in ways the model's author can predict
 
+*Bounded further by decision 43: the parse listener and `wireBpmn` change a process only where a `@WorkflowService` class of this application claims it. A process nobody claims and a process somebody else deployed keep their model as it is, flags included.*
+
 An embedded engine offers no other seam. What a remote BPMS gets for free from its own protocol
 this adapter has to put into the model before it is deployed. `prepareBpmn` and `wireBpmn` write
 two things into the deployed BPMN: the business key handed into a call activity which runs on the
@@ -907,8 +909,8 @@ workflow which already runs.
 
 A process this application does not serve is left alone. An embedded engine holds every definition
 deployed against its database, this application's unclaimed processes and another application's
-processes included. The listener sits on the start events of all of them, because the parse
-listener sees a model and not a claim, so it asks before it reports: a process no workflow service
+processes included. Since decision 43 the parse listener puts the start listener on
+the start events of a claimed process only. The listener still asks before it reports: a process no workflow service
 of this application serves is none of VanillaBP's business and the listener returns. Without that
 question the core would be asked to name a workflow it has no workflow service for, and the engine
 would retry the start into an incident.
@@ -1216,6 +1218,8 @@ cluster, and only a run against a cluster would settle it.
 
 *Superseded by decision 42: a user task of a claimed process now needs a `@WorkflowTask` method or the line `implemented-externally=true`, the INFO line is gone, and the core holds the rule for all adapters. Version 1 did ask for the method, so the sentence above saying that nobody used to say a word about it was wrong as well.*
 
+*The split it draws between a claimed process and one nobody claims goes further with decision 43: the parse listener does not add the user-task listeners to a process nobody claims either.*
+
 A user task of this engine runs without a `@WorkflowTask` method. The engine creates the task, it
 stands in a task list, somebody finishes it and the workflow moves on. That is why the core hands a
 user task over as an OPTIONAL spec, and `validateTaskWiring` filters those out before it asks for a
@@ -1399,6 +1403,8 @@ the upgrade against a running engine.
 
 ### 41. A standard loop is refused in a claimed process, warned about in one nobody claims, and a held version is warned about while workflows run on it
 
+*Superseded in part by decision 43: a standard loop in a process nobody claims gets no WARN any more. Such a process is not looked at.*
+
 #### What was decided
 
 Camunda 7 does not run a standard loop. An activity carrying `standardLoopCharacteristics` deploys
@@ -1475,3 +1481,54 @@ no longer counts as serving a listener on that element.
 `ImplementedExternallyTest` of the platform holds the rule. In this repository
 `Camunda7ListenersReportTest` holds the refused and the marked external task, and the integration
 tests mark the user tasks they leave without a method.
+
+### 43. The parse listener changes only a process the application claims
+
+Proposed by story 937. Decided by the maintainer on 2026-10-07.
+
+The platform decided on 2026-10-07 that a process nobody claims is not supported, in a decision of
+`adapter-platform-integration` of its own. The core ends the start over a deployed process no
+`@WorkflowService` class claims, unless the application marks it with
+`vanillabp.workflow-modules.<module>.workflows.<process>.implemented-externally=true`. What this
+adapter does with the processes it meets follows from that.
+
+**The parse listener.** The engine runs `Camunda7AsyncBpmnParseListener` for every model it parses:
+the ones this application deploys, and the ones somebody else deploys into the same database. It
+used to change all of them: the `asyncBefore`/`asyncAfter` flags, `asyncBefore=false` on a user
+task, the cancellation listener, the start listener on every start event, and the built-in
+user-task listeners. Now it changes a process only where the application claims it. It asks
+`Camunda7TaskRegistry#claimsTheProcessDefinition`, which finds the workflow module through the way
+back the deployment registered and then asks the core's
+`WorkflowTaskWiring.isClaimedByAWorkflowService`. A definition this adapter did not deploy has no
+workflow module to be found under, so it is never claimed. A process somebody else deployed keeps
+its flags exactly as modelled, and so does a marked process of this application.
+
+The way back is registered at the very start of `wireBpmn`, for a claimed process and for one nobody
+claims alike, because the engine may parse a model as soon as it is deployed. The declared ids of a
+renamed process are claimed, so the versions the engine still holds under them keep their flags.
+
+A definition without a tenant is found by its key alone, and that key may be the key of a claimed
+process. So the key leads to a workflow module only where the module deploys without a tenant. A
+module which deploys into a tenant owns no definition without one. A process somebody else deploys
+without a tenant under the id of such a module's process is therefore not claimed: it gets no
+listener, and a start with a business key is not refused. A module which deploys without a tenant
+finds its definitions by the key as before. `Camunda7ForeignProcessUnderAClaimedIdTest` holds this.
+
+**`wireBpmn`** returns right away for a process nobody claims. No task is collected, no external
+task is refused, no standard loop is warned about, no listener is registered, and no start message
+is reported.
+
+**The start listener** asks `Camunda7TaskRegistry#isClaimedByAWorkflowService` as well. It sits only
+on the start events of a claimed process now, so the question is a guard rather than the rule.
+
+**Version 1.** Its `TaskWiringBpmnParseListener` (1.5.0) was a custom pre-parse listener of the
+engine. A custom pre-deployer set the workflow module id from the name of EVERY deployment, so the
+listener ran for models other applications deployed as well, flags included. For such a model it
+then asked for a workflow service and threw "No bean annotated with @WorkflowService", which made
+the parse fail. So version 1 did not run a foreign process on its engine at all. Version 2 runs it
+as modelled. The upgrade note says so.
+
+This adds to decision 5 (what the adapter changes), 28 (a process this application does not serve
+is left alone) and 41 (the WARN about a standard loop in a process nobody claims is gone).
+`Camunda7UnclaimedProcessesAreLeftAloneTest` holds a claimed, a marked and a foreign process in one
+engine.

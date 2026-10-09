@@ -120,7 +120,7 @@ public class Camunda7AsynchronousTaskWiringTest {
   private static WorkflowTaskWiring aCoreKeepingTasksOpenFor(
       final String... wiringNames) {
 
-    final var wiring = mock(WorkflowTaskWiring.class);
+    final var wiring = io.vanillabp.camunda7.TestCollaborators.aCoreClaimingEveryProcess();
     when(wiring.workflowTaskCompletesAsynchronously(anyString(), anyString(), anyString()))
         .thenAnswer(invocation -> List.of(wiringNames).contains(invocation.<String>getArgument(2)));
     return wiring;

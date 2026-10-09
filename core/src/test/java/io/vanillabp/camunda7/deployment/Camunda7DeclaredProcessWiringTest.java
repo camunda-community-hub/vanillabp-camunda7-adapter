@@ -17,7 +17,6 @@ import io.vanillabp.camunda7.Camunda7ProcessingContext;
 import io.vanillabp.camunda7.TestCollaborators;
 import io.vanillabp.camunda7.wiring.Camunda7TaskConnectable;
 import io.vanillabp.camunda7.wiring.Camunda7TaskRegistry;
-import io.vanillabp.integration.adapter.spi.workflowtask.WorkflowTaskWiring;
 import io.vanillabp.integration.test.utils.CapturedOutput;
 import io.vanillabp.integration.test.utils.SuppressOutputExtension;
 
@@ -230,7 +229,7 @@ public class Camunda7DeclaredProcessWiringTest {
       final Map<String, String> modelsByVersion,
       final io.vanillabp.integration.adapter.spi.workflowend.WorkflowEndedInvoker workflowEndedInvoker) {
 
-    final var core = mock(WorkflowTaskWiring.class);
+    final var core = io.vanillabp.camunda7.TestCollaborators.aCoreClaimingEveryProcess();
     when(core.taskWiringOfProcessesNobodyDeployed(MODULE))
         .thenReturn(Map.of(OLD_ID, List.<String>of("checkCredit", "approve")));
     return new Camunda7DeploymentService(

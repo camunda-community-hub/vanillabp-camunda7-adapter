@@ -60,6 +60,31 @@ public class Camunda7WayBackToAProcessTest {
   }
 
   @Test
+  @DisplayName("Without a tenant the key finds only a module which deploys without one")
+  public void withoutATenantTheKeyFindsOnlyAModuleWhichDeploysWithoutOne() {
+
+    final var registry = new Camunda7TaskRegistry();
+    registry.registerTenant(MODULE, MODULE);
+    registry.registerProcess(MODULE, "RiskAssessment", "RiskAssessment");
+    registry.registerProcess("archive", "RiskAssessment", "RiskAssessment");
+
+    assertEquals(
+        "archive",
+        registry.resolveWorkflowModuleId(null, "RiskAssessment"),
+        "the module without a tenant owns the definitions without one, whichever registered first");
+    assertEquals(MODULE, registry.resolveWorkflowModuleId(MODULE, "RiskAssessment"));
+
+    final var withTheTenantOnly = new Camunda7TaskRegistry();
+    withTheTenantOnly.registerTenant(MODULE, MODULE);
+    withTheTenantOnly.registerProcess(MODULE, "RiskAssessment", "RiskAssessment");
+
+    assertTrue(
+        withTheTenantOnly.resolve(null, "RiskAssessment").isEmpty(),
+        "a definition without a tenant was deployed by somebody else");
+
+  }
+
+  @Test
   @DisplayName("A process this application did not deploy resolves to nothing")
   public void aProcessThisApplicationDidNotDeployResolvesToNothing() {
 

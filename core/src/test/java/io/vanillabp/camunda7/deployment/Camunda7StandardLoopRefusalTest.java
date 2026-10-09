@@ -32,8 +32,9 @@ import io.vanillabp.integration.test.utils.SuppressOutputExtension;
 /**
  * What this adapter says about a standard loop. The engine runs such an activity once and
  * says nothing (see {@code Camunda7StandardLoopTest}), so a model this boot deploys is refused
- * where the application claims its process, and a warning where nobody does. A version the
- * engine already holds is a warning where workflows still run on it.
+ * where the application claims its process. A process nobody claims is somebody else's model and
+ * is not looked at. A version the engine already holds is a warning where workflows still run on
+ * it.
  * <p>
  * Every refusal stands next to the model which must NOT be refused: a multi-instance element
  * is the form which does repeat an activity, and the message points to it.
@@ -122,9 +123,7 @@ public class Camunda7StandardLoopRefusalTest {
       final boolean claimed) {
 
     final var core = mock(WorkflowTaskWiring.class);
-    if (claimed) {
-      when(core.resolveWorkflowAggregateIdName(MODULE, PROCESS)).thenReturn("loanId");
-    }
+    when(core.isClaimedByAWorkflowService(MODULE, PROCESS)).thenReturn(claimed);
     final var service = new Camunda7DeploymentService(
         "c7", null, mock(Camunda7WorkflowProcessingLifecycle.class), TestCollaborators
             .builder()
@@ -172,20 +171,16 @@ public class Camunda7StandardLoopRefusalTest {
   }
 
   @Test
-  @DisplayName("A standard loop in a process nobody claims is a warning, and the boot goes on")
-  public void aStandardLoopNobodyClaimsIsAWarning(
+  @DisplayName("A standard loop in a process nobody claims is not looked at, and the boot goes on")
+  public void aStandardLoopNobodyClaimsIsNotLookedAt(
       final CapturedOutput output) {
 
     assertDoesNotThrow(() -> deploy(model(A_TASK_WITH_A_STANDARD_LOOP), false));
 
     final var logged = output.getAllOfThisTest();
-    assertTrue(
-        logged.contains("BPMN process 'LoanApproval' of workflow module 'loan-approval' carries a standard loop"),
-        () -> "the process and the module: "
-            + logged);
-    assertTrue(
-        logged.contains("No @WorkflowService class of this application claims this process"),
-        () -> "and why the boot goes on: "
+    assertFalse(
+        logged.contains(THE_WARNING),
+        () -> "somebody else's model is not judged: "
             + logged);
 
   }

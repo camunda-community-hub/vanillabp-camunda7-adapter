@@ -484,6 +484,16 @@ onto service-like tasks:
 every task runs in its own job transaction, aligning the embedded engine with
 remote BPMS.
 
+All of that applies to a process a `@WorkflowService` class of this application claims, and to
+nothing else. The parse listener runs for every model the engine parses, so it asks
+`Camunda7TaskRegistry#claimsTheProcessDefinition` before it changes anything: a process this
+application deploys without claiming it (the application marked it with `implemented-externally`)
+and a process somebody else deployed into the same database keep their flags and get no listener.
+`wireBpmn` returns for an unclaimed process before it collects a task, so no check refuses or warns
+about it either. Every such question goes to `WorkflowTaskWiring#isClaimedByAWorkflowService`. Why:
+[decision 43](./DECISIONS.md#43-the-parse-listener-changes-only-a-process-the-application-claims). `Camunda7UnclaimedProcessesAreLeftAloneTest` holds a claimed, a marked
+and a foreign process in one engine.
+
 A business rule task calling a DECISION (`camunda:decisionRef`) is the one task the
 wiring leaves alone: the engine evaluates it against a decision table this module
 deployed, so there is no `@WorkflowTask` method to ask for. A business rule task wired by

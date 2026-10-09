@@ -450,6 +450,9 @@ public class Camunda7DeploymentService implements AdapterDeploymentService<BpmnM
       // is called. The start listener of the called process therefore asks the core the
       // same question Camunda7CallActivities asks here, and asks it through the registry
       taskRegistry.setWorkflowAggregateSharing(workflowTaskWiring::workflowsShareTheWorkflowAggregate);
+      // the parse listener runs for every model the engine parses, and only a process the
+      // application claims gets anything from it (see decision 43 of DECISIONS.md)
+      taskRegistry.setClaimedProcesses(workflowTaskWiring::isClaimedByAWorkflowService);
       // every inbound delivery reports which adapter it came from
       taskRegistry.setAdapterId(adapterId);
       // the EL resolver builds the task behavior and needs both to raise a BPMN error
@@ -763,20 +766,33 @@ public class Camunda7DeploymentService implements AdapterDeploymentService<BpmnM
     // by the scoped id and the invoker is called with the plain one
     final var scopedBpmnProcessId = scopedProcessId(workflowModuleId, bpmnProcessId);
 
+    // the way back from the engine's process-definition key is registered before anything
+    // else, for a claimed process and for one nobody claims alike: the engine may parse the
+    // model as soon as it is deployed, and the parse listener has to tell the two apart then
+    registerTheWayBackFromTheEngine(workflowModuleId, bpmnProcessId, scopedBpmnProcessId);
+
+    // a process nobody claims travels with its file and is left as it was modelled: no
+    // task is collected, no check refuses it, no listener is wired to it, and the parse
+    // listener does not touch it (see decision 43 of DECISIONS.md). The core ended the start
+    // over it already unless the application marked it as somebody else's
+    if (!workflowTaskWiring.isClaimedByAWorkflowService(workflowModuleId, bpmnProcessId)) {
+      log.debug(
+          "Camunda7[{}]: BPMN process '{}' of file '{}' (workflow module '{}') is claimed by no "
+              + "@WorkflowService and is deployed as it was modelled",
+          adapterId,
+          bpmnProcessId,
+          filename,
+          workflowModuleId);
+      return;
+    }
+
     // The engine runs an activity carrying a standard loop once and says nothing. Asked
     // first, because no other finding about this model matters while it does not do what
-    // was drawn. A process nobody claims is somebody else's model, so it only gets a WARN,
-    // like every other finding of that kind
+    // was drawn
     final var standardLoops = Camunda7StandardLoops.elementIdsOf(model, scopedBpmnProcessId);
     if (!standardLoops.isEmpty()) {
-      if (theApplicationClaims(workflowModuleId, bpmnProcessId)) {
-        throw new IllegalStateException(
-            Camunda7StandardLoops.refusal(standardLoops, bpmnProcessId, workflowModuleId));
-      }
-      log.warn(
-          "Camunda7[{}]: {}",
-          adapterId,
-          Camunda7StandardLoops.warningAboutAnUnclaimedProcess(standardLoops, bpmnProcessId, workflowModuleId));
+      throw new IllegalStateException(
+          Camunda7StandardLoops.refusal(standardLoops, bpmnProcessId, workflowModuleId));
     }
     processesWiredByModule
         .computeIfAbsent(workflowModuleId, id -> java.util.concurrent.ConcurrentHashMap.newKeySet())
@@ -858,10 +874,6 @@ public class Camunda7DeploymentService implements AdapterDeploymentService<BpmnM
         workflowModuleId, bpmnProcessId, model, connectables);
 
     connectables.forEach(taskRegistry::register);
-
-    // a process the engine starts on its own may have no tasks at all, so the way
-    // back from the engine's process-definition key is registered explicitly
-    registerTheWayBackFromTheEngine(workflowModuleId, bpmnProcessId, scopedBpmnProcessId);
 
     // The engine can be asked which versions of this process it has, which
     // is what a version specification naming a version TAG needs
@@ -2359,34 +2371,6 @@ public class Camunda7DeploymentService implements AdapterDeploymentService<BpmnM
             bpmnProcessId,
             workflowModuleId,
             adapterId);
-
-  }
-
-  /**
-   * Whether a <code>&#64;WorkflowService</code> class of this application claims the given BPMN
-   * process. Asked of the core, which knows the workflow aggregate of a claimed process and
-   * nothing about an unclaimed one.
-   *
-   * @param workflowModuleId The workflow module
-   * @param bpmnProcessId The PLAIN BPMN process id
-   * @return Whether the application stands in for the process
-   */
-  private boolean theApplicationClaims(
-      final String workflowModuleId,
-      final String bpmnProcessId) {
-
-    try {
-      return workflowTaskWiring.resolveWorkflowAggregateIdName(workflowModuleId, bpmnProcessId) != null;
-    } catch (final RuntimeException e) {
-      log.debug(
-          "Camunda7[{}]: no @WorkflowService class of this application claims BPMN process '{}' of "
-              + "workflow module '{}'",
-          adapterId,
-          bpmnProcessId,
-          workflowModuleId,
-          e);
-      return false;
-    }
 
   }
 

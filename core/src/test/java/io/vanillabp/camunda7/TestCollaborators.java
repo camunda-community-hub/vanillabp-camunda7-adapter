@@ -49,11 +49,29 @@ public final class TestCollaborators {
 
   }
 
+  /**
+   * The core's wiring as a mock in which a <code>&#64;WorkflowService</code> claims every BPMN
+   * process. A bare mock answers <code>false</code> for a default method, and this adapter wires
+   * nothing of a process nobody claims.
+   *
+   * @return The mock, to be stubbed further by the test
+   */
+  public static WorkflowTaskWiring aCoreClaimingEveryProcess() {
+
+    final var core = mock(WorkflowTaskWiring.class);
+    org.mockito.Mockito
+        .lenient()
+        .when(core.isClaimedByAWorkflowService(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any()))
+        .thenReturn(true);
+    return core;
+
+  }
+
   public static AdapterCollaborators.Builder builder() {
 
     return AdapterCollaborators
         .forAdapter("c7")
-        .workflowTaskWiring(mock(WorkflowTaskWiring.class))
+        .workflowTaskWiring(aCoreClaimingEveryProcess())
         .workflowTaskInvoker(mock(WorkflowTaskInvoker.class))
         .scoping(scopingWithoutNameClashAvoidance())
         .workflowAggregateSync(mock(WorkflowAggregateSync.class))

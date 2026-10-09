@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  What the publish workflow gives Maven when it deploys a snapshot of this adapter.
+
+  The snapshots of this adapter go to the GitHub Packages registry of this repository,
+  because the namespace org.camunda.community.vanillabp belongs to the Camunda Community
+  Hub. The server below is the one the distributionManagement of the root pom.xml names.
+
+  Nothing is read from GitHub Packages any more. spi-for-java and the platform come from the
+  snapshot repository of Maven Central, which the root pom.xml names and which needs no login.
+-->
+<settings xmlns="http://maven.apache.org/SETTINGS/1.0.0"
+          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0 http://maven.apache.org/xsd/settings-1.0.0.xsd">
+    <servers>
+        <!-- used for "mvn deploy" due to pom's distributionManagement/snapshotRepository -->
+        <server>
+            <id>github</id>
+            <username>${env.USER_NAME}</username>
+            <password>${env.GITHUB_TOKEN}</password>
+        </server>
+    </servers>
+</settings>

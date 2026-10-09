@@ -30,7 +30,7 @@ A JDK 21 or newer, and Maven, without a wrapper. The workflows build with the JD
 The class files stay at Java 21 either way, because that is what the property `version.java` in the
 root `pom.xml` compiles against. Two repositories come first, in this order: `spi-for-java`, then
 `adapter-platform-integration`. Build and install them in the workspace, see [Getting
-started](#getting-started), or read their [published snapshots](#snapshots-on-maven-central).
+started](#getting-started), or read their [published snapshots](#snapshots-on-maven-central-and-in-github-packages).
 Then, here:
 
 ```bash
@@ -75,17 +75,21 @@ reactor and fails below 85 percent of covered instructions per platform, while t
 [Test coverage](./README.md#test-coverage) for what the gate prints and why the threshold is not
 the target.
 
-## Snapshots on Maven Central
+## Snapshots on Maven Central and in GitHub Packages
 
 If you clone only this repository, Maven takes `spi-for-java` and `adapter-platform-integration`
 from the snapshot repository of Maven Central, `https://central.sonatype.com/repository/maven-snapshots/`.
-Every push to `main` there publishes a snapshot. The root `pom.xml` names that repository, and
-reading it needs no login and no token.
+Every push to `main` of those two repositories publishes a snapshot there. The root `pom.xml` names
+that repository, and reading it needs no login and no token.
 
-Every push to `main` of this repository publishes its own snapshot to the same place. The old
-registries `https://maven.pkg.github.com/vanillabp/camunda7-adapter` and
-`https://maven.pkg.github.com/camunda-community-hub/vanillabp-camunda7-adapter` still answer, but
-with an old snapshot which no longer changes.
+The snapshots of this adapter stay in GitHub Packages, because the namespace
+`org.camunda.community.vanillabp` belongs to the Camunda Community Hub. Every push to `main`
+publishes one to `https://maven.pkg.github.com/camunda-community-hub/vanillabp-camunda7-adapter`.
+Reading it takes a personal access token (classic) with `read:packages` and a few entries in your
+`~/.m2/settings.xml`. [Using the published
+snapshots](https://github.com/vanillabp/development-workspace#using-the-published-snapshots) shows
+both. The old URL `https://maven.pkg.github.com/vanillabp/camunda7-adapter` still answers, but with
+an old snapshot which no longer changes.
 
 ## What a POM hands an application
 
@@ -141,7 +145,7 @@ decision number you used while you were writing, and once a pull request is merg
 bin/check-decision-numbers.sh
 ```
 
-The *Build and publish snapshots* workflow builds and tests every pull request and publishes nothing
+The *Publish to GitHub Packages* workflow builds and tests every pull request and publishes nothing
 from a branch. A red check is a finding about your change. Read the log, which the workflow uploads
 as a test report when the build fails, and fix what it says rather than pushing again to see
 whether it goes away.

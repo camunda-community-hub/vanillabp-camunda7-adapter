@@ -13,36 +13,25 @@ and behaviour by behaviour, and it is the first thing to read.
 [`DECISIONS.md`](./DECISIONS.md) holds the decisions several places rely on, and it is the only
 thing the code is allowed to cite.
 
-## From a bug to a pull request
+## Getting started
 
-Found a bug? You can hand it to a coding agent.
-
-1. Clone [`development-workspace`](https://github.com/vanillabp/development-workspace) with
-   `git clone --recurse-submodules`. It holds the VanillaBP repositories side by side. Its
-   `.claude/skills` folder holds the skills Claude Code reads when it starts at the root of the
-   workspace.
-2. Start your coding agent at the root of the workspace and describe the bug: what you did, what
-   you expected and what happened instead.
-3. The agent builds a scenario which reproduces the bug, looks for the cause and fixes it. Then it
-   pushes a branch to your fork and opens a pull request from there.
-4. The VanillaBP team reviews the pull request and merges it.
-
-You need a GitHub account, the GitHub CLI logged in with `gh auth login`, a fork of the repository
-you change (the agent can create it with `gh repo fork`), and Java 21, Maven and Docker for the
-build. The submodules are cloned over SSH. If GitHub has no SSH key of yours, run
-`git config --global url."https://github.com/".insteadOf "git@github.com:"` before you clone. If
-the bug is in a repository the workspace does not hold, the agent clones it next to the others.
-Before it opens the pull request, the agent follows the `CONTRIBUTING.md` and the `AGENTS.md` of
-the repository it changes, where it has one. The two Camunda adapters live in the Camunda Community
-Hub, which asks you to sign its contributor license agreement on your first pull request there.
+Start from the [development workspace](https://github.com/vanillabp/development-workspace). Clone it
+with `git clone --recurse-submodules`. This repository builds on `spi-for-java` and
+`adapter-platform-integration`, and the workspace holds all three side by side. The [README of the
+workspace](https://github.com/vanillabp/development-workspace#readme) says how to build them in
+order without published snapshots, and how to open a pull request, with or without the right to push
+here. It also shows how a coding agent can take a bug off your hands. The rest of this file is about
+this repository.
 
 ## Building and testing
 
 A JDK 21 or newer, and Maven, without a wrapper. The workflows build with the JDK named in
 `.github/workflows`, currently 25, so build with that one if you want to see what the pipeline sees.
 The class files stay at Java 21 either way, because that is what the property `version.java` in the
-root `pom.xml` compiles against. Two repositories are built and installed into the local Maven
-repository first, in this order: `spi-for-java`, then `adapter-platform-integration`. Then, here:
+root `pom.xml` compiles against. Two repositories come first, in this order: `spi-for-java`, then
+`adapter-platform-integration`. Build and install them in the workspace, see [Getting
+started](#getting-started), or read their [published snapshots](#snapshots-from-github-packages).
+Then, here:
 
 ```bash
 mvn spotless:apply
@@ -85,6 +74,20 @@ The build also measures itself. `test-coverage-report/coverage-gate` is the last
 reactor and fails below 85 percent of covered instructions per platform, while the rule is 90. See
 [Test coverage](./README.md#test-coverage) for what the gate prints and why the threshold is not
 the target.
+
+## Snapshots from GitHub Packages
+
+If you clone only this repository, Maven takes `spi-for-java` and `adapter-platform-integration`
+from their registries in GitHub Packages. Every push to `main` there publishes a snapshot. Reading
+them takes a personal access token (classic) with `read:packages` and a few entries in your
+`~/.m2/settings.xml`. [Using the published
+snapshots](https://github.com/vanillabp/development-workspace#using-the-published-snapshots) shows
+both.
+
+Every push to `main` of this repository publishes its own snapshot to
+`https://maven.pkg.github.com/camunda-community-hub/vanillabp-camunda7-adapter`. The old URL
+`https://maven.pkg.github.com/vanillabp/camunda7-adapter` still answers, but with an old snapshot
+which no longer changes.
 
 ## What a POM hands an application
 
@@ -144,6 +147,20 @@ The *Publish to GitHub Packages* workflow builds and tests every pull request an
 from a branch. A red check is a finding about your change. Read the log, which the workflow uploads
 as a test report when the build fails, and fix what it says rather than pushing again to see
 whether it goes away.
+
+A maintainer approves the first run of the workflows for somebody whose first pull request this is
+in the repository. A pull request from a fork gets no secrets of this repository, but the build
+needs one to read the snapshots. So the build of such a pull request fails with HTTP 401 before it
+compiles your change. [What the build of a pull request can
+do](https://github.com/vanillabp/development-workspace#what-the-build-of-a-pull-request-can-do) says
+what to do then.
+
+This repository lives in the Camunda Community Hub, which asks every contributor to sign its
+[contributor license agreement](https://cla-assistant.io/camunda-community-hub/community). On your
+first pull request here, the check `license/cla` asks you to sign it. [The license agreement of the
+Camunda Community
+Hub](https://github.com/vanillabp/development-workspace#the-license-agreement-of-the-camunda-community-hub)
+says how.
 
 `main` carries a ruleset, and it requires two green checks before a merge: `publish`, which is the
 build of that workflow, and `orphaned-javadoc-check`, which is the *Checks* workflow running the

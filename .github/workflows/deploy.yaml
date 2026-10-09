@@ -26,6 +26,18 @@ jobs:
           cache: maven
           gpg-private-key: ${{ secrets.MAVEN_CENTRAL_GPG_SIGNING_KEY_SEC }}
           gpg-passphrase: MAVEN_CENTRAL_GPG_PASSPHRASE
+      # Maven 3.10 writes 'maven-metadata-local.xml' and '_remote.repositories' into the
+      # staging directory of central-publishing-maven-plugin, and the Central Portal refuses
+      # the bundle: "Bundle has content that does NOT have a .pom file". Measured on
+      # 2026-10-09 with the plugin version of the hub parent, 0.8.0, as well. The runner
+      # image ships 3.10 now, so the release brings its own 3.9. The hub action calls the
+      # 'mvn' it finds on the PATH, so this step reaches it too. Remove this step once a
+      # plugin version stages a clean bundle under Maven 3.10.
+      - name: Use Maven 3.9
+        run: |
+          curl -fsSL https://archive.apache.org/dist/maven/maven-3/3.9.16/binaries/apache-maven-3.9.16-bin.tar.gz \
+            | tar xz -C "$RUNNER_TEMP"
+          echo "$RUNNER_TEMP/apache-maven-3.9.16/bin" >> "$GITHUB_PATH"
       - name: Release
         id: release
         uses: camunda-community-hub/community-action-maven-release@v2

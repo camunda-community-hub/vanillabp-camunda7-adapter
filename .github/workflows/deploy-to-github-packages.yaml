@@ -41,20 +41,18 @@ jobs:
       # the Quarkus tests load modules from the local repository.
       - name: Build and test
         if: "${{ github.event_name == 'pull_request' }}"
-        run: mvn -s $GITHUB_WORKSPACE/.github/workflows/github-packages-settings.xml
-          --batch-mode --no-transfer-progress --update-snapshots install
+        run: mvn --batch-mode --no-transfer-progress --update-snapshots install
         env:
-          USER_NAME: "${{ secrets.VANILLABP_USER_NAME }}"
-          USER_TOKEN: "${{ secrets.VANILLABP_USER_TOKEN }}"
-          GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
           CI: false
+      # spi-for-java and the platform come from the snapshot repository of Maven Central,
+      # which the root pom.xml names and which needs no login. The settings file only
+      # carries the login for the deploy into GitHub Packages.
       - name: Publish package
         if: "${{ github.event_name == 'push' }}"
         run: mvn -s $GITHUB_WORKSPACE/.github/workflows/github-packages-settings.xml
           --batch-mode --no-transfer-progress --update-snapshots deploy
         env:
           USER_NAME: "${{ secrets.VANILLABP_USER_NAME }}"
-          USER_TOKEN: "${{ secrets.VANILLABP_USER_TOKEN }}"
           GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
           CI: false
       # what a failing test printed is in these reports, and for the Quarkus modules

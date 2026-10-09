@@ -211,6 +211,26 @@
     </dependencies>
   </dependencyManagement>
 
+  <!-- the snapshots of spi-for-java and the platform, which this adapter builds on. Nobody
+       needs a login to read them, so the build of a pull request from a fork resolves them
+       as well. io.vanillabp:release-parent names the same repository, but this repository
+       inherits the hub parent and so names it here. The snapshots of this adapter itself
+       stay in GitHub Packages, see distributionManagement above. Releases are not read from
+       here: they come from Maven Central itself. -->
+  <repositories>
+    <repository>
+      <releases>
+        <enabled>false</enabled>
+      </releases>
+      <snapshots>
+        <enabled>true</enabled>
+      </snapshots>
+      <id>central-snapshots</id>
+      <name>Maven Central snapshots</name>
+      <url>https://central.sonatype.com/repository/maven-snapshots/</url>
+    </repository>
+  </repositories>
+
   <build>
     <pluginManagement>
       <plugins>

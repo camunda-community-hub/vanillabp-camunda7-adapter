@@ -1726,10 +1726,10 @@ a half later inside somebody's pull request. The night writes down which platfor
 resolved, with the timestamp and the build number, so a red night can be read as a break of the
 platform or as a break of this repository.
 
-Every push to `main` publishes a snapshot to the GitHub Packages registry of this repository,
-`https://maven.pkg.github.com/camunda-community-hub/vanillabp-camunda7-adapter`. A release goes the
-way of every Camunda Community Hub extension: publish a GitHub Release whose tag is the version, for
-example `2.0.0`. The workflow `.github/workflows/deploy.yaml` then runs
+Every push to `main` publishes a snapshot to the snapshot repository of Maven Central,
+`https://central.sonatype.com/repository/maven-snapshots/`. Reading it needs no login. A release
+goes the way of every Camunda Community Hub extension: publish a GitHub Release whose tag is the
+version, for example `2.0.0`. The workflow `.github/workflows/deploy.yaml` then runs
 `community-action-maven-release`. It deploys through the profiles of `community-hub-release-parent`
 to Camunda's Artifactory and to Maven Central, and it commits the next development version to `main`.
 Version 1 is maintained on the branch `maintenance/1.x` and releases from there the same way.
@@ -1743,7 +1743,7 @@ lifecycles per module and reports every compiler warning twice):
 1. **Spring Boot** (core + Spring Boot integration) - into `test-coverage-report/spring-boot/report`
 2. **Quarkus** (core + Quarkus extension) - into `test-coverage-report/quarkus/report`
 
-Both are published to GitHub Pages by the *Publish to GitHub Packages* workflow on every push to
+Both are published to GitHub Pages by the *Build and publish snapshots* workflow on every push to
 the default branch. Click the [platform's badge](#documentation-and-supported-platforms) to open
 the respective report.
 

@@ -861,7 +861,20 @@ public class Camunda7ProcessService<A> implements MigratableProcessService<A> {
       return;
     }
     // the values the model reads travel with the correlation: a gateway
-    // behind the receiving event decides on what the caller changed before correlating
+    // behind the receiving event decides on what the caller changed before correlating.
+    // They land in the instance which waits, so they are written in the format of its
+    // process. Where executions of several instances wait, the engine picks one, and the
+    // format of the process of the call is the answer as before
+    final var waitingInstances = executionsExpecting(
+        request.workflowModuleId(),
+        request.bpmnProcessId(),
+        request.messageName(),
+        businessKey,
+        request.correlationId())
+        .stream()
+        .map(org.camunda.bpm.engine.runtime.Execution::getProcessInstanceId)
+        .distinct()
+        .toList();
     messageCorrelation(
         request.workflowModuleId(),
         request.bpmnProcessId(),
@@ -869,9 +882,11 @@ public class Camunda7ProcessService<A> implements MigratableProcessService<A> {
         businessKey,
         request.correlationId())
         .setVariables(
-            sharedValues(
-                request.aggregatePersistence(),
-                request.workflowAggregateId(),
+            sharedValuesOfTheInstance(
+                aggregateForOperatorContext(request.aggregatePersistence(), request.workflowAggregateId()),
+                waitingInstances.size() == 1
+                    ? waitingInstances.get(0)
+                    : null,
                 request.workflowModuleId(),
                 request.bpmnProcessId()))
         .correlateWithResult();
@@ -1109,13 +1124,115 @@ public class Camunda7ProcessService<A> implements MigratableProcessService<A> {
       final String workflowModuleId,
       final String bpmnProcessId) {
 
+    return sharedValues(aggregate, () -> serializationFormatOf(workflowModuleId, bpmnProcessId));
+
+  }
+
+  /**
+   * The shared values in the format a supplier names. The supplier is asked only where there
+   * is something to write, because finding out which process an instance runs costs a query.
+   *
+   * @param aggregate The workflow aggregate or <code>null</code>
+   * @param serializationFormat Says which format a nested value is written in
+   * @return The variables (never <code>null</code>)
+   */
+  private java.util.Map<String, Object> sharedValues(
+      final A aggregate,
+      final java.util.function.Supplier<String> serializationFormat) {
+
     if ((aggregateSync == null) || (aggregate == null)) {
       return java.util.Map.of();
     }
     return io.vanillabp.camunda7.sync.Camunda7Variables
         .of(
             aggregateSync.syncedValues(aggregate, SYNC_MODE),
-            serializationFormatOf(workflowModuleId, bpmnProcessId));
+            serializationFormat.get());
+
+  }
+
+  /**
+   * The shared values to write into one process instance, in the format of the BPMN process
+   * that instance runs.
+   * <p>
+   * A process service is the one of the process at the top, so the request names that process.
+   * A task, a waiting message and a called process belong to the process which contains them,
+   * though, and in Camunda 7 a called process is a process instance of its own. The format is
+   * configured per BPMN process, so it is read under the id of the process the values are
+   * written into. That is also what the task path does when the engine hands a task to the
+   * application. See decision 45 in the repository's DECISIONS.md.
+   *
+   * @param aggregate The workflow aggregate or <code>null</code>
+   * @param processInstanceId The instance the values are written into, or <code>null</code>
+   *          where it is not known
+   * @param workflowModuleId The workflow module of the call
+   * @param bpmnProcessId The BPMN process of the call
+   * @return The variables (never <code>null</code>)
+   */
+  private java.util.Map<String, Object> sharedValuesOfTheInstance(
+      final A aggregate,
+      final String processInstanceId,
+      final String workflowModuleId,
+      final String bpmnProcessId) {
+
+    return sharedValues(aggregate, () -> {
+      final var process = processOfTheInstance(processInstanceId, workflowModuleId, bpmnProcessId);
+      return serializationFormatOf(process.workflowModuleId(), process.bpmnProcessId());
+    });
+
+  }
+
+  /**
+   * The workflow module and the plain BPMN process id of the process an instance runs.
+   * <p>
+   * Where this cannot be told, the process of the call is the answer: the instance is gone, the
+   * registry is missing (tests), or the instance runs a process this adapter did not deploy.
+   * That is the answer every operation gave before it asked.
+   *
+   * @param processInstanceId The process instance, or <code>null</code>
+   * @param workflowModuleId The workflow module of the call
+   * @param bpmnProcessId The BPMN process of the call
+   * @return The process the instance runs
+   */
+  private io.vanillabp.camunda7.wiring.Camunda7TaskRegistry.WorkflowProcess processOfTheInstance(
+      final String processInstanceId,
+      final String workflowModuleId,
+      final String bpmnProcessId) {
+
+    final var processOfTheCall = new io.vanillabp.camunda7.wiring.Camunda7TaskRegistry.WorkflowProcess(
+        workflowModuleId, bpmnProcessId);
+    if ((taskRegistry == null) || (processInstanceId == null)) {
+      return processOfTheCall;
+    }
+    final var instance = runtimeService
+        .createProcessInstanceQuery()
+        .processInstanceId(processInstanceId)
+        .singleResult();
+    if (instance == null) {
+      return processOfTheCall;
+    }
+    final var definition = repositoryService.getProcessDefinition(instance.getProcessDefinitionId());
+    return taskRegistry
+        .resolve(instance.getTenantId(), definition.getKey())
+        .orElse(processOfTheCall);
+
+  }
+
+  /**
+   * The process instance an execution belongs to.
+   *
+   * @param executionId The execution, a task of a <code>&#64;TaskId</code> handler
+   * @return The process instance, or <code>null</code> where the execution is gone
+   */
+  private String processInstanceOfTheExecution(
+      final String executionId) {
+
+    final var execution = runtimeService
+        .createExecutionQuery()
+        .executionId(executionId)
+        .singleResult();
+    return execution == null
+        ? null
+        : execution.getProcessInstanceId();
 
   }
 
@@ -1156,7 +1273,11 @@ public class Camunda7ProcessService<A> implements MigratableProcessService<A> {
       final String workflowModuleId,
       final String bpmnProcessId) {
 
-    final var variables = sharedValues(aggregate, workflowModuleId, bpmnProcessId);
+    final var variables = sharedValuesOfTheInstance(
+        aggregate,
+        processInstanceOfTheExecution(executionId),
+        workflowModuleId,
+        bpmnProcessId);
     if (variables.isEmpty()) {
       return;
     }
@@ -1515,9 +1636,15 @@ public class Camunda7ProcessService<A> implements MigratableProcessService<A> {
       final String workflowModuleId,
       final String bpmnProcessId) {
 
-    final var variables = sharedValues(
-        aggregatePersistence,
-        workflowAggregateId,
+    final var task = taskService
+        .createTaskQuery()
+        .taskId(taskId)
+        .singleResult();
+    final var variables = sharedValuesOfTheInstance(
+        aggregateForOperatorContext(aggregatePersistence, workflowAggregateId),
+        task == null
+            ? null
+            : task.getProcessInstanceId(),
         workflowModuleId,
         bpmnProcessId);
     if (variables.isEmpty()) {
@@ -1533,8 +1660,14 @@ public class Camunda7ProcessService<A> implements MigratableProcessService<A> {
    * <code>&lt;bpmnProcessId&gt;-&lt;messageName&gt;</code>. Applications set this
    * local variable at the receiving scope; a correlation carrying a correlation id
    * only matches executions whose variable equals it.
+   * <p>
+   * The id is the one of the process service's process, the process at the top, also where
+   * the message is caught in a called process. Every other value of a called process is read
+   * under the called process' own id. This one keeps the version-1 name: the models set the
+   * variable, so a new name would be one no existing model sets. See
+   * decision 45 in the repository's DECISIONS.md.
    *
-   * @param bpmnProcessId The plain BPMN process id of the waiting workflow
+   * @param bpmnProcessId The plain BPMN process id of the process service's workflow
    * @param messageName The plain name of the message it waits for
    * @return The name of the local variable the correlation id is compared against
    */
@@ -1730,14 +1863,39 @@ public class Camunda7ProcessService<A> implements MigratableProcessService<A> {
       final String businessKey,
       final String correlationId) {
 
+    return !executionsExpecting(workflowModuleId, bpmnProcessId, messageName, businessKey, correlationId)
+        .isEmpty();
+
+  }
+
+  /**
+   * The executions a correlation would choose from: those waiting for the message and, where
+   * the application named a correlation id, expecting exactly that one.
+   *
+   * @param workflowModuleId The workflow module ID
+   * @param bpmnProcessId The BPMN process ID (names the correlation-id variable)
+   * @param messageName The BPMN message name
+   * @param businessKey The workflow aggregate's ID
+   * @param correlationId The expected correlation id or <code>null</code>
+   * @return The executions (never <code>null</code>)
+   */
+  private java.util.List<org.camunda.bpm.engine.runtime.Execution> executionsExpecting(
+      final String workflowModuleId,
+      final String bpmnProcessId,
+      final String messageName,
+      final String businessKey,
+      final String correlationId) {
+
+    final var waiting = waitingExecutions(workflowModuleId, messageName, businessKey);
     if (correlationId == null) {
-      return messageSubscriptionWaiting(workflowModuleId, messageName, businessKey);
+      return waiting;
     }
     final var variableName = correlationIdVariableName(bpmnProcessId, messageName);
-    return waitingExecutions(workflowModuleId, messageName, businessKey)
+    return waiting
         .stream()
-        .anyMatch(execution -> correlationId
-            .equals(runtimeService.getVariableLocal(execution.getId(), variableName)));
+        .filter(execution -> correlationId
+            .equals(runtimeService.getVariableLocal(execution.getId(), variableName)))
+        .toList();
 
   }
 
@@ -1755,7 +1913,8 @@ public class Camunda7ProcessService<A> implements MigratableProcessService<A> {
    * @param businessKey The aggregate's ID
    * @param aggregate The workflow aggregate or <code>null</code>
    * @param taskId The parked execution whose scope receives the values, or
-   *        <code>null</code> for the workflow's global scope
+   *        <code>null</code> for the workflow's global scope and the global scope of
+   *        every called process continuing the aggregate
    * @param tolerateGoneWorkflow Whether a workflow gone by now is tolerated (phase
    *        two is at-least-once) instead of failing. Judged within the scope of the
    *        call - a foreign workflow carrying the same business key would otherwise
@@ -1770,14 +1929,17 @@ public class Camunda7ProcessService<A> implements MigratableProcessService<A> {
       final String workflowModuleId,
       final String bpmnProcessId) {
 
-    final var variables = new java.util.LinkedHashMap<String, Object>(
-        sharedValues(aggregate, workflowModuleId, bpmnProcessId));
-    if (variables.isEmpty()) {
-      // an aggregate sharing nothing at all (@NoSyncWithBPMS on the class) - without a
-      // variable event the engine would not look at its conditional events, so a
-      // technical marker is written instead
-      variables.put(AGGREGATE_CHANGED_MARKER, System.currentTimeMillis());
-    }
+    final java.util.function.Function<String, java.util.Map<String, Object>> variablesFor = processInstanceId -> {
+      final var variables = new java.util.LinkedHashMap<String, Object>(
+          sharedValuesOfTheInstance(aggregate, processInstanceId, workflowModuleId, bpmnProcessId));
+      if (variables.isEmpty()) {
+        // an aggregate sharing nothing at all (@NoSyncWithBPMS on the class) - without a
+        // variable event the engine would not look at its conditional events, so a
+        // technical marker is written instead
+        variables.put(AGGREGATE_CHANGED_MARKER, System.currentTimeMillis());
+      }
+      return variables;
+    };
 
     if (taskId != null) {
       // check BEFORE writing (rollback-only pitfall, see signalTask)
@@ -1818,7 +1980,7 @@ public class Camunda7ProcessService<A> implements MigratableProcessService<A> {
       runtimeService
           .setVariablesLocal(
               flowScopeExecutionIdOf(execution.getProcessInstanceId(), taskId),
-              variables);
+              variablesFor.apply(execution.getProcessInstanceId()));
       return;
     }
 
@@ -1871,7 +2033,51 @@ public class Camunda7ProcessService<A> implements MigratableProcessService<A> {
           businessKey);
       return;
     }
-    runtimeService.setVariables(processInstance.getId(), variables);
+    runtimeService.setVariables(processInstance.getId(), variablesFor.apply(processInstance.getId()));
+    // a called process is a process instance of its own in Camunda 7, with variables of its
+    // own, so what waits in it never sees the values written above. Every called instance
+    // continuing this aggregate gets them as well, in the format of its own process. See
+    // decision 45 in the repository's DECISIONS.md
+    calledInstancesContinuingTheAggregate(processInstance.getId(), businessKey)
+        .forEach(calledInstanceId -> runtimeService
+            .setVariables(calledInstanceId, variablesFor.apply(calledInstanceId)));
+
+  }
+
+  /**
+   * The instances of called processes below a process instance which continue its workflow
+   * aggregate, at any depth.
+   * <p>
+   * A called process continues the aggregate where it carries the same business key, which the
+   * deployment passes on exactly where caller and called process share the aggregate. The walk
+   * stops at a called process with an aggregate of its own: what it calls belongs to that
+   * aggregate, not to this one.
+   *
+   * @param processInstanceId The instance at the top
+   * @param businessKey The aggregate's ID
+   * @return The called instances, the ones closer to the top first
+   */
+  private java.util.List<String> calledInstancesContinuingTheAggregate(
+      final String processInstanceId,
+      final String businessKey) {
+
+    final var found = new java.util.ArrayList<String>();
+    var callers = java.util.List.of(processInstanceId);
+    while (!callers.isEmpty()) {
+      final var called = callers
+          .stream()
+          .flatMap(caller -> runtimeService
+              .createProcessInstanceQuery()
+              .superProcessInstanceId(caller)
+              .list()
+              .stream())
+          .filter(instance -> businessKey.equals(instance.getBusinessKey()))
+          .map(ProcessInstance::getId)
+          .toList();
+      found.addAll(called);
+      callers = called;
+    }
+    return found;
 
   }
 

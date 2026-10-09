@@ -73,7 +73,7 @@ public class Camunda7ViewerApiIT {
   }
 
   @Test
-  @DisplayName("The definitions of a running workflow include the called process in the version executed next")
+  @DisplayName("The definitions of a running workflow include the called process in the version it runs")
   public void processDefinitionsIncludeCalledProcesses() throws IOException {
 
     final var aggregate = startViewedWorkflow();

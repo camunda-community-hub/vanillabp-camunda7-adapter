@@ -1,7 +1,9 @@
 package io.vanillabp.camunda7.it;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
+import java.util.List;
 import java.util.function.Supplier;
 
 import org.junit.jupiter.api.DisplayName;
@@ -111,6 +113,56 @@ public class Camunda7CallByExpressionIT {
     assertNotNull(
         whatTheCalledProcessWrote(aggregateId),
         "the called process reached the aggregate its caller was started with");
+
+  }
+
+  /**
+   * The ends the application was told about for the workflow of that aggregate.
+   */
+  private static List<String> endsOf(
+      final Long aggregateId) {
+
+    return CallByExpressionWorkflowService.ENDS_REPORTED
+        .stream()
+        .filter(end -> end.startsWith("%s|".formatted(aggregateId)))
+        .toList();
+
+  }
+
+  /**
+   * Runs one workflow to its end and checks that the application heard of that end once.
+   * The called process ends first, inside the workflow, so by the time the caller's end
+   * arrives an end of the called process would have arrived as well.
+   */
+  private void theWorkflowEndsOnce(
+      final boolean callByExpression) throws InterruptedException {
+
+    final var aggregateId = startCaller(callByExpression);
+
+    awaitUntil(
+        () -> endsOf(aggregateId).contains("%s|COMPLETED|CBE_End".formatted(aggregateId)),
+        "the workflow of the caller to end");
+
+    assertEquals(
+        List.of("%s|COMPLETED|CBE_End".formatted(aggregateId)),
+        endsOf(aggregateId),
+        "the called process is a step of the workflow, so only the caller's end is reported");
+
+  }
+
+  @Test
+  @DisplayName("A workflow calling a process by its id ends once, at the end of the caller")
+  public void aWorkflowCallingByIdEndsOnce() throws Exception {
+
+    theWorkflowEndsOnce(false);
+
+  }
+
+  @Test
+  @DisplayName("A workflow calling a process by an expression ends once, at the end of the caller")
+  public void aWorkflowCallingByAnExpressionEndsOnce() throws Exception {
+
+    theWorkflowEndsOnce(true);
 
   }
 

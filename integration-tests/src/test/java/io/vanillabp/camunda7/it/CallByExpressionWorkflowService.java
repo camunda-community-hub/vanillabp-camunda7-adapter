@@ -1,10 +1,15 @@
 package io.vanillabp.camunda7.it;
 
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import io.vanillabp.spi.process.ProcessService;
 import io.vanillabp.spi.service.BpmnProcess;
+import io.vanillabp.spi.service.WorkflowEnd;
+import io.vanillabp.spi.service.WorkflowEnded;
 import io.vanillabp.spi.service.WorkflowService;
 import io.vanillabp.spi.service.WorkflowTask;
 
@@ -19,6 +24,12 @@ import io.vanillabp.spi.service.WorkflowTask;
     bpmnProcess = @BpmnProcess(bpmnProcessId = "CallByExpressionCaller"),
     secondaryBpmnProcesses = @BpmnProcess(bpmnProcessId = "CallByExpressionChild"))
 public class CallByExpressionWorkflowService {
+
+  /**
+   * Every end the application was told about, as "aggregate|kind|end event", so the test can
+   * count how often one workflow ended.
+   */
+  public static final List<String> ENDS_REPORTED = new CopyOnWriteArrayList<>();
 
   private final ProcessService<CallByExpressionAggregate> processService;
 
@@ -47,6 +58,19 @@ public class CallByExpressionWorkflowService {
 
     aggregate.setWhatTheCalledProcessWrote("the called process ran on aggregate "
         + aggregate.getId());
+
+  }
+
+  /**
+   * Records each end. The called process runs on the aggregate of its caller, so it is a step
+   * of that workflow, and only the end of the caller may arrive here.
+   */
+  @WorkflowEnded
+  public void workflowEnded(
+      final CallByExpressionAggregate aggregate,
+      final WorkflowEnd end) {
+
+    ENDS_REPORTED.add("%s|%s|%s".formatted(aggregate.getId(), end.kind(), end.endEventId()));
 
   }
 

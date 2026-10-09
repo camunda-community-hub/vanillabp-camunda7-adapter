@@ -86,6 +86,12 @@ public class Camunda7ForeignProcessUnderAClaimedIdTest {
   @BeforeEach
   public void deployTheClaimedAndTheForeignProcess() {
 
+    // the claimed process is no called process, so a start of it would be reported
+    org.mockito.Mockito
+        .when(theCoresStartEntry
+            .startsAWorkflowOfItsOwn(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any()))
+        .thenReturn(true);
+
     final var registry = new Camunda7TaskRegistry();
     final var invoker = mock(WorkflowTaskInvoker.class);
     final var configuration = new StandaloneInMemProcessEngineConfiguration();

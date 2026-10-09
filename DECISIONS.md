@@ -1532,3 +1532,52 @@ This adds to decision 5 (what the adapter changes), 28 (a process this applicati
 is left alone) and 41 (the WARN about a standard loop in a process nobody claims is gone).
 `Camunda7UnclaimedProcessesAreLeftAloneTest` holds a claimed, a marked and a foreign process in one
 engine.
+
+### 45. A value of a called process is read under the called process' own id
+
+Proposed by story 950. Decided by the maintainer on 2026-10-09.
+
+The platform decided on 2026-10-09, in a decision of `adapter-platform-integration` of its own,
+that a task belongs to the BPMN process which contains it. For a task of a called process that is
+the called process. This adapter followed
+the rule where the engine hands a task to the application. It did not follow it where the
+application calls the process service. A process service belongs to the process at the top, so
+its requests name that process, and the adapter used that id for everything it read.
+
+**The serialization format.** The format of a nested shared value is configured per BPMN process
+(`vanillabp.workflow-modules.<module>.workflows.<process>.adapters.<id>.serialization-format`).
+Completing or cancelling a task, completing or cancelling a user task, pushing for a task and
+correlating a message write values into the process instance which waits. The adapter now reads
+the format under the process that instance runs. It finds the process from the instance's process
+definition and tenant, through the way back the deployment registered
+(`Camunda7TaskRegistry#resolve`). Where it cannot tell (the instance is gone, the process was not
+deployed by this adapter, or several instances wait for one message), it uses the process of the
+call, as before. The task path, `Camunda7WorkflowTaskBehavior`, already read the format of the
+task's own process, so both ways now agree.
+
+**A push without a task.** `aggregateChanged(aggregate)` wrote only into the instance of the
+process at the top. In Camunda 7 a called process is a process instance of its own, with variables
+of its own. A conditional event waiting in the called process never saw the push. Measured on
+2026-10-09 with Camunda 7.24 in memory: a conditional event behind an event-based gateway in the
+called process stayed waiting. The push now also writes into every called instance which continues
+the aggregate, each in the format of its own process. A called instance continues the aggregate
+where it carries the same business key, which the deployment passes on exactly where caller and
+called process share the aggregate (decision 5). The walk stops at a called process with an
+aggregate of its own, because what that one calls belongs to its own aggregate.
+
+**The viewer.** `getProcessDefinitions` reported the latest deployed version of every called
+process, the version a call activity would call next. A workflow which waits in an older version
+was drawn with a model it never ran. It now reports the version the called instance runs or ran
+on, from the history, and at history level `none` from the called instances which still run. A
+call activity which has not called anything yet still reports the latest version. With history
+level `none` and a history context, the running called instance is now checked against the root of
+the workflow, the same check the history path always made. Without it, any called instance id
+showed its definition to whoever passed it.
+
+**What stays.** The local variable a correlation id is compared with keeps its version-1 name,
+`<primary bpmnProcessId>-<messageName>`, also where the message is caught in a called process. The
+models set that variable, so a new name would be one no existing model sets. The wiki page
+`Configuration` explains it with an example.
+
+`Camunda7SettingsOfACalledProcessTest` holds the format and the push, and
+`Camunda7ViewerOfACalledProcessTest` holds the viewer.

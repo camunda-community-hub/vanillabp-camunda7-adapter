@@ -1055,7 +1055,7 @@ assembled.
 ### 32. A called process named by an expression is asked about while it runs
 
 *Decision 44 adds that the start of a called process is not reported to the core. The listener still hands the
-caller's name on. That decision waits in `DECISIONS.pending/949.md` for its number.*
+caller's name on.*
 
 Camunda 7 hands a called process no business key, and the business key is where this adapter keeps
 the workflow aggregate's id. Decision 5 closes that gap in the model: the deployment writes
@@ -1535,3 +1535,27 @@ This adds to decision 5 (what the adapter changes), 28 (a process this applicati
 is left alone) and 41 (the WARN about a standard loop in a process nobody claims is gone).
 `Camunda7UnclaimedProcessesAreLeftAloneTest` holds a claimed, a marked and a foreign process in one
 engine.
+
+### 44. The start of a called process is not reported, but the listener still hands the caller's name on
+
+The platform decided that a called process is not a workflow of its own (decision 124 of `adapter-platform-integration`,
+story 949). Its start and its end do not reach the application. The core tells an adapter which processes these are:
+`BpmsInitiatedStartInvoker#startsAWorkflowOfItsOwn` and `WorkflowEndedInvoker#workflowEndedHandlerExists` answer
+`false` for a process the application declares only in `secondaryBpmnProcesses` and deploys a model for.
+
+**The end.** The parse listener already asks `workflowEndedHandlerExists` before it attaches the end listener, so a
+called process gets none now. Nothing in this adapter had to change for it. Before, the extended
+`Camunda7CallByExpressionIT` measured two `@WorkflowEnded` calls per workflow, one at `CBEC_End` of the called
+process and one at `CBE_End` of the caller. Now it measures one.
+
+**The start.** The start listener stays on every start event the process holds (decisions 27 and 28), the called
+process included. It has a second job there: a call activity which names its process in an expression leaves the
+caller's name to this listener (decision 32). So the listener asks `startsAWorkflowOfItsOwn` when it fires. Where
+the answer is `false`, it writes the caller's name into the instance if it has to, and reports nothing.
+
+Leaving the listener off the called process at parse time was the other way. It would have broken the call by
+expression, because nothing else gives that instance its name.
+
+The tests: `Camunda7CallByExpressionIT` asks for exactly one end per workflow, for a call by id and for a call by an
+expression, and `Camunda7CalledProcessStartTest#aCalledProcessIsNoStartOfItsOwn` holds that the name is handed on
+while nothing is reported.

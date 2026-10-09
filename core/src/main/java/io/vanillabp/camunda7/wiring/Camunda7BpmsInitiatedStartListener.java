@@ -175,7 +175,7 @@ public class Camunda7BpmsInitiatedStartListener implements ExecutionListener {
     if (!bpmsInitiatedStartInvoker.startsAWorkflowOfItsOwn(workflowModuleId, bpmnProcessId)) {
       // a called process is a step of the workflow which called it, so its start is not
       // reported. What is left to do is the name, which the called instance needs for its
-      // tasks, see DECISIONS.pending/949.md in the repository
+      // tasks, see decision 44 in the repository's DECISIONS.md
       if (inheritedBusinessKey != null) {
         ((PvmExecutionImpl) execution).setProcessBusinessKey(inheritedBusinessKey);
       }

@@ -637,7 +637,10 @@ none is, so "nothing matched" stays a synchronous answer; phase two correlates a
 the commit, through the outbox, tolerating a subscription which is gone by then. A
 rollback therefore leaves the instance waiting. A correlation id matches via the V1
 local-variable convention `<primary bpmnProcessId>-<messageName>` at the receiving
-scope. `startWorkflowByMessage` uses `correlateStartMessage()` and is two-phase the
+scope. The name keeps the primary process also where the message is caught in a called
+process, which is the one place on this adapter where a value of a called process is named
+after the process at the top. It stays that way because the models set the variable, and a
+new name would be one no existing model sets (decision 45 in the repository's DECISIONS.md). `startWorkflowByMessage` uses `correlateStartMessage()` and is two-phase the
 same way, with an already-started pre-check. No variables are ever set - the payload
 doctrine. `Camunda7TaskProcessingIT#correlateMessageResumesProcess`,
 `#correlateMessageWithCorrelationId`, `#rolledBackCorrelationLeavesInstanceWaiting` and
@@ -1130,8 +1133,21 @@ as a `ProcessEnginePlugin` bean instead; those apply to every engine this adapte
 The one place variables ARE read is `@TaskParam`, which takes the value from the task's
 input mapping, a hand-over the model asks for on purpose.
 
+Which workflow the format is read for is the process the values are written into, not the
+process whose process service was called. A process service belongs to the process at the
+top, but a task, a waiting message and a called process belong to the process which contains
+them. So completing or cancelling a task of a called process, pushing for it, and correlating
+a message the called process waits for all read the format under the id of the called process.
+That is what the engine's own task delivery has always done. `Camunda7SettingsOfACalledProcessTest`
+holds it (see decision 45 in the repository's DECISIONS.md).
+
 `aggregateChanged(aggregate)` writes the shared values with `setVariables` at the process
-instance, `aggregateChanged(aggregate, taskId)` with `setVariablesLocal` at the execution
+instance, and then at the instance of every called process which continues the aggregate. A
+called process is a process instance of its own in Camunda 7, with variables of its own, so a
+gateway waiting in it never saw a value written only into the caller. A called process
+continues the aggregate where it carries the same business key; the walk stops at a called
+process with an aggregate of its own. `aggregateChanged(aggregate, taskId)` writes with
+`setVariablesLocal` at the execution
 of the scope the task RUNS in, which the adapter resolves by walking around two scopes:
 
 - the scope Camunda gives an activity of its own where the model asks for one (a task with
@@ -1619,10 +1635,17 @@ neither an eventual-consistency lag nor an application-version boundary.
   under the other two modes. The adapter-native process definition id is Camunda's own
   (`MyProcess:1:8a9c…`), so the exact version an instance runs on is reported.
 - `getProcessDefinitions` additionally reports the definitions the process' **call activities**
-  would call next (latest deployed version of the called process id in the same tenant);
-  call activities addressing their process by expression are skipped (only known at runtime).
+  called: the version the called instance runs or ran on, read from the history and, at
+  history level `none`, from the called instances which still run. Where calls of one call
+  activity ran on different versions, the most recent call counts. A call activity which has
+  not called anything yet reports the version it would call next (latest deployed version of
+  the called process id in the same tenant). Call activities addressing their process by
+  expression are skipped (only known at runtime). `Camunda7ViewerOfACalledProcessTest` holds
+  both cases.
 - The history context of an executed call activity is the **called process instance id**; a
-  context not belonging to the workflow is rejected and logged.
+  context not belonging to the workflow is rejected and logged. That holds at history level
+  `none` as well, where the running called instance is checked against the root of the
+  workflow.
 - Camunda's fine-grained activity types are mapped onto the SPI's `WorkflowElementType`;
   `error` carries the message of an OPEN incident of that activity.
 - **History level matters:** with history level `none` no element history exists - the adapter

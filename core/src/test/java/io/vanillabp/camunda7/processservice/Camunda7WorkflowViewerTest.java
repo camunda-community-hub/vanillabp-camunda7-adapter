@@ -52,6 +52,12 @@ public class Camunda7WorkflowViewerTest {
   private final org.camunda.bpm.engine.repository.ProcessDefinitionQuery definitionQuery = mock(
       org.camunda.bpm.engine.repository.ProcessDefinitionQuery.class, RETURNS_SELF);
 
+  /**
+   * What the call activities of an instance called. Nothing, unless a test says otherwise.
+   */
+  private final org.camunda.bpm.engine.history.HistoricActivityInstanceQuery activityQuery = mock(
+      org.camunda.bpm.engine.history.HistoricActivityInstanceQuery.class, RETURNS_SELF);
+
   private final Camunda7WorkflowViewer viewer = new Camunda7WorkflowViewer(
       "c7", repositoryService, historyService, runtimeService);
 
@@ -61,6 +67,8 @@ public class Camunda7WorkflowViewerTest {
     when(historyService.createHistoricProcessInstanceQuery()).thenReturn(historicInstanceQuery);
     when(runtimeService.createProcessInstanceQuery()).thenReturn(instanceQuery);
     when(repositoryService.createProcessDefinitionQuery()).thenReturn(definitionQuery);
+    when(historyService.createHistoricActivityInstanceQuery()).thenReturn(activityQuery);
+    when(activityQuery.list()).thenReturn(List.of());
 
   }
 

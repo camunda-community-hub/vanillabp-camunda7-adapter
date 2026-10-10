@@ -14,12 +14,17 @@ import jakarta.inject.Inject;
  * <ul>
  * <li>{@code keptInBothVersions} serves every version - the task survived into the deployed
  * model;</li>
- * <li>{@code droppedInVersionTwo} serves version 1 only - the task was dropped from the
- * model, and the method stays for the workflows still running on that version. It matches no
- * task of the deployed model, which must not fail the start;</li>
+ * <li>{@code droppedFromTheNewModel} serves version 2 only, the old model a node of the older
+ * release deployed - the new model dropped the task, and the method stays for the workflows
+ * still running on that version. It matches no task of the deployed model, which must not
+ * fail the start;</li>
  * <li>{@code servedForAnUnknownVersion} names a version this engine does not hold, so it
- * never runs and the task it would serve is unserved in version 1.</li>
+ * never runs and the task it would serve is unserved in version 2.</li>
  * </ul>
+ * <p>
+ * The application deploys only the new model. It could not deploy the old one: a start
+ * refuses the version it deploys while a task of it has no method for that version, and
+ * 'servedForAnUnknownVersion' has none.
  */
 @ApplicationScoped
 @WorkflowService(
@@ -44,8 +49,8 @@ public class C7VersionsWorkflowService {
 
   }
 
-  @WorkflowTask(taskDefinition = "droppedInVersionTwo", version = "1")
-  public void droppedInVersionTwo(
+  @WorkflowTask(taskDefinition = "droppedFromTheNewModel", version = "2")
+  public void droppedFromTheNewModel(
       final C7VersionsAggregate aggregate,
       @TaskId final String taskId) {
 

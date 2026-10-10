@@ -10,34 +10,32 @@ import io.vanillabp.spi.service.WorkflowService;
 import io.vanillabp.spi.service.WorkflowTask;
 
 /**
- * The workflow service of the old-process-versions test. Its three methods
- * are the three states an application can be in towards the versions its BPMS holds:
- * <ul>
- * <li>{@code keptInBothVersions} serves every version - the task survived into the deployed
- * model;</li>
- * <li>{@code droppedInVersionTwo} serves version 1 only - the task was dropped from the model,
- * and the method stays for the workflows still running on that version. It matches no
- * task of the deployed model, which must not fail the start;</li>
- * <li>{@code servedForAnUnknownVersion} names a version this engine does not hold, so it never runs
- * and the task it would serve is unserved in version 1.</li>
- * </ul>
+ * The application which deploys version 1 of the old-process-versions test. It serves every
+ * task of that version, because a start refuses a version it deploys itself when a task of it
+ * has no method for that version.
  * <p>
- * Version 1 is deployed by the generation before this one,
- * {@link OldProcessVersionsBeforeWorkflowService}, which still serves every task of it. This
- * class cannot deploy version 1 itself: a start refuses the version it deploys when a task of it
- * has no method for that version, and here 'servedForAnUnknownVersion' has none.
+ * The application after it is {@link OldProcessVersionsWorkflowService}. That one no longer
+ * serves the task 'servedForAnUnknownVersion' in version 1, which is what the old-versions check
+ * has to report while a workflow still runs on version 1.
+ * <p>
+ * A bean only under the profile of its own generation: the generations declare the same
+ * process and must never boot together.
  */
 @Service
-@Profile("!"
-    + OldProcessVersionsBeforeWorkflowService.PROFILE)
+@Profile(OldProcessVersionsBeforeWorkflowService.PROFILE)
 @WorkflowService(
     workflowAggregateClass = OldProcessVersionsAggregate.class,
     bpmnProcess = @BpmnProcess(bpmnProcessId = "OldProcessVersionsProcess"))
-public class OldProcessVersionsWorkflowService {
+public class OldProcessVersionsBeforeWorkflowService {
+
+  /**
+   * The profile of the boot which deploys version 1.
+   */
+  public static final String PROFILE = "old-process-versions-before";
 
   private final ProcessService<OldProcessVersionsAggregate> processService;
 
-  public OldProcessVersionsWorkflowService(
+  public OldProcessVersionsBeforeWorkflowService(
       final ProcessService<OldProcessVersionsAggregate> processService) {
 
     this.processService = processService;
@@ -67,11 +65,16 @@ public class OldProcessVersionsWorkflowService {
 
   }
 
-  @WorkflowTask(taskDefinition = "servedForAnUnknownVersion", version = "0")
-  public void servedForAnUnknownVersion(
+  /**
+   * Never runs in this test: the workflow stays open in the task before it.
+   *
+   * @param aggregate The workflow aggregate
+   */
+  @WorkflowTask(taskDefinition = "servedForAnUnknownVersion", version = "1")
+  public void servedInVersionOne(
       final OldProcessVersionsAggregate aggregate) {
 
-    aggregate.setServedBy("never");
+    aggregate.setServedBy("version one");
 
   }
 

@@ -145,6 +145,10 @@ decision number you used while you were writing, and once a pull request is merg
 bin/check-decision-numbers.sh
 ```
 
+After you corrected a number, `bin/check-decision-citations.sh` says whether every citation of a
+decision still points at an entry of `DECISIONS.md`. The *Checks* workflow runs it on every pull
+request.
+
 The *Publish to GitHub Packages* workflow builds and tests every pull request and publishes nothing
 from a branch. A red check is a finding about your change. Read the log, which the workflow uploads
 as a test report when the build fails, and fix what it says rather than pushing again to see

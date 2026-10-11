@@ -1,65 +1,63 @@
 package io.vanillabp.camunda7.engine;
 
 /**
- * Per-adapter-id engine settings of the Camunda 7 adapter, living at the canonical
- * per-adapter location <code>vanillabp.adapters.&lt;id&gt;.*</code> (contributed to
- * the shared configuration tree via the platform-specific overlay - see the Spring
- * Boot module's <code>VanillaBpCamunda7Properties</code> and the Quarkus module's
- * <code>@ConfigMapping</code> overlay):
+ * The engine settings of one adapter id of the Camunda 7 adapter. They live at the
+ * canonical per-adapter location <code>vanillabp.adapters.&lt;id&gt;.*</code>. Each platform
+ * adds them to the shared configuration tree with its own overlay: the Spring Boot module's
+ * <code>VanillaBpCamunda7Properties</code> and the Quarkus module's
+ * <code>@ConfigMapping</code> overlay.
  * <ul>
- *   <li><code>database-schema-update</code> - create/upgrade the engine schema on
- *       boot (engine values, e.g. <code>true</code>, <code>false</code>,
- *       <code>create-drop</code>); default <code>true</code>;</li>
- *   <li><code>history-time-to-live</code> - engine-wide default history time to
- *       live (Camunda 7.24 rejects deployments of processes without one); default
- *       <code>P180D</code>, overridable per process via
- *       <code>camunda:historyTimeToLive</code>;</li>
- *   <li><code>data-source-name</code> - OPTIONAL name of an
- *       application-/runtime-provided datasource this adapter id's embedded engine
- *       runs on (setting up datasources is deliberately NOT VanillaBP's concern -
- *       the adapter never builds its own pool). Spring Boot: the name of a
- *       {@code DataSource} BEAN; Quarkus: the name of a declared named Agroal
- *       datasource (<code>quarkus.datasource.&lt;name&gt;.*</code>). Without it
- *       the engine shares the application's default datasource and joins the
- *       caller's transaction (the embedded-engine guarantee). With it the engine
- *       runs on its own schema - required for engine-side-by-side migrations (two
- *       embedded engines must never share one schema) - and starting workflows
- *       uses VanillaBP's two-phase pattern (see
- *       <code>Camunda7ProcessService</code>).</li>
+ *   <li><code>database-schema-update</code> - creates or upgrades the engine schema on
+ *       boot. It takes engine values, e.g. <code>true</code>, <code>false</code>,
+ *       <code>create-drop</code>. Default <code>true</code>.</li>
+ *   <li><code>history-time-to-live</code> - the engine-wide default history time to
+ *       live. Camunda 7.24 rejects the deployment of a process without one. Default
+ *       <code>P180D</code>. A process may override it with
+ *       <code>camunda:historyTimeToLive</code>.</li>
+ *   <li><code>data-source-name</code> - OPTIONAL. The name of the datasource this adapter
+ *       id's embedded engine runs on. The application or the runtime provides it. Setting
+ *       up datasources is on purpose NOT VanillaBP's job, and the adapter never builds its
+ *       own pool. On Spring Boot it is the name of a {@code DataSource} BEAN. On Quarkus
+ *       it is the name of a declared named Agroal datasource
+ *       (<code>quarkus.datasource.&lt;name&gt;.*</code>). Without it the engine shares the
+ *       application's default datasource and joins the caller's transaction (the
+ *       embedded-engine guarantee). With it the engine runs on its own schema. A
+ *       side-by-side migration of engines needs that, because two embedded engines must
+ *       never share one schema. Starting a workflow then uses VanillaBP's two-phase
+ *       pattern (see <code>Camunda7ProcessService</code>).</li>
  *   <li><code>accept-unscoped-identifiers</code> - OPTIONAL acknowledgement that the
  *       application's identifiers are unique across all of its workflow modules, which
  *       silences the WARN logged while the name-clash-avoidance mode <code>none</code>
  *       applies (this adapter's default mode); default <code>false</code>;</li>
- *   <li><code>table-prefix</code> - OPTIONAL prefix of the engine's database tables
- *       (engine setting <code>databaseTablePrefix</code>). It lets two adapter ids
- *       share ONE datasource while running separate engines - the side-by-side
- *       migration setup on a single database. <b>The tables of the prefix have to
- *       exist before the application starts</b>: Camunda's schema management
- *       ignores the prefix and would create a set of unprefixed
- *       <code>ACT_*</code> tables instead (its own words in
- *       {@code ProcessEngineConfigurationImpl#setDatabaseTablePrefix}, recorded by
- *       {@code Camunda7TablePrefixEngineBehaviourTest}). A prefixed adapter id
- *       therefore also needs <code>database-schema-update: false</code>, and
- *       {@link Camunda7TablePrefixSchema} says so while the application boots
- *       rather than letting the engine fail on its first query.</li>
- *   <li><code>sleep-until-something-is-due</code> - OPTIONAL: the job executor waits
- *       until the next job is due instead of polling every 5 to 60 seconds; default
- *       <code>false</code>, see {@link Camunda7JobExecutorSleep};</li>
- *   <li><code>allow-listeners</code> - OPTIONAL: whether the execution listeners somebody
- *       MODELLED are served by <code>@WorkflowTask</code> methods, resolvable per workflow
- *       module and workflow, default <code>false</code>, see
- *       {@link io.vanillabp.camunda7.wiring.Camunda7AllowListenersResolver};</li>
- *   <li><code>db-metrics-reporting</code> - OPTIONAL: whether the engine's metrics
+ *   <li><code>table-prefix</code> - OPTIONAL. The prefix of the engine's database tables
+ *       (engine setting <code>databaseTablePrefix</code>). With it two adapter ids share
+ *       ONE datasource and still run separate engines. This is the side-by-side migration
+ *       setup on a single database. <b>The tables of the prefix have to exist before the
+ *       application starts.</b> Camunda's schema management ignores the prefix. It would
+ *       create a set of unprefixed <code>ACT_*</code> tables instead. Camunda says so in
+ *       {@code ProcessEngineConfigurationImpl#setDatabaseTablePrefix}, and
+ *       {@code Camunda7TablePrefixEngineBehaviourTest} records it. So a prefixed adapter id
+ *       also needs <code>database-schema-update: false</code>.
+ *       {@link Camunda7TablePrefixSchema} says so while the application boots. Otherwise
+ *       the engine would fail on its first query.</li>
+ *   <li><code>sleep-until-something-is-due</code> - OPTIONAL. The job executor waits
+ *       until the next job is due, instead of polling every 5 to 60 seconds. Default
+ *       <code>false</code>, see {@link Camunda7JobExecutorSleep}.</li>
+ *   <li><code>allow-listeners</code> - OPTIONAL. Whether <code>@WorkflowTask</code> methods
+ *       serve the execution listeners somebody MODELLED. It is resolvable per workflow
+ *       module and workflow. Default <code>false</code>, see
+ *       {@link io.vanillabp.camunda7.wiring.Camunda7AllowListenersResolver}.</li>
+ *   <li><code>db-metrics-reporting</code> - OPTIONAL. Whether the engine's metrics
  *       reporter writes its counters to the database every 900 seconds. Unset means
- *       the opposite of the sleep, so an engine which is allowed to sleep is not woken
- *       by its own metrics.</li>
+ *       the opposite of the sleep. So an engine which may sleep is not woken by its own
+ *       metrics.</li>
  * </ul>
  */
 public class Camunda7EngineProperties {
 
   /**
    * The platform integration builds one per configured adapter id and fills it through the
-   * setters, so a key a deployment says nothing about keeps the default written next to it.
+   * setters. So a key which a deployment does not set keeps the default written next to it.
    */
   public Camunda7EngineProperties() {
 
@@ -78,85 +76,85 @@ public class Camunda7EngineProperties {
   private String tablePrefix;
 
   /**
-   * The serialization format a shared value the engine has no variable type for is stored
-   * in, e.g. {@code application/json} (the SPIN JSON dataformat) or
-   * {@code application/xstream} (camunda-xstream). That is a nested value and a number
-   * this engine cannot store as itself. It is applied twice: to the engine's
-   * {@code defaultSerializationFormat}, so an application configures the format once, and
+   * The serialization format for a shared value the engine has no variable type for, e.g.
+   * {@code application/json} (the SPIN JSON dataformat) or {@code application/xstream}
+   * (camunda-xstream). Such a value is a nested value, or a number this engine cannot store
+   * as itself. The format is applied twice. First to the engine's
+   * {@code defaultSerializationFormat}, so an application configures the format once. Then
    * per written variable, so a workflow module or a single workflow may override it
    * ({@code vanillabp.workflow-modules.<module>.adapters.<id>.serialization-format},
    * {@code vanillabp.workflow-modules.<module>.workflows.<workflow>.adapters.<id>.serialization-format}).
    * <p>
-   * The matching dataformat has to be on the classpath - that dependency and its own
-   * settings belong to the application, VanillaBP only names the format.
+   * The matching dataformat has to be on the classpath. That dependency and its own
+   * settings belong to the application. VanillaBP only names the format.
    */
   private String serializationFormat;
 
   /**
-   * The Camunda engine plugins of this adapter id, each a named section naming a class and
-   * carrying its own properties - which Camunda itself applies (see
-   * {@link Camunda7EnginePlugins}). This is how a serialization dataformat
-   * (camunda-xstream, SPIN) reaches an engine VanillaBP builds, and it is per adapter id,
-   * so two embedded engines can carry different plugins.
+   * The Camunda engine plugins of this adapter id. Each one is a named section. It names a
+   * class and has its own properties, and Camunda itself applies them (see
+   * {@link Camunda7EnginePlugins}). This is how a serialization dataformat (camunda-xstream,
+   * SPIN) gets into an engine VanillaBP builds. It is per adapter id, so two embedded engines
+   * can have different plugins.
    */
   private java.util.Map<String, Camunda7EnginePluginProperties> enginePlugins = java.util.Map.of();
 
   /**
    * The Camunda tenant a workflow module is deployed to under the name-clash
-   * avoidance mode {@code by-adapter}. Unset (the default) means the
-   * workflow module ID is the tenant - VanillaBP 1's behavior.
+   * avoidance mode {@code by-adapter}. Unset (the default) means that the
+   * workflow module ID is the tenant. This is how VanillaBP 1 behaved.
    */
   private String tenantId;
 
   /**
    * Whether the application states that its identifiers are unique across all of its
-   * workflow modules, which is what the name-clash-avoidance mode {@code none} relies
-   * on. It silences the WARN the adapter logs per workflow module while that mode
-   * applies - a deliberate acknowledgement, not a log-level setting: with a wrong one,
-   * two workflow modules address the same process definitions and tasks. Default
+   * workflow modules. The name-clash-avoidance mode {@code none} relies on that. It
+   * silences the WARN which the adapter logs per workflow module while that mode applies.
+   * It is a deliberate statement, not a log-level setting. If the statement is wrong, two
+   * workflow modules address the same process definitions and tasks. Default
    * {@code false}.
    */
   private boolean acceptUnscopedIdentifiers = false;
 
   /**
-   * Whether the execution listeners somebody MODELLED are served by <code>@WorkflowTask</code>
-   * methods. Adapter-level base of the most-specific-wins resolution over three levels (workflow
-   * &gt; workflow-module &gt; adapter), see
+   * Whether <code>@WorkflowTask</code> methods serve the execution listeners somebody MODELLED.
+   * This is the adapter level. The most specific of three levels wins (workflow &gt;
+   * workflow-module &gt; adapter), see
    * {@link io.vanillabp.camunda7.wiring.Camunda7AllowListenersResolver}. Default
    * <code>false</code>.
    * <p>
-   * Without it a model carrying such a listener does not boot: the engine would evaluate the
-   * listener's expression itself, and a workflow reaching the element either fails on a name
-   * nothing resolves or runs a method the application never meant for that element. With it the
-   * listener is a task like any other - a method is asked for and a method serving no listener is
-   * reported - and what that costs is written into the boot log of every workflow module it
+   * Without it a model with such a listener does not boot. Otherwise the engine would evaluate
+   * the listener's expression itself. A workflow reaching the element would then fail on a name
+   * nothing resolves, or run a method the application never meant for that element. With it the
+   * listener is a task like any other. A method is asked for, and a method serving no listener
+   * is reported. What that costs is written into the boot log of every workflow module it
    * applies to.
    * <p>
-   * There is deliberately no TASK level: that level is keyed by a task DEFINITION, and whether a
-   * listener becomes a task at all is what this key decides.
+   * There is on purpose no TASK level. That level is keyed by a task DEFINITION, and this key
+   * decides whether a listener becomes a task at all.
    */
   private boolean allowListeners = false;
 
   /**
-   * Whether this adapter id's job executor waits until the next job is due instead of
-   * polling. An application which waits for a timer most of its life pays for every poll
-   * on a database billed by active use, and a due date is an exact answer to the question
-   * those polls keep asking. Off by default: replacing the timing of the engine's job
-   * executor is not something to do to an application which did not ask for it.
+   * Whether this adapter id's job executor waits until the next job is due, instead of
+   * polling. Think of an application which waits for a timer most of its life, on a
+   * database billed by active use. It pays for every poll. A due date answers exactly the
+   * question those polls keep asking. Off by default, because the timing of the engine's
+   * job executor should not change for an application which did not ask for it.
    * <p>
-   * This is one switch rather than two, for the sleeping and for the waking, because the
-   * two make no sense apart. An executor which sleeps on a due date and nobody wakes is
-   * worse than either half.
+   * This is one switch, not two for the sleeping and the waking. The two make no sense
+   * apart. An executor which sleeps until a due date and which nobody wakes is worse than
+   * either half.
    */
   private boolean sleepUntilSomethingIsDue = false;
 
   /**
    * Whether the engine's metrics reporter writes its counters to the database every 900
-   * seconds. Unset (the default) means the opposite of {@link #sleepUntilSomethingIsDue},
-   * so the engine keeps Camunda's behaviour while it polls anyway and stops writing once
-   * it is allowed to sleep. Set it to <code>true</code> to keep the metrics on a sleeping
-   * engine, which costs a wake-up four times an hour. Metrics are still counted in memory
-   * either way, only the writing stops.
+   * seconds. Unset (the default) means the opposite of {@link #sleepUntilSomethingIsDue}.
+   * So the engine keeps Camunda's behaviour while it polls anyway, and it stops writing
+   * once it may sleep. Set it to <code>true</code> to keep the metrics on a sleeping
+   * engine. That costs a wake-up four times an hour. Metrics are still counted in memory
+   * either way. Only the writing stops.
    */
   private Boolean dbMetricsReporting;
 
@@ -202,7 +200,7 @@ public class Camunda7EngineProperties {
 
   /**
    * The name of the datasource this adapter id's engine runs on. Unset means the
-   * application's default one, which is what lets the engine join the caller's
+   * application's default one. Only then can the engine join the caller's
    * transaction.
    *
    * @return The configured name, <code>null</code> for the application's default datasource
@@ -222,8 +220,8 @@ public class Camunda7EngineProperties {
   }
 
   /**
-   * The prefix of the engine's database tables, which lets two adapter ids run
-   * separate engines on one datasource.
+   * The prefix of the engine's database tables. With it two adapter ids run separate
+   * engines on one datasource.
    *
    * @return The configured prefix, <code>null</code> for the plain table names
    */
@@ -293,7 +291,7 @@ public class Camunda7EngineProperties {
 
   /**
    * Whether the application states that its identifiers are unique across all of its
-   * workflow modules, which silences the WARN of the mode {@code none}.
+   * workflow modules. This silences the WARN of the mode {@code none}.
    *
    * @return Whether the application acknowledged unscoped identifiers
    */
@@ -376,8 +374,7 @@ public class Camunda7EngineProperties {
 
   /**
    * Whether this engine's job executor waits for the next job instead of polling for it.
-   * It is asked while the engine is built, and it decides the metrics answer below as
-   * well.
+   * It is asked while the engine is built. It also decides the metrics answer below.
    *
    * @return Whether the job executor of this adapter id waits until the next job is due
    */
@@ -389,8 +386,8 @@ public class Camunda7EngineProperties {
 
   /**
    * Whether the metrics reporter writes its counters to the database. Unset follows the
-   * answer above: an engine which is allowed to rest should not be woken four times an
-   * hour by its own bookkeeping.
+   * answer above. An engine which may rest should not be woken four times an hour by its
+   * own bookkeeping.
    *
    * @return Whether the engine's metrics reporter writes to the database
    */
@@ -403,7 +400,7 @@ public class Camunda7EngineProperties {
   }
 
   /**
-   * Keeps an empty map instead of <code>null</code>, so the engine is built the same way
+   * Keeps an empty map instead of <code>null</code>. So the engine is built the same way,
    * whether or not an application configured plugins.
    *
    * @param enginePlugins The configured plugin sections, may be <code>null</code>
@@ -416,17 +413,17 @@ public class Camunda7EngineProperties {
   }
 
   /**
-   * The reserved value of {@code data-source-name} naming the application's
-   * DEFAULT datasource explicitly. Needed because an application providing several
-   * datasources has to name the one each adapter id runs on - and the
-   * default datasource has no name of its own on either platform.
+   * The reserved value of {@code data-source-name} which names the application's
+   * DEFAULT datasource explicitly. An application with several datasources has to name
+   * the one each adapter id runs on. But the default datasource has no name of its own
+   * on either platform.
    */
   public static final String DEFAULT_DATA_SOURCE_NAME = "default";
 
   /**
    * Whether a configured name means the application's own datasource. Unset and blank mean
-   * the same as the reserved word, because leaving the key out is how most applications
-   * say it.
+   * the same as the reserved word, because most applications say it by leaving the key
+   * out.
    *
    * @param dataSourceName A configured datasource name
    * @return Whether it names the application's DEFAULT datasource
@@ -440,9 +437,9 @@ public class Camunda7EngineProperties {
   }
 
   /**
-   * Whether this adapter id runs on a datasource of its own. That is what decides whether
-   * the engine can join the caller's transaction, so a good deal of behaviour hangs off
-   * this one answer.
+   * Whether this adapter id runs on a datasource of its own. This decides whether the
+   * engine can join the caller's transaction. So a good deal of behaviour depends on this
+   * one answer.
    *
    * @return Whether the engine runs on a named datasource
    */

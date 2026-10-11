@@ -8,9 +8,9 @@ import org.camunda.bpm.container.impl.metadata.PropertyHelper;
 import org.camunda.bpm.engine.impl.cfg.ProcessEnginePlugin;
 
 /**
- * Builds the engine plugins an adapter id configures - the way a dataformat
- * (camunda-xstream, SPIN) or any other Camunda plugin reaches an embedded engine VanillaBP
- * builds:
+ * Builds the engine plugins an adapter id configures. This is how a dataformat
+ * (camunda-xstream, SPIN) or any other Camunda plugin gets into an embedded engine which
+ * VanillaBP builds:
  *
  * <pre>
  * vanillabp:
@@ -26,22 +26,23 @@ import org.camunda.bpm.engine.impl.cfg.ProcessEnginePlugin;
  *             allowed-types: my.project.**,other.project.**
  * </pre>
  *
- * The section is named by the application (a class name carries dots, which both
- * configuration binders would need quoted), it names the plugin's class, and <b>the
- * properties are applied by Camunda itself</b> ({@link PropertyHelper}, the same code which reads the
- * <code>&lt;property&gt;</code> elements of a <code>bpm-platform.xml</code>), so the types a
- * plugin declares are converted exactly as they are in a container-managed engine. The
- * kebab-case of the configuration maps to the plugin's setters
- * ({@code allowed-types} to {@code setAllowedTypes}).
+ * The application names the section, because a class name has dots, and both configuration
+ * binders would need them quoted. The section names the plugin's class. <b>Camunda itself
+ * applies the properties</b> with {@link PropertyHelper}. This is the same code which reads the
+ * <code>&lt;property&gt;</code> elements of a <code>bpm-platform.xml</code>. So the types a
+ * plugin declares are converted exactly as in a container-managed engine. The kebab-case of
+ * the configuration maps to the plugin's setters ({@code allowed-types} to
+ * {@code setAllowedTypes}).
  * <p>
- * Configuring a plugin here is per adapter id, which is what a side-by-side migration needs:
- * two embedded engines, each with the plugins its models require. An application may instead
- * contribute a plugin as a BEAN - a plugin which configures itself from the application's own
- * properties (camunda-xstream does that on Spring Boot) is easier that way - and those beans
- * apply to every engine this adapter builds.
+ * A plugin configured here belongs to one adapter id. A side-by-side migration needs that: two
+ * embedded engines, each with the plugins its models require. An application may instead
+ * contribute a plugin as a BEAN. That is easier for a plugin which configures itself from the
+ * application's own properties, as camunda-xstream does on Spring Boot. Such beans apply to
+ * every engine this adapter builds.
  * <p>
- * Why an embedded engine of this adapter accepts plugins at all is decision 9 in the repository's
- * DECISIONS.md: without a data format a nested shared value cannot become an object variable.
+ * Decision 9 in the repository's DECISIONS.md says why an embedded engine of this adapter
+ * accepts plugins at all. Without a data format, a nested shared value cannot become an object
+ * variable.
  */
 public final class Camunda7EnginePlugins {
 
@@ -126,9 +127,9 @@ public final class Camunda7EnginePlugins {
       return plugin;
     }
     try {
-      // Camunda's own property mapping: the same code which applies the <property>
-      // elements of a bpm-platform.xml, so the plugin's types are converted the way its
-      // documentation describes. Kebab-case, like every other VanillaBP key
+      // Camunda's own property mapping. It is the same code which applies the <property>
+      // elements of a bpm-platform.xml. So the plugin's types are converted the way its
+      // documentation describes. The keys are kebab-case, like every other VanillaBP key
       PropertyHelper.applyProperties(plugin, properties, PropertyHelper.KEBAB_CASE);
     } catch (final RuntimeException rejected) {
       throw new IllegalStateException(

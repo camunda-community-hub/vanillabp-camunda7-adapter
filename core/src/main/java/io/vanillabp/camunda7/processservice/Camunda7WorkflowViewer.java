@@ -22,25 +22,25 @@ import io.vanillabp.spi.process.WorkflowHistory;
 import lombok.extern.slf4j.Slf4j;
 
 /**
- * The Camunda 7 part of VanillaBP's viewer/history API: process
+ * The Camunda 7 part of VanillaBP's viewer and history API: process
  * definitions, BPMN XML and the execution history of a workflow.
  * <p>
- * Camunda 7 is embedded and authoritative for both: the
- * {@link RepositoryService} holds every deployed version including its BPMN XML,
- * the {@link HistoryService} the instance timeline. Both are cheap local queries -
- * unlike remote BPMS there is neither eventual consistency nor a
+ * Camunda 7 is embedded and has the final word on both. The
+ * {@link RepositoryService} holds every deployed version including its BPMN XML.
+ * The {@link HistoryService} holds the timeline of an instance. Both are cheap local
+ * queries. Unlike a remote BPMS, there is no eventual consistency, and no
  * &quot;deployed by a previous application version&quot; boundary.
  * <p>
  * Addressing follows the adapter's conventions: the workflow-aggregate ID is the
  * BUSINESS KEY, the workflow module ID the TENANT ID.
  * <p>
  * The <b>history context</b> of this adapter is the (historic) process instance ID
- * of a call activity's called instance - stable, and resolvable to the exact
+ * of the instance a call activity called. It is stable, and it leads to the exact
  * version that instance ran on.
  * <p>
- * The definition ids returned here are ADAPTER-NATIVE (Camunda's process
- * definition ids like {@code demo:1:8a9c...}); the core namespaces them with the
- * adapter id.
+ * The definition ids returned here are ADAPTER-NATIVE. They are Camunda's process
+ * definition ids like {@code demo:1:8a9c...}. The core puts the adapter id in front
+ * of them.
  */
 @Slf4j
 public class Camunda7WorkflowViewer {
@@ -54,7 +54,7 @@ public class Camunda7WorkflowViewer {
   private final RuntimeService runtimeService;
 
   /**
-   * Reads one engine. Everything is asked when somebody asks for it, so building the
+   * Reads one engine. Nothing is asked before somebody asks for it. So building the
    * viewer costs nothing.
    *
    * @param adapterId The adapter id the definition ids are namespaced with
@@ -76,11 +76,11 @@ public class Camunda7WorkflowViewer {
   }
 
   /**
-   * The process definitions of the addressed (sub-)workflow: the definition the
-   * instance runs/ran on first (its {@code usedByElements} is <code>null</code>),
-   * followed by the definitions its call activities called ({@code usedByElements}
-   * naming the call-activity elements). A call activity which called nothing yet reports
-   * the version it WOULD call next, the latest deployed one.
+   * The process definitions of the addressed (sub-)workflow. First comes the definition
+   * the instance runs or ran on. Its {@code usedByElements} is <code>null</code>. Then
+   * come the definitions its call activities called. Their {@code usedByElements} names
+   * the call-activity elements. A call activity which called nothing yet reports the
+   * version it WOULD call next, the latest deployed one.
    *
    * @param workflowModuleId The workflow module the workflow belongs to. The tenant is a
    *          parameter of its own: a module has one only under {@code by-adapter}
@@ -164,10 +164,10 @@ public class Camunda7WorkflowViewer {
     final var historicInstance = resolveHistoricInstance(
         workflowModuleId, bpmnProcessId, tenantId, workflowAggregateId, historyContext);
     if (historicInstance == null) {
-      // no history at all: either the engine runs with history level NONE or the
+      // no history at all. Either the engine runs with history level NONE, or the
       // instance's history was already cleaned up (history-time-to-live). The
-      // running instance still allows reporting the definition it runs on - the
-      // element history is unavailable, which the SPI expresses as null.
+      // running instance still tells the definition it runs on. The element
+      // history is not available, and the SPI says that with null.
       final var addressed = resolveAddressedInstance(
           workflowModuleId, bpmnProcessId, tenantId, workflowAggregateId, historyContext);
       if (addressed == null) {
@@ -218,13 +218,13 @@ public class Camunda7WorkflowViewer {
   }
 
   /**
-   * Resolves the (sub-)workflow addressed and the process definition it runs/ran on -
-   * from history if available, otherwise from the runtime state (history level
-   * NONE).
+   * Resolves the addressed (sub-)workflow and the process definition it runs or ran on.
+   * It reads the history if there is one. Otherwise it reads the runtime state (history
+   * level NONE).
    * <p>
-   * The runtime state follows the rule of the history: a called instance is accepted only
-   * where it belongs to the workflow asked about, which is where its root is that workflow's
-   * instance. Without that check a history level of NONE would show a called instance of any
+   * The runtime state follows the rule of the history. A called instance is accepted only
+   * where it belongs to the workflow asked about, that is, where its root is that workflow's
+   * instance. Without that check, a history level of NONE would show a called instance of any
    * other workflow to whoever passes its id. See decision 45 in the repository's DECISIONS.md.
    *
    * @return The instance or <code>null</code> if this engine does not know the workflow
@@ -242,7 +242,7 @@ public class Camunda7WorkflowViewer {
       return new AddressedInstance(historicInstance.getId(), historicInstance.getProcessDefinitionId(), true);
     }
 
-    // no history: the runtime state answers for RUNNING instances only
+    // no history. The runtime state answers for RUNNING instances only
     var runningQuery = runtimeService
         .createProcessInstanceQuery()
         .processInstanceBusinessKey(String.valueOf(workflowAggregateId))
@@ -278,10 +278,10 @@ public class Camunda7WorkflowViewer {
   }
 
   /**
-   * Resolves the historic process instance addressed: the workflow's primary
-   * instance (business key + process + tenant) or, for a history context, the
-   * called instance - which is accepted ONLY if it belongs to that very workflow
-   * (a context of a foreign workflow must not leak its history).
+   * Resolves the addressed historic process instance. This is the workflow's primary
+   * instance (business key + process + tenant). For a history context it is the called
+   * instance. That one is accepted ONLY if it belongs to this very workflow, because the
+   * context of a foreign workflow must not leak its history.
    */
   private HistoricProcessInstance resolveHistoricInstance(
       final String workflowModuleId,
@@ -354,13 +354,13 @@ public class Camunda7WorkflowViewer {
   /**
    * The definitions called by the call activities of the given definition. A call activity
    * which called a process already reports the definition that called instance runs or ran
-   * on, because that is the model a viewer has to draw for this workflow. One which has not
-   * called anything yet reports the version which WOULD be executed next, the latest deployed
-   * one. Where calls of one call activity ran on different versions, the most recent call
-   * counts. See decision 45 in the repository's DECISIONS.md.
+   * on. That is the model a viewer has to draw for this workflow. One which has not called
+   * anything yet reports the version which WOULD run next, the latest deployed one. Where
+   * calls of one call activity ran on different versions, the most recent call counts. See
+   * decision 45 in the repository's DECISIONS.md.
    * <p>
-   * Call activities addressing their process by an expression are skipped: which definition
-   * they call is only known at execution time.
+   * Call activities which name their process by an expression are skipped. Which
+   * definition they call is only known when they run.
    */
   private List<ProcessDefinition> calledDefinitions(
       final String workflowModuleId,
@@ -456,8 +456,8 @@ public class Camunda7WorkflowViewer {
 
   /**
    * The definition each call activity of an instance called, by the id of the call activity.
-   * The history answers where there is one. Without it the called instances which still run
-   * answer, each pointing back at the execution which called it.
+   * The history answers where there is one. Without it, the called instances which still run
+   * answer. Each of them points back at the execution which called it.
    *
    * @param addressed The instance whose call activities are meant
    * @return The definition id of the most recent call per call activity
@@ -508,7 +508,7 @@ public class Camunda7WorkflowViewer {
   }
 
   /**
-   * The messages of the OPEN incidents per activity - the SPI's per-element
+   * The messages of the OPEN incidents per activity. They fill the SPI's per-element
    * {@code error} attribute ("the element is currently in error").
    */
   private java.util.Map<String, String> openIncidentMessagesByActivity(
@@ -540,9 +540,9 @@ public class Camunda7WorkflowViewer {
 
   /**
    * Maps Camunda 7's activity type strings onto the SPI's element types. Camunda
-   * uses fine-grained names (e.g. {@code messageEndEvent},
-   * {@code boundaryTimer}, {@code intermediateMessageCatch}) which the SPI groups
-   * into BPMN element categories.
+   * uses fine-grained names, e.g. {@code messageEndEvent}, {@code boundaryTimer},
+   * {@code intermediateMessageCatch}. The SPI groups them into BPMN element
+   * categories.
    *
    * @param activityType What Camunda calls the element, or <code>null</code> where it
    *          reports none

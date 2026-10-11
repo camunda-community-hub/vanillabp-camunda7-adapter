@@ -13,8 +13,8 @@ import org.slf4j.LoggerFactory;
 
 /**
  * Applies the {@link Camunda7EngineCustomizer}s of an application to the configuration an
- * engine is about to be built from. Both engine holders - Spring Boot and Quarkus - call
- * this, so what a customizer may contribute is the same on both platforms.
+ * engine is about to be built from. Both engine holders, Spring Boot and Quarkus, call
+ * this. So a customizer may contribute the same things on both platforms.
  */
 public final class Camunda7EngineCustomizers {
 
@@ -24,9 +24,9 @@ public final class Camunda7EngineCustomizers {
   }
 
   /**
-   * Lets the application have the last word on the engine configuration, and says in the
-   * log who touched it. A customizer runs after VanillaBP set everything it needs, so it
-   * can undo what the adapter relies on - which is why the line naming it matters.
+   * Lets the application have the last word on the engine configuration. The log says who
+   * touched it. A customizer runs after VanillaBP set everything it needs. So it can undo
+   * something the adapter relies on, and that is why the log line naming it matters.
    *
    * @param adapterId The adapter id whose engine is being built
    * @param configuration The configuration, with VanillaBP's own parse listener already
@@ -72,8 +72,8 @@ public final class Camunda7EngineCustomizers {
       configuration.setCustomPostBPMNParseListeners(postListeners);
     }
     if (!historyEventHandlers.isEmpty()) {
-      // the engine's own handler comes along: the composite writes history the way it
-      // always did and hands every event on to the contributed handlers as well
+      // the engine's own handler stays. The composite writes history the way it always
+      // did, and it hands every event to the contributed handlers as well
       configuration.setHistoryEventHandler(new CompositeDbHistoryEventHandler(historyEventHandlers));
     }
 

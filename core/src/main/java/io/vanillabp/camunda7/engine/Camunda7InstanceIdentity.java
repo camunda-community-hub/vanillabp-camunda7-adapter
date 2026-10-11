@@ -7,17 +7,17 @@ import java.util.function.Function;
 
 /**
  * What makes two configured <code>camunda7</code> adapter ids DIFFERENT engines:
- * the database they run on. Camunda 7 is embedded, so two ids sharing
- * one datasource AND one table prefix are literally the same engine state -
- * configuring them as separate adapters is a defect.
+ * the database they run on. Camunda 7 is embedded. So two ids which share one
+ * datasource AND one table prefix are really the same engine state. Configuring
+ * them as separate adapters is a defect.
  * <p>
  * Two ids are distinguishable if they use
  * <ul>
  * <li>different datasources (<code>vanillabp.adapters.&lt;id&gt;.data-source-name</code>),
  * or</li>
  * <li>different engine table prefixes
- * (<code>vanillabp.adapters.&lt;id&gt;.table-prefix</code>) - which lets two engines
- * share ONE datasource, exactly the migration setup on a single database. Such an
+ * (<code>vanillabp.adapters.&lt;id&gt;.table-prefix</code>). With them two engines
+ * share ONE datasource. This is the migration setup on a single database. Such an
  * engine needs a schema which exists already, see
  * {@link Camunda7TablePrefixSchema}.</li>
  * </ul>
@@ -60,8 +60,8 @@ public record Camunda7InstanceIdentity(
 
   /**
    * Fails the boot if two of the given adapter ids would run on the same database
-   * AND table prefix (see the class comment). Called through the adapter SPI hook
-   * {@code AdapterDeploymentService#validateDistinctAdapterInstances}.
+   * AND table prefix (see the class comment). The adapter SPI hook
+   * {@code AdapterDeploymentService#validateDistinctAdapterInstances} calls it.
    *
    * @param adapterIds The configured adapter ids of type <code>camunda7</code>
    * @param identityResolver Resolves an adapter id's identity from the

@@ -9,22 +9,22 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Everything the due-date sleep needs on an engine being built, for both platforms. What
- * stays with the platform is the executor itself, because the class it extends is the
- * platform's: {@link Camunda7SleepingJobExecutor} where the engine owns the thread pool,
- * the Spring Boot module's counterpart where the application owns it.
+ * Everything the due-date sleep needs on an engine being built, for both platforms. The
+ * executor itself stays with the platform, because the class it extends is the
+ * platform's. That is {@link Camunda7SleepingJobExecutor} where the engine owns the thread
+ * pool, and the Spring Boot module's counterpart where the application owns it.
  * <p>
- * Three things happen here where the sleep is configured. The commit of every engine
- * command is asked to wake the acquisition ({@link Camunda7WakeupAfterCommit}). Jobs are
- * acquired by due date, because waking for the earliest due job and then acquiring in an
- * unrelated order would pick the wrong job where more are due than one cycle takes. And
- * the engine's metrics reporter is switched off, since it writes through a database command
- * every 900 seconds and would wake an engine four times an hour that was meant to stay
+ * Three things happen here where the sleep is configured. First, the commit of every engine
+ * command is asked to wake the acquisition ({@link Camunda7WakeupAfterCommit}). Second, jobs
+ * are acquired by due date. The executor wakes for the earliest due job. If it then acquired
+ * in some other order, it would pick the wrong job where more are due than one cycle takes.
+ * Third, the engine's metrics reporter is switched off. It writes through a database command
+ * every 900 seconds. So it would wake an engine four times an hour, which was meant to stay
  * quiet.
  * <p>
- * The startup message says all of it, including what is still awake, because a developer
- * who switches this on and watches their database has to be able to tell which traffic is
- * whose.
+ * The startup message says all of it, including what is still awake. A developer who
+ * switches this on and watches their database has to be able to tell which traffic comes
+ * from where.
  * <p>
  * The reasons behind each of the three are decision 18 in the repository's DECISIONS.md.
  */
@@ -38,8 +38,8 @@ public final class Camunda7JobExecutorSleep {
 
   /**
    * Applies what is the same on both platforms to an engine which is about to be built.
-   * Called for every adapter id, whether or not the sleep is configured: the metrics
-   * reporter is an engine setting of its own, and an id which configured neither key keeps
+   * It is called for every adapter id, whether or not the sleep is configured. The metrics
+   * reporter is an engine setting of its own. And an id which configured neither key keeps
    * the engine's own behaviour down to the last statement.
    *
    * @param adapterId The adapter id whose engine is being built
@@ -60,8 +60,8 @@ public final class Camunda7JobExecutorSleep {
     configuration
         .setCustomPostCommandInterceptorsTxRequired(
             withWakeup(adapterId, configuration.getCustomPostCommandInterceptorsTxRequired()));
-    // a job which failed is rescheduled in a transaction of its own, and the new due date
-    // of such a retry is exactly the kind of future job this feature sleeps on
+    // a job which failed is rescheduled in a transaction of its own. The new due date of
+    // such a retry is exactly the kind of future job this feature sleeps on
     configuration
         .setCustomPostCommandInterceptorsTxRequiresNew(
             withWakeup(adapterId, configuration.getCustomPostCommandInterceptorsTxRequiresNew()));
@@ -72,8 +72,8 @@ public final class Camunda7JobExecutorSleep {
 
   /**
    * The custom post-command interceptors of the engine plus the wake-up. Post-command
-   * means inside the command context, which is where a transaction listener can be
-   * registered; the list is <code>null</code> until somebody fills it.
+   * means inside the command context. Only there can a transaction listener be
+   * registered. The list is <code>null</code> until somebody fills it.
    */
   private static List<CommandInterceptor> withWakeup(
       final String adapterId,
@@ -88,8 +88,8 @@ public final class Camunda7JobExecutorSleep {
   }
 
   /**
-   * What the application is told on the boot which switched the sleep on: what changed,
-   * what the operator still has to do, and what keeps talking to the database anyway.
+   * What the application is told on the boot which switched the sleep on. It says what
+   * changed, what the operator still has to do, and what talks to the database anyway.
    */
   private static void announce(
       final String adapterId,

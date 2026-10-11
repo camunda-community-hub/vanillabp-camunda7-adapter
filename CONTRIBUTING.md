@@ -1,17 +1,18 @@
 # Contributing
 
-This repository is the VanillaBP adapter for Camunda 7. It implements the adapter SPI of the
-[platform integration](https://github.com/vanillabp/adapter-platform-integration) and runs the
-engine embedded in the application, in the application's own transaction. Business code never sees
-it: what an application writes against is
-[`spi-for-java`](https://github.com/vanillabp/spi-for-java), and everything this adapter does for
-its users is described in the [wiki](https://github.com/camunda-community-hub/vanillabp-camunda7-adapter/wiki).
+This repository is the VanillaBP adapter for Camunda 7. It implements the adapter SPI (service
+provider interface) of the
+[platform integration](https://github.com/vanillabp/adapter-platform-integration). The engine runs
+embedded in the application, in the application's own transaction. Business code never sees the
+adapter. An application is written against
+[`spi-for-java`](https://github.com/vanillabp/spi-for-java). The
+[wiki](https://github.com/camunda-community-hub/vanillabp-camunda7-adapter/wiki) describes
+everything this adapter does for its users.
 
 Where the rules are: [`README.md`](./README.md) explains how the adapter works, module by module
-and behaviour by behaviour, and it is the first thing to read.
-[`AGENTS.md`](./AGENTS.md) says how work is done here, in the form an agent reads.
-[`DECISIONS.md`](./DECISIONS.md) holds the decisions several places rely on, and it is the only
-thing the code is allowed to cite.
+and behaviour by behaviour. Read it first. [`AGENTS.md`](./AGENTS.md) says how work is done here,
+in the form an agent reads. [`DECISIONS.md`](./DECISIONS.md) holds the decisions several places
+rely on. It is the only thing the code may cite.
 
 ## Getting started
 
@@ -25,10 +26,10 @@ this repository.
 
 ## Building and testing
 
-A JDK 21 or newer, and Maven, without a wrapper. The workflows build with the JDK named in
-`.github/workflows`, currently 25, so build with that one if you want to see what the pipeline sees.
-The class files stay at Java 21 either way, because that is what the property `version.java` in the
-root `pom.xml` compiles against. Two repositories come first, in this order: `spi-for-java`, then
+You need a JDK 21 or newer, and Maven. There is no Maven wrapper. The workflows build with the JDK
+named in `.github/workflows`, currently 25. Use that one if you want to see what the pipeline sees.
+The class files stay at Java 21 either way, because the property `version.java` in the root
+`pom.xml` says so. Two repositories come first, in this order: `spi-for-java`, then
 `adapter-platform-integration`. Build and install them in the workspace, see [Getting
 started](#getting-started), or read their [published snapshots](#snapshots-on-maven-central-and-in-github-packages).
 Then, here:
@@ -38,40 +39,40 @@ mvn spotless:apply
 mvn install
 ```
 
-`install` and not `install verify`: `install` already runs every phase `verify` has, so naming both
-walks two lifecycles per module and reports every compiler warning twice.
+Run `install`, not `install verify`. `install` already runs every phase of `verify`. Naming both
+runs two lifecycles per module and reports every compiler warning twice.
 
-Nothing in this repository needs Docker or a network: the Camunda 7 engine runs embedded, on an
-in-memory database. That makes a full run cheap compared to the other adapters, and it is why both
-platforms play the documented features through a real engine rather than a double, Spring Boot in
-`integration-tests` and Quarkus in `quarkus/integration-tests`. A core which is correct says nothing
-about a platform's glue ever calling it.
+Nothing in this repository needs Docker or a network. The Camunda 7 engine runs embedded, on an
+in-memory database. So a full run is cheap compared to the other adapters. That is also why both
+platforms test the documented features against a real engine and not against a test double: Spring
+Boot in `integration-tests`, Quarkus in `quarkus/integration-tests`. A correct core does not prove
+that the glue code of a platform ever calls it.
 
 Two tools read the javadoc, and each one sees a part the other misses. The compiler checks every
 class for a broken reference or broken HTML, the package private ones included. The javadoc plugin
-checks what the published documentation shows, so it starts at protected and stops there. One thing
-below protected is shown as well: the fields a serializable class carries into its serialized form,
-which is why a private field of an exception is asked for a comment too.
+checks what the published documentation shows, so it looks at protected and public only. One thing
+below protected is shown as well: the fields a serializable class writes into its serialized form.
+That is why a private field of an exception needs a comment too.
 
-A comment which is missing breaks the build. Everything this repository publishes has one now, and
-the plugin fails on a warning so that it stays that way. Write the sentence rather than switching
-the check off, and write the one a reader needs: what this repository publishes is read by somebody
-wiring it into an application, and `@return the value` is the same gap in a longer form. A module
-which publishes nothing sets `maven.javadoc.skip`, so a test module is never asked for comments.
+A missing comment breaks the build. Everything this repository publishes has one now, and the
+plugin fails on a warning so that it stays that way. Write the sentence instead of switching the
+check off. Write the sentence a reader needs: somebody who wires this repository into an
+application reads it, and `@return the value` tells them nothing. A module which publishes nothing
+sets `maven.javadoc.skip`, so a test module never needs comments.
 
-One thing the javadoc plugin cannot see is an accessor Lombok generates, because it reads the source
-and Lombok writes bytecode. So a published comment names a property in words rather than linking a
-getter which is not in the file. A published class which takes its constructor from Lombok writes
-that constructor out, because the documentation otherwise shows a parameterless one which does not
+The javadoc plugin cannot see an accessor which Lombok generates. The plugin reads the source, and
+Lombok writes bytecode. So a published comment names a property in words and does not link a getter
+which is not in the file. A published class which gets its constructor from Lombok writes that
+constructor out. Otherwise the documentation shows a constructor without parameters, which does not
 exist.
 
-Two javadoc blocks in a row are the gap neither tool sees. Javadoc keeps the last block before an
-element and drops the earlier ones without a word, so a comment somebody wrote and kept up to date
-appears nowhere. `bin/check-orphaned-javadoc.sh` finds that shape. A block it reports describes
-something, usually the element next door, so hang it back there rather than delete it.
+Neither tool sees two javadoc blocks in a row. Javadoc keeps the last block before an element and
+drops the earlier ones without a word. So a comment somebody wrote and kept up to date appears
+nowhere. `bin/check-orphaned-javadoc.sh` finds this case. A block it reports describes something,
+usually the element next to it. Move it back there instead of deleting it.
 
 The build also measures itself. `test-coverage-report/coverage-gate` is the last module of the
-reactor and fails below 85 percent of covered instructions per platform, while the rule is 90. See
+reactor. It fails below 85 percent of covered instructions per platform, while the rule is 90. See
 [Test coverage](./README.md#test-coverage) for what the gate prints and why the threshold is not
 the target.
 
@@ -93,14 +94,14 @@ an old snapshot which no longer changes.
 
 ## What a POM hands an application
 
-A tool which only translates our source belongs in scope `provided`, and the scope stands at the
-declaration in the module which uses the tool. Lombok is such a tool, an annotation processor is
-another. An application asked for a workflow engine, and every jar it did not ask for is one more
-thing to ship and to answer a CVE report about.
+A tool which only compiles our source belongs in scope `provided`. Write the scope at the
+declaration in the module which uses the tool. Lombok is such a tool, and so is an annotation
+processor. An application asked for a workflow engine. Every jar it did not ask for is one more
+thing to ship, and one more thing to answer a CVE (security vulnerability) report about.
 
-Writing `<optional>true</optional>` in a `dependencyManagement` does not do it. Maven copies a
-managed version, scope and exclusions into a dependency and leaves the optional flag behind, so the
-POM we publish says nothing at all about that dependency. Lombok reached the runtime classpath of
+`<optional>true</optional>` in a `dependencyManagement` does not help. Maven copies the managed
+version, scope and exclusions into a dependency, but not the optional flag. So the POM we publish
+says nothing at all about that dependency. Lombok reached the runtime classpath of
 every application that way, here and in the platform.
 
 ## How we write
@@ -111,12 +112,14 @@ sentence twice.
 
 Short main sentences, one thought each. One subordinate clause is enough. Active voice. The common
 word instead of the rare one: `use` instead of `leverage`, `about` instead of `regarding`, `so`
-instead of `consequently`. A technical term stays a technical term, but say what it means the first
+instead of `consequently`, `has` instead of `possesses`. A technical term stays a technical term, but say what it means the first
 time it turns up, and write an abbreviation out once. If a sentence trips you up when you read it
 aloud, rewrite it.
 
 This holds for every English text here, the javadoc, the commit message and the pull request
-included. Nothing a program reads is renamed for the sake of language: type and method names,
+included, and for the [wiki](https://github.com/camunda-community-hub/vanillabp-camunda7-adapter/wiki)
+as well. The section `How we write` in [`AGENTS.md`](./AGENTS.md) shows a few sentences before and
+after. Nothing a program reads is renamed for the sake of language: type and method names,
 configuration keys and artifact coordinates stay as they are, because code in other repositories
 points at them.
 
@@ -126,16 +129,16 @@ Where a change would make an entry of [`DECISIONS.md`](./DECISIONS.md) untrue, a
 it and wait for the answer. An entry is never edited away: it stays, marked as superseded and
 naming its successor, and the new decision takes the next free number.
 
-The second question is the SPI. What this adapter implements is published by the platform
-integration and served by three other adapters as well, so a change to the SPI is discussed there
-and not worked around here. An adapter may refuse what its BPMS cannot do, with a message naming
-the adapter, and that is a different thing from bending the contract.
+The second question is the SPI. The platform integration publishes what this adapter implements,
+and three other adapters implement it as well. So a change to the SPI is discussed there, and not
+worked around here. An adapter may refuse what its BPMS cannot do, with a message which names the
+adapter. That is not the same as bending the contract.
 
 ## Opening a pull request
 
-Work on a branch of your own and keep one subject per pull request. The description says what moved
-and why it had to. It may cite an issue or a conversation, because it is a record of a moment
-itself, which the code is not.
+Work on a branch of your own and keep one subject per pull request. The description says what
+changed and why. It may cite an issue or a conversation, because it records a moment in time. The
+code does not.
 
 Check the numbers your branch hands out before you open it. Another branch may have taken the
 decision number you used while you were writing, and once a pull request is merged a
@@ -149,15 +152,15 @@ After you corrected a number, `bin/check-decision-citations.sh` says whether eve
 decision still points at an entry of `DECISIONS.md`. The *Checks* workflow runs it on every pull
 request.
 
-The *Publish to GitHub Packages* workflow builds and tests every pull request and publishes nothing
-from a branch. A red check is a finding about your change. Read the log, which the workflow uploads
-as a test report when the build fails, and fix what it says rather than pushing again to see
-whether it goes away.
+The *Publish to GitHub Packages* workflow builds and tests every pull request. It publishes nothing
+from a branch. A red check is a finding about your change. When the build fails, the workflow
+uploads the log as a test report. Read it and fix what it says. Do not push again just to see
+whether the error goes away.
 
-A maintainer approves the first run of the workflows for somebody whose first pull request this is
-in the repository. A pull request from a fork builds and tests like any other, because the
-snapshots it needs can be read without a login. It cannot publish anything, because GitHub gives it
-no secrets of this repository. [What the build of a pull request can
+If this is your first pull request in the repository, a maintainer approves the first run of the
+workflows. A pull request from a fork builds and tests like any other, because it can read the
+snapshots it needs without a login. It cannot publish anything, because GitHub gives it no secrets
+of this repository. [What the build of a pull request can
 do](https://github.com/vanillabp/development-workspace#what-the-build-of-a-pull-request-can-do) says
 more.
 
@@ -168,9 +171,8 @@ Camunda Community
 Hub](https://github.com/vanillabp/development-workspace#the-license-agreement-of-the-camunda-community-hub)
 says how.
 
-`main` carries a ruleset, and it requires two green checks before a merge: `publish`, which is the
-build of that workflow, and `orphaned-javadoc-check`, which is the *Checks* workflow running the
-script named above. While one of them is red, GitHub does not offer the merge.
+`main` has a ruleset which requires two green checks before a merge. `publish` is the build of
+that workflow. `orphaned-javadoc-check` is the *Checks* workflow, which runs the script named above. While one of them is red, GitHub does not offer the merge.
 
 ## License
 

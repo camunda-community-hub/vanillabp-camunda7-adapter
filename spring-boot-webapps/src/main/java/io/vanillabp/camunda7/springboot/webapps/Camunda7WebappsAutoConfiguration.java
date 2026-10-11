@@ -16,17 +16,18 @@ import io.vanillabp.camunda7.springboot.processservice.Camunda7ProcessServiceCon
  * VanillaBP built.
  *
  * <p>
- * Two things have to be arranged for that, and neither is obvious:
+ * Two things are needed for that, and neither is obvious.
  * </p>
  *
  * <ol>
  * <li>Camunda's webapp auto-configuration only applies when a {@link CamundaBpmProperties}
- * bean exists, which normally comes with their engine auto-configuration. That one is
- * switched off here (see {@link Camunda7WebappsEnvironmentPostProcessor}), because it
- * would build a second engine, so this module contributes the properties bean itself.
- * Its defaults are what the webapps need, including the path <code>/camunda</code>.</li>
- * <li>The webapps resolve engines through the runtime container rather than through
- * beans, so {@link Camunda7WebappsRegistration} registers VanillaBP's engines there.</li>
+ * bean exists. That bean normally comes with Camunda's engine auto-configuration. This
+ * module switches that one off, because it would build a second engine (see
+ * {@link Camunda7WebappsEnvironmentPostProcessor}). So this module adds the properties
+ * bean itself. Its defaults are what the webapps need, including the path
+ * <code>/camunda</code>.</li>
+ * <li>The webapps find engines through the runtime container, not through beans. So
+ * {@link Camunda7WebappsRegistration} registers VanillaBP's engines there.</li>
  * </ol>
  */
 @AutoConfiguration(after = Camunda7ProcessServiceConfiguration.class)
@@ -45,8 +46,8 @@ public class Camunda7WebappsAutoConfiguration {
 
   /**
    * Registers VanillaBP's engines with the Camunda webapps, so Cockpit, Tasklist and Admin
-   * show them. The engines are resolved lazily, because they are built while the context
-   * refreshes and this bean is defined before that.
+   * show them. The engines are resolved lazily. They are built while the context
+   * refreshes, and this bean is defined before that.
    *
    * @param engines The engines VanillaBP built, one per configured adapter id
    * @param properties Which adapter ids the webapps serve, and who the administrator is

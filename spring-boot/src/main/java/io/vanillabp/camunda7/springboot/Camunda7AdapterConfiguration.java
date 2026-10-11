@@ -9,16 +9,16 @@ import io.vanillabp.integration.processservice.SpringBootMigrationAdapterAutoCon
 /**
  * Announces the Camunda 7 adapter to the VanillaBP Spring Boot integration.
  * <p>
- * This configuration must be constructed before the platform validates the configured
- * adapter types (hence {@code before = SpringBootMigrationAdapterAutoConfiguration}). It
- * must not declare any other bean definitions so it can be constructed very early.
+ * This configuration must be built before the platform validates the configured adapter
+ * types. That is why it says {@code before = SpringBootMigrationAdapterAutoConfiguration}.
+ * It must not declare any other bean definitions, so it can be built very early.
  */
 @AutoConfiguration(before = SpringBootMigrationAdapterAutoConfiguration.class)
 public class Camunda7AdapterConfiguration extends AdapterConfigurationBase {
 
   /**
-   * Spring Boot builds the class while it applies the auto-configuration, and that is all
-   * it does: the announcement below is read from the instance.
+   * Spring Boot builds the class while it applies the auto-configuration. That is all it
+   * does. The announcement below is read from the instance.
    */
   public Camunda7AdapterConfiguration() {
 

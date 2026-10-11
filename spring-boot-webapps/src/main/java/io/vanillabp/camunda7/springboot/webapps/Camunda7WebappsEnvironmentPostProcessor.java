@@ -12,19 +12,19 @@ import org.springframework.core.env.MapPropertySource;
  * starter this module depends on.
  *
  * <p>
- * That auto-configuration builds a {@code ProcessEngineFactoryBean} unconditionally, so
- * an application would end up with two engines on one datasource: the one VanillaBP
- * built and configured, and one Camunda built from <code>camunda.bpm.*</code>. Both would
- * run a job executor, and the second one would acquire the jobs of the first. The
- * webapps themselves do not need it - they resolve engines through the
+ * That auto-configuration always builds a {@code ProcessEngineFactoryBean}. So an
+ * application would end up with two engines on one datasource. One is the engine VanillaBP
+ * built and configured. The other is one Camunda built from <code>camunda.bpm.*</code>.
+ * Both would run a job executor, and the second one would take the jobs of the first. The
+ * webapps themselves do not need it. They find engines through the
  * {@code RuntimeContainerDelegate}, and {@link Camunda7WebappsRegistration} registers
  * VanillaBP's engines there.
  * </p>
  *
  * <p>
- * The value is contributed as the LAST property source, so an application can still see
- * and override it. Overriding it to <code>true</code> is a defect rather than a choice,
- * so it fails the start with a message saying why.
+ * The value is added as the LAST property source, so an application can still see and
+ * override it. Setting it to <code>true</code> is a defect, not a choice. So the start
+ * fails with a message which says why.
  * </p>
  */
 public class Camunda7WebappsEnvironmentPostProcessor implements EnvironmentPostProcessor {

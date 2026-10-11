@@ -29,9 +29,9 @@ import io.vanillabp.integration.test.utils.SuppressOutputExtension;
  * Boots an application with this module and asks the web applications what they serve.
  *
  * <p>
- * The interesting assertion is the engine NAME: it proves that Cockpit, Tasklist and
- * Admin talk to the engine VanillaBP built for the adapter id, and not to one Camunda's
- * own auto-configuration created.
+ * The interesting assertion is the engine NAME. It proves that Cockpit, Tasklist and
+ * Admin talk to the engine VanillaBP built for the adapter id. They do not talk to an
+ * engine which Camunda's own auto-configuration created.
  * </p>
  */
 @ExtendWith(SuppressOutputExtension.class)
@@ -40,8 +40,8 @@ import io.vanillabp.integration.test.utils.SuppressOutputExtension;
     properties = {
         "spring.datasource.url=jdbc:h2:mem:c7-webapps-boot;DB_CLOSE_DELAY=-1", "vanillabp.adapters.camunda7.webapps.admin-user.id=demo", "vanillabp.adapters.camunda7.webapps.admin-user.password=demo", "vanillabp.adapters.camunda7.webapps.admin-user.first-name=Demo", "vanillabp.adapters.camunda7.webapps.admin-user.last-name=User"
     })
-// the runtime container is JVM-wide, so this context releases its engine when the class
-// is done instead of leaving it there for the next test class
+// the runtime container is JVM-wide. So this context releases its engine when the class
+// is done, and does not leave it there for the next test class
 @DirtiesContext(classMode = ClassMode.AFTER_CLASS)
 public class Camunda7WebappsBootTest {
 
@@ -58,8 +58,8 @@ public class Camunda7WebappsBootTest {
   @BeforeEach
   public void restClient() {
 
-    // redirects are NOT followed: where the web application sends a visitor is part of
-    // what is asserted here
+    // redirects are NOT followed. Where the web application sends a visitor is part of
+    // what this test checks
     rest = RestClient
         .builder()
         .baseUrl("http://localhost:"
@@ -72,11 +72,10 @@ public class Camunda7WebappsBootTest {
   @DisplayName("The engine auto-configuration of Camunda is switched off in a booted application")
   public void camundasOwnAutoConfigurationIsOff() {
 
-    // the unit test of the post processor proves what it contributes, this one proves
-    // that it RUNS. Interface and spring.factories key have to name the same type, and
-    // measured: naming the old key while implementing the new interface fails the boot
-    // with "not assignable to factory type", so this test is what catches a half-done
-    // migration
+    // the unit test of the post processor proves what it adds. This one proves that it
+    // RUNS. The interface and the spring.factories key have to name the same type. We
+    // measured it: naming the old key while implementing the new interface fails the boot
+    // with "not assignable to factory type". So this test catches a half-done migration
     assertEquals(
         "false",
         context.getEnvironment().getProperty(Camunda7WebappsEnvironmentPostProcessor.CAMUNDA_BPM_ENABLED),
@@ -136,7 +135,7 @@ public class Camunda7WebappsBootTest {
         + "\"}]", engines.getBody());
 
     // Camunda's engine auto-configuration would have added a second engine on the
-    // application's datasource, whose job executor would acquire VanillaBP's jobs
+    // application's datasource. Its job executor would take VanillaBP's jobs
     assertEquals(
         0,
         context.getBeanNamesForType(ProcessEngineFactoryBean.class).length,

@@ -13,14 +13,14 @@ import io.vanillabp.camunda7.springboot.engine.Camunda7EngineHolder;
 import io.vanillabp.integration.test.utils.SuppressOutputExtension;
 
 /**
- * Unit test of the {@link Camunda7EngineHolder}'s job-executor lifecycle:
- * the engine is built with the executor INACTIVE (deferred activation); the executor
- * is engine-global while start/stop is notified per workflow module, so the started
- * modules are reference-counted - the executor stops only when the LAST started
- * module stops, and unconditionally on {@code close()} (which is idempotent). The
- * holder is built on a NAMED, application-provided datasource bean
- * (<code>data-source-name</code>), which also covers the named-bean resolution path
- * (VanillaBP never builds its own pool - datasources are the application's concern).
+ * Unit test of the job-executor lifecycle of the {@link Camunda7EngineHolder}. The engine
+ * is built with the executor INACTIVE (deferred activation). The executor belongs to the
+ * whole engine, while start and stop arrive per workflow module. So the started modules
+ * are counted. The executor stops only when the LAST started module stops. It always
+ * stops on {@code close()}, and {@code close()} may be called twice. The holder is built
+ * on a NAMED datasource bean which the application provides (<code>data-source-name</code>).
+ * So the test also covers how a named bean is resolved. VanillaBP never builds its own
+ * pool, because datasources are the application's job.
  */
 @ExtendWith(SuppressOutputExtension.class)
 @SuppressOutputExtension.SuppressBackgroundOutput
@@ -41,9 +41,9 @@ public class Camunda7EngineHolderTest {
 
     final var holder = new Camunda7EngineHolder(
         "holder-test", namedDataSourceProperties("holderTestDataSource"), null, null, null, null, null);
-    // Spring lifecycle done manually: SpringProcessEngineConfiguration needs an
-    // ApplicationContext (Spring-bean resolution in scripting/expressions), and the
-    // named datasource bean is resolved from it
+    // Spring lifecycle done by hand. SpringProcessEngineConfiguration needs an
+    // ApplicationContext to resolve Spring beans in scripts and expressions. The named
+    // datasource bean is resolved from it, too
     try (var applicationContext = new StaticApplicationContext()) {
       applicationContext
           .getBeanFactory()
@@ -76,7 +76,7 @@ public class Camunda7EngineHolderTest {
       holder.stopWorkflowProcessing("module-b");
       Assertions.assertFalse(holder.isJobExecutorActive());
 
-      // restartable (e.g. tests or future lifecycle features)
+      // it can start again (e.g. for tests or future lifecycle features)
       holder.startWorkflowProcessing("module-a");
       Assertions.assertTrue(holder.isJobExecutorActive());
 
@@ -84,7 +84,7 @@ public class Camunda7EngineHolderTest {
       holder.close();
     }
 
-    // close stops the executor unconditionally, before the engine closes - and is
+    // close stops the executor unconditionally, before the engine closes. And it is
     // safe to call more than once
     Assertions.assertFalse(holder.isJobExecutorActive());
     holder.close();

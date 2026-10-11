@@ -8,36 +8,36 @@ import io.vanillabp.camunda7.engine.Camunda7EngineProperties;
 
 /**
  * The Camunda 7 adapter's OVERLAY of the shared <code>vanillabp.*</code> configuration
- * tree: the adapter's engine settings live at the canonical per-adapter location
- * <code>vanillabp.adapters.&lt;id&gt;.*</code> (keys documented in
+ * tree. The adapter's engine settings live at the canonical place of every adapter,
+ * <code>vanillabp.adapters.&lt;id&gt;.*</code>. The keys are documented in
  * {@link Camunda7EngineProperties}: <code>database-schema-update</code>,
- * <code>history-time-to-live</code>, <code>data-source-name</code> - on Spring Boot
- * the name of an application-provided {@code DataSource} BEAN). A second
- * {@code @ConfigurationProperties} class over the same prefix coexists with the
- * platform's binding of the core model; keys unknown to either view are ignored by
- * the JavaBean binding.
+ * <code>history-time-to-live</code>, <code>data-source-name</code>. On Spring Boot the
+ * last one is the name of a {@code DataSource} BEAN which the application provides. So
+ * this is a second {@code @ConfigurationProperties} class over the same prefix. It lives
+ * next to the platform's binding of the core model. The JavaBean binding ignores the keys
+ * which one view does not know.
  * <p>
- * The adapter-id set is NEVER derived from this overlay map - it always comes from the
- * platform's core properties ({@code adapterTypes()} filtered by type
- * {@code camunda7}); the overlay is a per-known-id lookup only (environment-variable
- * overrides can materialize phantom map entries in the overlay).
+ * The set of adapter ids NEVER comes from this overlay map. It always comes from the
+ * platform's core properties: {@code adapterTypes()}, filtered by the type
+ * {@code camunda7}. The overlay only looks up the settings of an id that is known. The
+ * reason: environment variables can create phantom map entries in the overlay.
  */
 @ConfigurationProperties("vanillabp")
 public class VanillaBpCamunda7Properties {
 
   /**
-   * Spring Boot builds the class and fills it with the keys of this overlay it recognises.
-   * An application which configures nothing keeps the empty maps, and every lookup then
-   * answers what the adapter section or the default says.
+   * Spring Boot builds the class and fills it with the keys of this overlay it knows. An
+   * application which configures nothing keeps the empty maps. Then every lookup answers
+   * what the adapter section or the default says.
    */
   public VanillaBpCamunda7Properties() {
 
   }
 
   /**
-   * The adapter sections of the shared tree, keyed by adapter ID - only the
-   * Camunda 7 engine keys are modeled here (bound directly onto the
-   * platform-neutral {@link Camunda7EngineProperties}).
+   * The adapter sections of the shared tree, keyed by adapter ID. Only the Camunda 7
+   * engine keys are modeled here. They are bound directly onto the platform-neutral
+   * {@link Camunda7EngineProperties}.
    */
   private Map<String, Camunda7EngineProperties> adapters = Map.of();
 
@@ -161,9 +161,10 @@ public class VanillaBpCamunda7Properties {
     private Map<String, Camunda7ScopedProperties> adapters = Map.of();
 
     /**
-     * The tasks of this workflow. Modelled here for one reason only: a key set at this level
-     * which the adapter does not resolve there has to be findable, so the boot can say where
-     * the key IS read instead of leaving a line which does nothing.
+     * The tasks of this workflow. They are modelled here for one reason only. A key may be
+     * set at this level although the adapter does not resolve it there. The boot has to
+     * find such a key, so it can say where the key IS read. Otherwise the line would just
+     * do nothing.
      */
     private Map<String, Camunda7TaskProperties> tasks = Map.of();
 
@@ -208,8 +209,8 @@ public class VanillaBpCamunda7Properties {
   }
 
   /**
-   * The Camunda 7 keys of one task - the most specific level, and the one
-   * <code>allow-listeners</code> does not resolve at.
+   * The Camunda 7 keys of one task. This is the most specific level, and
+   * <code>allow-listeners</code> is not resolved at it.
    */
   public static class Camunda7TaskProperties {
 
@@ -264,9 +265,9 @@ public class VanillaBpCamunda7Properties {
 
     /**
      * Whether the execution listeners somebody modelled are served by
-     * <code>@WorkflowTask</code> methods, for this scope. A {@code Boolean} rather than a
-     * primitive, because unset has to be told apart from {@code false}: this is what lets a
-     * workflow module switch OFF what the adapter switched on.
+     * <code>@WorkflowTask</code> methods, for this scope. It is a {@code Boolean}, not a
+     * primitive, because "unset" has to differ from {@code false}. That lets a workflow
+     * module switch OFF what the adapter switched on.
      */
     private Boolean allowListeners;
 
@@ -315,9 +316,10 @@ public class VanillaBpCamunda7Properties {
   }
 
   /**
-   * The Camunda 7 keys of one workflow module's adapter section: the scoped keys every
-   * level has, plus the tenant, which only a workflow module may override because a tenant
-   * id is an attribute of the deployment this adapter makes per workflow module.
+   * The Camunda 7 keys of one workflow module's adapter section. These are the scoped keys
+   * every level has, plus the tenant. Only a workflow module may override the tenant. The
+   * reason: a tenant id belongs to the deployment, and this adapter makes one deployment
+   * per workflow module.
    */
   public static class Camunda7ModuleScopedProperties extends Camunda7ScopedProperties {
 
@@ -458,8 +460,8 @@ public class VanillaBpCamunda7Properties {
   }
 
   /**
-   * Every <code>allow-listeners</code> this configuration puts at TASK level, fully spelled out
-   * - the level which does not resolve this key.
+   * Every <code>allow-listeners</code> this configuration puts at TASK level, fully spelled
+   * out. That level does not resolve this key.
    *
    * @param adapterId The adapter id
    * @return The keys found, in configuration order
@@ -496,9 +498,9 @@ public class VanillaBpCamunda7Properties {
   }
 
   /**
-   * The Camunda tenant configured for one workflow module of one adapter id: the module's
-   * own name where it has one, the adapter's otherwise. What the mode then makes of it is
-   * the adapter's business.
+   * The Camunda tenant configured for one workflow module of one adapter id. It is the
+   * module's own name where it has one, otherwise the adapter's. What the mode then makes
+   * of it is the adapter's business.
    *
    * @param adapterId The adapter id
    * @param workflowModuleId The workflow module ID

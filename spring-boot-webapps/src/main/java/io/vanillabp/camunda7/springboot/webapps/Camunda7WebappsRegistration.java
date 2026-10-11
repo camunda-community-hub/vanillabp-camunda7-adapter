@@ -26,16 +26,16 @@ import io.vanillabp.camunda7.springboot.webapps.Camunda7WebappsProperties.AdminU
  * Makes the engines VanillaBP built visible to Cockpit, Tasklist and Admin.
  *
  * <p>
- * The webapps do not look for {@code ProcessEngine} beans, they ask the
- * {@link RuntimeContainerDelegate} - and VanillaBP does not register its engines there,
- * because nothing in the adapter needs a global registry. This class registers every
- * engine whose adapter id has the webapps enabled, and removes it again when the context
- * stops, so a second context in the same JVM does not find a stale engine.
+ * The webapps do not look for {@code ProcessEngine} beans. They ask the
+ * {@link RuntimeContainerDelegate} instead. VanillaBP does not register its engines there,
+ * because nothing in the adapter needs a global registry. So this class registers every
+ * engine whose adapter id has the webapps enabled. It removes the engine again when the
+ * context stops, so a second context in the same JVM does not find a stale engine.
  * </p>
  *
  * <p>
  * The engine name is part of the webapps' URLs
- * (<code>/camunda/app/cockpit/vanillabp-camunda7-&lt;adapter-id&gt;/</code>), and
+ * (<code>/camunda/app/cockpit/vanillabp-camunda7-&lt;adapter-id&gt;/</code>).
  * <code>/camunda</code> redirects to it. With several adapter ids the webapps offer all
  * of them in their engine switcher.
  * </p>
@@ -53,7 +53,7 @@ public class Camunda7WebappsRegistration implements SmartLifecycle {
   private boolean running;
 
   /**
-   * Remembers what it registered, so the webapps are left as they were found when the
+   * Remembers what it registered. So the webapps are left as they were found when the
    * application shuts down.
    *
    * @param engines The engines VanillaBP built, resolved lazily because they come into
@@ -133,9 +133,9 @@ public class Camunda7WebappsRegistration implements SmartLifecycle {
 
   /**
    * Creates the configured administrator, the group <code>camunda-admin</code> and the
-   * grants that group needs, which is what the webapps expect to find - without a member
-   * of that group they open their setup wizard instead of the login. The recipe is
-   * Camunda's own, see their {@code CreateAdminUserConfiguration}.
+   * grants that group needs. The webapps expect to find all three. Without a member of that
+   * group they open their setup wizard instead of the login. The recipe is Camunda's own,
+   * see their {@code CreateAdminUserConfiguration}.
    *
    * @param adapterId The adapter id whose engine is set up
    * @param engine    The engine

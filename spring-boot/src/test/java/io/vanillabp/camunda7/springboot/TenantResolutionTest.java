@@ -14,9 +14,9 @@ import io.vanillabp.integration.test.utils.SuppressOutputExtension;
 
 /**
  * The Camunda tenant a workflow module is deployed into is resolved per workflow module,
- * with a fallback to the adapter. Two modules sharing a BPMN process id depend on it: one
- * name for the whole adapter puts both into one tenant, and a name for one of them is how
- * the application gives that module a scope of its own.
+ * with a fallback to the adapter. Two modules which share a BPMN process id depend on it.
+ * One name for the whole adapter puts both into one tenant. A name for one of them gives
+ * that module a scope of its own.
  */
 @ExtendWith(SuppressOutputExtension.class)
 public class TenantResolutionTest {

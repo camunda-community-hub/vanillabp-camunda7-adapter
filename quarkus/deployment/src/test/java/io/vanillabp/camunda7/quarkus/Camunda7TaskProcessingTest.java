@@ -19,15 +19,15 @@ import jakarta.persistence.EntityManager;
 import jakarta.transaction.UserTransaction;
 
 /**
- * End-to-end test of {@code @WorkflowTask} processing on Quarkus - a
- * real embedded engine on Agroal/Narayana: handlers run inside the engine's JTA
- * job transaction with the CDI request context active. The three outcomes:
+ * End-to-end test of {@code @WorkflowTask} processing on Quarkus, with a real embedded
+ * engine on Agroal and Narayana. Handlers run inside the engine's JTA job transaction,
+ * with the CDI request context active. The three outcomes:
  * <ul>
- * <li>normal return - aggregate mutation committed, task completed;</li>
- * <li>{@code TaskException} - error-boundary routing WITH committed aggregate
- * changes (the V1 contract);</li>
- * <li>technical exception - the job's JTA transaction rolls back (aggregate
- * unchanged), the job is retried (retry counter decremented).</li>
+ * <li>normal return: the aggregate change is committed, the task is completed.</li>
+ * <li>{@code TaskException}: the error boundary takes over, and the aggregate changes are
+ * committed all the same (the V1 contract).</li>
+ * <li>technical exception: the job's JTA transaction rolls back (aggregate unchanged), and
+ * the job is retried (retry counter decremented).</li>
  * </ul>
  */
 @ExtendWith(SuppressOutputExtension.class)
@@ -46,9 +46,9 @@ public class Camunda7TaskProcessingTest {
           .addAsResource("application.yaml")
           .addAsResource("c7-task/processes/task-matrix.bpmn", "c7-test/processes/task-matrix.bpmn")
           .addAsResource("workflow-module-descriptor/workflow-module", "META-INF/workflow-module"))
-      // own database: the module's shared H2 URL (DB_CLOSE_DELAY=-1) would leak
-      // residual instances between test classes (the failing job's instance of
-      // this test stays active on purpose)
+      // a database of its own. The module's shared H2 URL (DB_CLOSE_DELAY=-1) would
+      // leak left-over instances between test classes. The instance of the failing job
+      // of this test stays active on purpose
       .overrideRuntimeConfigKey("quarkus.datasource.jdbc.url", "jdbc:h2:mem:c7-task-test;DB_CLOSE_DELAY=-1");
 
   @Inject
@@ -127,8 +127,8 @@ public class Camunda7TaskProcessingTest {
 
     final var aggregateId = start("QTaskProcess");
 
-    // The instance is created AFTER the commit, so waiting for it to
-    // disappear would end before it ever existed - the results are the signal
+    // the instance is created AFTER the commit. So waiting for it to disappear would
+    // end before it ever existed. The results are the signal
     final var deadline = System.currentTimeMillis() + 15000;
     while (!"happy|error-raised|handled".equals(resultsOf(aggregateId))) {
       Assertions.assertTrue(
@@ -138,9 +138,9 @@ public class Camunda7TaskProcessingTest {
       Thread.sleep(100);
     }
 
-    // 'happy' committed by the first task, 'error-raised' committed ALTHOUGH the
-    // handler threw (TaskException = BPMN error, no rollback), 'handled' via the
-    // error boundary
+    // 'happy' is committed by the first task. 'error-raised' is committed ALTHOUGH
+    // the handler threw (TaskException = BPMN error, no rollback). 'handled' comes
+    // through the error boundary
     Assertions.assertEquals("happy|error-raised|handled", resultsOf(aggregateId));
 
   }
@@ -205,8 +205,8 @@ public class Camunda7TaskProcessingTest {
       final var aggregate = entityManager.find(QTaskAggregate.class, aggregateId);
       workflowService.completeAsyncTask(aggregate, taskId);
 
-      // still inside the caller's transaction: the engine has NOT been touched -
-      // that is what makes the operation repeatable when it loses a conflict
+      // still inside the caller's transaction: the engine has NOT been touched. That
+      // makes the operation repeatable when it loses a conflict
       Assertions.assertTrue(
           parkedExecutionExists(taskId),
           "the task was resumed inside the caller's transaction");
@@ -302,8 +302,8 @@ public class Camunda7TaskProcessingTest {
       Thread.sleep(100);
     }
 
-    // the instance stays (task not completed) and the handler's mutation was
-    // rolled back with the job's JTA transaction
+    // the instance stays (task not completed). The handler's change was rolled back
+    // with the job's JTA transaction
     Assertions.assertEquals(1, countInstances(aggregateId));
     Assertions.assertNull(resultsOf(aggregateId));
 

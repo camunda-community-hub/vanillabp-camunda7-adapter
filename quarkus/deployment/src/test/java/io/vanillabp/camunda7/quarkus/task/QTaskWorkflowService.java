@@ -9,8 +9,8 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 
 /**
- * Workflow service of the Quarkus task-processing test: the three
- * outcomes on a real embedded engine with JTA transactions.
+ * Workflow service of the Quarkus task-processing test. It produces the three outcomes on
+ * a real embedded engine with JTA transactions.
  */
 @ApplicationScoped
 @WorkflowService(
@@ -42,8 +42,8 @@ public class QTaskWorkflowService {
   public void qError(
       final QTaskAggregate aggregate) {
 
-    // the mutation has to be COMMITTED although the handler throws - the V1
-    // TaskException contract (BPMN error, no rollback)
+    // the mutation has to be COMMITTED although the handler throws. That is the V1
+    // TaskException contract: BPMN error, no rollback
     aggregate.appendResult("error-raised");
     throw new TaskException("PaymentFailed", "PAYMENT_FAILED");
 
@@ -79,8 +79,8 @@ public class QTaskWorkflowService {
   public void qFails(
       final QTaskAggregate aggregate) {
 
-    // must NEVER become visible: a technical exception rolls back the job's JTA
-    // transaction including this mutation
+    // must NEVER become visible. A technical exception rolls back the job's JTA
+    // transaction, and this mutation with it
     aggregate.appendResult("must-never-be-visible");
     throw new IllegalStateException("boom-q21b");
 

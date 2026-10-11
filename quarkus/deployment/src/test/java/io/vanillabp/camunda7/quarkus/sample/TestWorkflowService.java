@@ -7,8 +7,8 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 
 /**
- * The workflow service bound to the {@code TestProcess} BPMN process. Its presence
- * makes the VanillaBP Quarkus integration build a {@link ProcessService} bean for
+ * The workflow service bound to the {@code TestProcess} BPMN process. Because it exists,
+ * the VanillaBP Quarkus integration builds a {@link ProcessService} bean for
  * {@link TestAggregate}.
  */
 @ApplicationScoped

@@ -25,33 +25,38 @@ import io.vanillabp.integration.test.utils.OneFreePortPerJvm;
 import io.vanillabp.integration.test.utils.SuppressOutputExtension;
 
 /**
- * The startup check about the versions the engine still holds, on Quarkus. An application
- * only ever brings its newest model, and what its {@code @WorkflowTask} methods have to keep
- * serving are the workflows still running on the versions before it - so the check reads the
- * engine's own models, counts the workflows on them and reports what the application no
+ * The startup check on Quarkus about the versions the engine still holds. An application
+ * only ever brings its newest model. But its {@code @WorkflowTask} methods have to keep
+ * serving the workflows which still run on the versions before it. So the check reads the
+ * engine's own models, counts the workflows on them, and reports what the application no
  * longer serves.
  * <p>
  * <strong>Why this test looked impossible.</strong> The check has nothing to report unless
- * two generations of one model met one database, and a Quarkus prod-mode test builds its
- * application once and boots it once per class. It does not have to: the application is
- * built once here and STARTED TWICE, because three things this repository already has line
- * up. {@code QuarkusProdModeTest} can stop and start the built artifact on demand; the
- * resources location is runtime configuration, which the build-time resource index was made
- * for, so one archive can carry both models and a boot picks the one it deploys; and the
- * datasource url is runtime configuration too, so the two boots can meet on a file database
- * which outlives the first JVM. The alternative was to measure this one check on Spring Boot only
- * and write that into the coverage gate, which would have been the first entry of a list
- * that grows.
+ * two generations of one model met one database. And a Quarkus prod-mode test builds its
+ * application once and boots it once per class. But it does not have to. Here the
+ * application is built once and STARTED TWICE, because three things this repository already
+ * has fit together:
+ * <ul>
+ * <li>{@code QuarkusProdModeTest} can stop and start the built artifact on demand.</li>
+ * <li>the resources location is runtime configuration. The build-time resource index was
+ * made for that. So one archive can carry both models, and a boot picks the one it
+ * deploys.</li>
+ * <li>the datasource url is runtime configuration too. So the two boots can meet on a file
+ * database which outlives the first JVM.</li>
+ * </ul>
+ * The alternative was to measure this one check on Spring Boot only, and to write that into
+ * the coverage gate. That would have been the first entry of a list which grows.
  * <p>
- * Both boots run the new model. The old one comes in between, the way a node still running
- * the older release deploys it during a rolling deployment: through the engine, while the first
- * boot runs, so the engine numbers it 2. The application cannot deploy it itself, because a
- * start refuses the version it deploys while a task of it has no method for that version, and
- * the old model has such a task. The second boot deploys the new model again, as version 3.
+ * Both boots run the new model. The old one comes in between, the way a node which still
+ * runs the older release deploys it during a rolling deployment. It comes through the
+ * engine, while the first boot runs, so the engine numbers it 2. The application cannot
+ * deploy it itself. A start refuses to deploy a version while a task of it has no method
+ * for that version, and the old model has such a task. The second boot deploys the new
+ * model again, as version 3.
  * <p>
- * What the second boot finds: version 2 with a workflow parked in the task which the new model
- * dropped, a method which still serves that task for that version, and a method naming a
- * version the engine never held.
+ * What the second boot finds: version 2 with a workflow parked in the task which the new
+ * model dropped, a method which still serves that task for that version, and a method which
+ * names a version the engine never held.
  */
 @ExtendWith(SuppressOutputExtension.class)
 @SuppressOutputExtension.SuppressBackgroundOutput
@@ -62,16 +67,16 @@ public class Camunda7OldProcessVersionsTest {
   private static final int PORT = OneFreePortPerJvm.getPort();
 
   /**
-   * A file database rather than an in-memory one: the first application's JVM is gone before
-   * the second one boots, and what this test is about is the two of them meeting.
+   * A file database, not an in-memory one. The first application's JVM is gone before the
+   * second one boots, and this test is about the two of them meeting.
    */
   private static final Path DATABASE = Path
       .of("target", "c7-old-process-versions")
       .toAbsolutePath();
 
   static {
-    // a database left behind by an earlier build would hold workflows this run never
-    // started, and the check would report them
+    // a database left behind by an earlier build would hold workflows which this run
+    // never started. And the check would report them
     removeTheDatabaseOfAnEarlierBuild();
   }
 
@@ -87,22 +92,22 @@ public class Camunda7OldProcessVersionsTest {
               "c7-versions/v2/old-process-versions.bpmn",
               "c7-versions/v2/old-process-versions.bpmn")
           .addAsResource("workflow-module-descriptor/c7-versions", "META-INF/workflow-module"))
-      // JVM args needed for tracking coverage - check this module's POM for the
-      // systemPropertyVariables feeding 'jacoco.agent'
+      // JVM args needed for tracking coverage. See this module's POM for the
+      // systemPropertyVariables which feed 'jacoco.agent'
       .setJVMArgs(testCoverageJavaAgent(quarkusProdModeTestDefaults()))
       .setRun(true)
       .setRuntimeProperties(theBootDeploying("v2"));
 
   /**
-   * How long the test waits for the workflow of the first boot to park in the task the new
-   * model drops. Generous, because a build machine running other builds is allowed to be slow.
+   * How long the test waits for the workflow of the first boot to park in the task which the
+   * new model drops. It is generous, because a build machine which runs other builds may be
+   * slow.
    */
   private static final long PATIENCE = 60000;
 
   /**
    * What one boot of this application is configured with. Both values are runtime
-   * configuration, which is what lets one built artifact be two generations of an
-   * application.
+   * configuration. That lets one built artifact be two generations of an application.
    *
    * @param generation The directory of the model generation this boot deploys
    * @return The runtime properties of that boot
@@ -158,8 +163,8 @@ public class Camunda7OldProcessVersionsTest {
         reported.contains("OldProcessVersionsProcess"),
         () -> "the report has to name the BPMN process: "
             + reported);
-    // asserted in the shape the case below asks NOT to be there, so rewording that
-    // sentence fails here rather than making the negative assertion go quiet
+    // checked in the same shape which the case below asks NOT to be there. So if that
+    // sentence is reworded, this fails, and the negative check does not just go quiet
     assertTrue(
         reported.contains("definition(s) 'servedForAnUnknownVersion'"),
         () -> "the report has to name the task definition nobody serves for that version: "
@@ -176,8 +181,8 @@ public class Camunda7OldProcessVersionsTest {
   }
 
   /**
-   * Deploys the old model while the first boot runs, as a node still on the older release
-   * would.
+   * Deploys the old model while the first boot runs, as a node which still runs the older
+   * release would.
    */
   private void deployTheOldModelAsAnotherNodeWould() {
 
@@ -192,9 +197,9 @@ public class Camunda7OldProcessVersionsTest {
   }
 
   /**
-   * Starts a workflow on the old model and waits until it sits in the task the new model no
-   * longer has. That parked workflow is the whole point: without it the engine
-   * would hold an older version nobody runs on, and the check would have nothing to say.
+   * Starts a workflow on the old model and waits until it sits in the task which the new
+   * model no longer has. That parked workflow is the whole point. Without it the engine would
+   * hold an older version which nobody runs on, and the check would have nothing to say.
    */
   private void startAWorkflowAndLetItParkInTheDroppedTask() throws InterruptedException {
 

@@ -21,15 +21,15 @@ import jakarta.inject.Inject;
 
 /**
  * What this adapter hands an extension on Quarkus: one {@link Camunda7EngineFacts} per
- * configured adapter id, answering what the adapter itself acts on.
+ * configured adapter id. It answers with what the adapter itself acts on.
  * <p>
- * The pin this class was written for is the transaction answer. An extension of version 1
- * assumed that an engine on Quarkus always joins the application's transaction, because the
- * engine is built on the container's transaction manager. That is true of the transaction
- * manager and false of the commit: an adapter id given a data source of its own writes to a
- * resource the application's persistence does not take part in, so the two commit separately
- * and this adapter treats such an engine as separate everywhere else. The answer is the
- * adapter's, and here it is measured on the platform where the assumption was made.
+ * This class was written to pin the transaction answer. An extension of version 1 assumed
+ * that an engine on Quarkus always joins the application's transaction, because the engine
+ * is built on the container's transaction manager. That is true of the transaction manager,
+ * but false of the commit. An adapter id with a data source of its own writes to a resource
+ * which the application's persistence does not take part in. So the two commit apart, and
+ * this adapter treats such an engine as separate everywhere else. The answer is the
+ * adapter's. Here it is measured on the platform where the assumption was made.
  */
 @ExtendWith(SuppressOutputExtension.class)
 @SuppressOutputExtension.SuppressBackgroundOutput
@@ -96,8 +96,8 @@ public class Camunda7EngineFactsOnQuarkusTest {
             "the id on 'quarkus.datasource.c7b' writes to a resource the application does not join, "
                 + "whatever the transaction manager enlists");
 
-    // and it is the adapter's own answer, not a second reading: the same engine says it
-    // delivers repeatable tasks for exactly the same reason
+    // and it is the adapter's own answer, not a second reading. The same engine says it
+    // delivers repeatable tasks, for exactly the same reason
     Assertions
         .assertTrue(
             engineRegistry
@@ -159,7 +159,7 @@ public class Camunda7EngineFactsOnQuarkusTest {
 
     Assertions.assertNotNull(deployed, "the adapter deployed this definition, so it knows its version");
     Assertions.assertEquals("1", deployed.version());
-    // how an operator reads it is written by the platform, so every BPMS spells it alike
+    // the platform writes how an operator reads it, so every BPMS spells it alike
     Assertions.assertEquals("1", deployed.displayVersion());
     Assertions
         .assertNull(

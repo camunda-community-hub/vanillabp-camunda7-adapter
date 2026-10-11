@@ -25,17 +25,16 @@ import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
 
 /**
- * What the Quarkus end-to-end tests can see of the running application: a handful of
- * <code>introspect/...</code> endpoints reporting the aggregates and the embedded
- * engine's state, and triggering the {@code ProcessService} operations the tests want
- * to observe.
+ * What the Quarkus end-to-end tests can see of the running application. These are a
+ * handful of <code>introspect/...</code> endpoints. They report the aggregates and the
+ * state of the embedded engine, and they trigger the {@code ProcessService} operations
+ * which the tests want to observe.
  * <p>
- * A prod-mode test runs the application in a forked JVM, so nothing of it can be
- * injected into the test - everything travels through these endpoints. The ones
- * driving VanillaBP open their transaction themselves
- * ({@link jakarta.transaction.UserTransaction}), because what happens inside the
- * caller's transaction and what only after its commit is half of what the tests are
- * about.
+ * A prod-mode test runs the application in a forked JVM. So nothing of it can be injected
+ * into the test, and everything travels through these endpoints. The ones which drive
+ * VanillaBP open their transaction themselves ({@link jakarta.transaction.UserTransaction}).
+ * The reason: half of what the tests are about is what happens inside the caller's
+ * transaction, and what happens only after its commit.
  */
 @Path("/introspect")
 @Produces(MediaType.APPLICATION_JSON)
@@ -62,8 +61,8 @@ public class C7E2eIntrospectionController {
   UserTransaction userTransaction;
 
   /**
-   * The count of connections taken from the application's pool - the one number which says
-   * whether a sleeping engine really left the database alone.
+   * The count of connections taken from the application's pool. It is the one number which
+   * says whether a sleeping engine really left the database alone.
    */
   @Inject
   C7ConnectionsTaken connectionsTaken;
@@ -116,8 +115,8 @@ public class C7E2eIntrospectionController {
   }
 
   /**
-   * The aggregates of the workflows the ENGINE started on its own - the
-   * application never creates one of them.
+   * The aggregates of the workflows which the ENGINE started on its own. The application
+   * never creates one of them.
    *
    * @return One "id|processedBy|endedAs" per aggregate
    */
@@ -136,8 +135,8 @@ public class C7E2eIntrospectionController {
   }
 
   /**
-   * Which job executor the engine of the adapter id runs, by class name. It is how a test
-   * sees whether the property asking for the due-date sleep reached the engine.
+   * Which job executor the engine of the adapter id runs, by class name. With it a test
+   * sees whether the property which asks for the due-date sleep reached the engine.
    *
    * @return The simple class name of the engine's job executor
    */
@@ -158,9 +157,9 @@ public class C7E2eIntrospectionController {
 
   /**
    * How many connections were taken from the application's datasource since it was created.
-   * A connection is what anything in the application needs before it can say a word to the
-   * database, so a count which does not move is a database nobody spoke to - which is what
-   * the due-date sleep is worth measuring.
+   * Anything in the application needs a connection before it can say a word to the
+   * database. So a count which does not move means that nobody spoke to the database. That
+   * is what makes the due-date sleep worth measuring.
    *
    * @return How many connections were taken since the application started
    */
@@ -175,23 +174,23 @@ public class C7E2eIntrospectionController {
 
   /**
    * What the engine's job acquisition is doing, and what it has cost the database so far.
-   * Nothing here touches the database, which is the point: a measurement of silence cannot
-   * ask its question through the thing it measures, and every engine command wakes the
-   * acquisition it is asking about.
+   * Nothing here touches the database, and that is the point. A measurement of silence
+   * cannot ask its question through the thing it measures. And every engine command wakes
+   * the acquisition it asks about.
    * <p>
-   * The two values a measurement leans on are <code>lastCycleAt</code> and
+   * A measurement leans on two values: <code>lastCycleAt</code> and
    * <code>foundNothing</code>. Together they say that the acquisition ran a cycle which
-   * found nothing to do and is therefore waiting for a due date rather than backing off
-   * after work. A cycle which runs later moves <code>lastCycleAt</code>, so a sleep which
-   * was interrupted cannot look like a sleep which held.
+   * found nothing to do. So it waits for a due date, and does not back off after work. A
+   * cycle which runs later moves <code>lastCycleAt</code>. So a sleep which was interrupted
+   * cannot look like a sleep which held.
    * <p>
-   * The engine's own rule has a fourth condition this cannot see, the executing threads
-   * being full. That case makes the acquisition busy rather than idle, so it shows up as
+   * The engine's own rule has a fourth condition which this cannot see: the executing
+   * threads are full. That case makes the acquisition busy, not idle. So it shows up as
    * <code>foundNothing</code> being false anyway.
    *
-   * Whether that thread is parked is reported as well. The cycle which found nothing is
-   * still running for a moment after it says so, and the connection it gives back at the end
-   * of it would land inside a window opened too early.
+   * Whether that thread is parked is reported as well. The cycle which found nothing still
+   * runs for a moment after it says so. The connection it gives back at its end would land
+   * inside a window which was opened too early.
    *
    * @return The acquisition's thread and whether it is parked, the moment of its last cycle,
    *         whether that cycle found nothing, and the connections taken in total and by that
@@ -235,7 +234,7 @@ public class C7E2eIntrospectionController {
 
   /**
    * Whether the thread with this id waits right now. The acquisition thread sleeps between
-   * two cycles, and a test which expects the engine to be idle asks for exactly that.
+   * two cycles. A test which expects the engine to be idle asks for exactly that.
    *
    * @param threadId The id of the thread to look at
    * @return Whether that thread waits or waits with a timeout
@@ -255,9 +254,9 @@ public class C7E2eIntrospectionController {
 
   /**
    * Which thread runs the acquisition cycles right now. The adapter answers that question
-   * itself - {@code Camunda7WakeupAfterCommit} asks it about every committing thread - so
-   * the threads of the application are held against that answer instead of against a name
-   * somebody guessed.
+   * itself: {@code Camunda7WakeupAfterCommit} asks it about every committing thread. So the
+   * threads of the application are compared with that answer, not with a name somebody
+   * guessed.
    *
    * @param runnable The acquisition loop of the engine
    * @return The thread's id, or -1 while no thread runs the loop
@@ -280,18 +279,17 @@ public class C7E2eIntrospectionController {
   }
 
   /**
-   * When the engine's next job falls due, which is the moment a sleeping acquisition wakes
-   * up at. The same question the sleep itself asks: the earliest due date of an active job
+   * When the engine's next job falls due. At that moment a sleeping acquisition wakes up.
+   * It is the same question the sleep itself asks: the earliest due date of an active job
    * which still has retries left.
    * <p>
    * Asking it costs a connection and wakes the acquisition, because every committed engine
-   * command does. So a measurement asks this BEFORE it starts looking and again after it
-   * stopped, never in between.
+   * command does. So a measurement asks this BEFORE it starts looking, and again after it
+   * stopped. Never in between.
    *
-   * @return The due date in epoch milliseconds and how many workflows are still running,
-   *         with an empty due date where the engine holds no job at all. A job the engine
-   *         gave no due date is due now, and is reported as the start of the epoch rather
-   *         than as nothing
+   * @return The due date in epoch milliseconds and how many workflows are still running.
+   *         The due date is empty where the engine holds no job at all. A job without a due
+   *         date is due now. It is reported as the start of the epoch, not as nothing
    */
   @GET
   @Path("/engine/next-due-date")
@@ -331,9 +329,9 @@ public class C7E2eIntrospectionController {
   // --- starting workflows ---
 
   /**
-   * Starts the primary process through the VanillaBP user API and reports what was
-   * visible while the caller's transaction was still open: the workflow is created
-   * by the phase-two outbox, so nothing may exist yet.
+   * Starts the primary process through the VanillaBP user API. It reports what was visible
+   * while the caller's transaction was still open. The phase-two outbox creates the
+   * workflow, so nothing may exist yet.
    *
    * @param approved What the gateway of {@code TaskProcess} branches on
    * @return The aggregate's id and what phase one left behind
@@ -361,7 +359,7 @@ public class C7E2eIntrospectionController {
   }
 
   /**
-   * Starts a workflow and rolls the transaction back - neither the aggregate nor the
+   * Starts a workflow and rolls the transaction back. Neither the aggregate nor the
    * workflow may survive.
    *
    * @param approved What the gateway branches on
@@ -384,8 +382,8 @@ public class C7E2eIntrospectionController {
 
   /**
    * Saves an aggregate and starts one of the workflow service's SECONDARY processes
-   * against the engine: the injectable process service starts the primary process
-   * only. The business key IS the aggregate's id, which is how VanillaBP finds it
+   * directly in the engine. The process service which can be injected starts the primary
+   * process only. The business key IS the aggregate's id. That is how VanillaBP finds it
    * again.
    *
    * @param bpmnProcessId The BPMN process to start
@@ -419,8 +417,8 @@ public class C7E2eIntrospectionController {
 
   /**
    * Starts a process the way a system past VanillaBP does it: through the engine's API,
-   * with a business key of its own choosing. VanillaBP names a workflow and nobody else,
-   * so the start is refused and the message comes back for the test to read.
+   * with a business key it chose itself. Only VanillaBP names a workflow. So the start is
+   * refused, and the message comes back for the test to read.
    *
    * @param businessKey The key the starter chose
    * @return What the refusal said, or the key where the engine let the start through
@@ -430,7 +428,7 @@ public class C7E2eIntrospectionController {
   public Map<String, Object> startPastVanillaBp(
       @PathParam("businessKey") final String businessKey) {
 
-    // no transaction of this method's own: the engine's command opens one, and a start
+    // no transaction of this method's own. The engine's command opens one, and a start
     // which fails must not take this response with it
     try {
       runtimeService()
@@ -452,11 +450,11 @@ public class C7E2eIntrospectionController {
   }
 
   /**
-   * Starts the same process past VanillaBP WITHOUT a name. Nothing names this workflow,
-   * so the application's <code>&#64;WorkflowStartedByBpms</code> method does, and the
-   * engine holds that name as the business key from then on.
+   * Starts the same process past VanillaBP WITHOUT a name. Nothing names this workflow. So
+   * the application's <code>&#64;WorkflowStartedByBpms</code> method does, and the engine
+   * holds that name as the business key from then on.
    *
-   * @return Nothing but an acknowledgement - the name is the application's to give
+   * @return Nothing but an acknowledgement. The name is the application's to give
    */
   @POST
   @Path("/started-past-vanillabp-unnamed")
@@ -628,8 +626,8 @@ public class C7E2eIntrospectionController {
   }
 
   /**
-   * Broadcasts a signal and rolls the transaction back - the embedded engine shares
-   * that transaction, so nothing may have happened.
+   * Broadcasts a signal and rolls the transaction back. The embedded engine shares that
+   * transaction, so nothing may have happened.
    *
    * @param signalName The signal's name
    */
@@ -776,8 +774,8 @@ public class C7E2eIntrospectionController {
   }
 
   /**
-   * The local variables of one execution - where a pushed aggregate landed is read
-   * from exactly this.
+   * The local variables of one execution. The test reads exactly this to see where a
+   * pushed aggregate landed.
    *
    * @param executionId The execution
    * @return The names of its local variables
@@ -814,8 +812,8 @@ public class C7E2eIntrospectionController {
   }
 
   /**
-   * The lowest retry count of the jobs of a workflow - a technical exception in a
-   * handler is visible here and nowhere else.
+   * The lowest retry count of the jobs of a workflow. A technical exception in a handler
+   * is visible here and nowhere else.
    *
    * @param aggregateId The aggregate's id (the business key)
    * @return The lowest retry count, or -1 if the workflow has no jobs
@@ -847,8 +845,8 @@ public class C7E2eIntrospectionController {
   }
 
   /**
-   * The message of the job which failed - a technical exception of a handler ends up
-   * here, and VanillaBP's guiding message with it.
+   * The message of the job which failed. A technical exception of a handler ends up here,
+   * and VanillaBP's guiding message with it.
    *
    * @param aggregateId The aggregate's id (the business key)
    * @return The job's exception message, or an empty string
@@ -906,10 +904,10 @@ public class C7E2eIntrospectionController {
   }
 
   /**
-   * Writes the correlation id a waiting subscription expects, following VanillaBP's
-   * local-variable convention. The convention uses the PRIMARY BPMN process id of the
-   * process service, which is what makes this endpoint worth having: the test would
-   * otherwise have to reimplement the naming.
+   * Writes the correlation id which a waiting subscription expects, following VanillaBP's
+   * convention for local variables. The convention uses the PRIMARY BPMN process id of the
+   * process service. That makes this endpoint worth having. Otherwise the test would have
+   * to build the name itself.
    *
    * @param executionId The waiting execution
    * @param messageName The message
@@ -933,8 +931,8 @@ public class C7E2eIntrospectionController {
   }
 
   /**
-   * Saves an aggregate WITHOUT starting a workflow - what an operation addressing a
-   * workflow nobody started has to answer about.
+   * Saves an aggregate WITHOUT starting a workflow. An operation on a workflow which nobody
+   * started has to answer about such an aggregate.
    *
    * @return The aggregate's id
    */
@@ -967,8 +965,8 @@ public class C7E2eIntrospectionController {
   }
 
   /**
-   * Completes a user task the way an operator's UI would - the path a user task
-   * WITHOUT a <code>&#64;WorkflowTask</code> method has to keep working on.
+   * Completes a user task the way an operator's UI would. A user task WITHOUT a
+   * <code>&#64;WorkflowTask</code> method has to keep working on this path.
    *
    * @param taskId The engine's task id
    */
@@ -999,8 +997,8 @@ public class C7E2eIntrospectionController {
   }
 
   /**
-   * Deploys the second version of {@code VersionedProcess} while the application runs
-   * - the way another node of a rolling deployment would.
+   * Deploys the second version of {@code VersionedProcess} while the application runs. It
+   * does so the way another node of a rolling deployment would.
    */
   @POST
   @Path("/engine/deploy-version-two")
@@ -1075,9 +1073,9 @@ public class C7E2eIntrospectionController {
   }
 
   /**
-   * Runs one {@code ProcessService} call in a transaction of its own and reports what
-   * was visible while it was still open - the engine may not have been touched at
-   * that point.
+   * Runs one {@code ProcessService} call in a transaction of its own. It reports what was
+   * visible while that transaction was still open. At that point the engine may not have
+   * been touched.
    *
    * @param aggregateId The aggregate the operation works on
    * @param operation What to call

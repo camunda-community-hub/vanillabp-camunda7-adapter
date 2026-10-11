@@ -15,13 +15,13 @@ import lombok.Getter;
 import lombok.Setter;
 
 /**
- * The workflow aggregate of the Quarkus end-to-end application - a JPA entity on H2,
- * because the embedded Camunda 7 engine shares its datasource and its JTA
- * transaction, and that sharing is what the rollback assertions are about.
+ * The workflow aggregate of the Quarkus end-to-end application. It is a JPA entity on H2,
+ * because the embedded Camunda 7 engine shares its datasource and its JTA transaction. The
+ * rollback assertions are about exactly that sharing.
  * <p>
- * BPMN expressions reach its attributes through VanillaBP's EL resolver:
- * <code>${approved}</code> is the gateway condition of {@code TaskProcess},
- * <code>${items}</code> the collection of the multi-instance activity.
+ * BPMN expressions reach its attributes through VanillaBP's EL resolver.
+ * <code>${approved}</code> is the gateway condition of {@code TaskProcess}.
+ * <code>${items}</code> is the collection of the multi-instance activity.
  */
 @Entity
 @Table(name = "C7_E2E_AGGREGATE")
@@ -30,8 +30,8 @@ import lombok.Setter;
 public class C7E2eAggregate {
 
   /**
-   * An id range of its own: the Camunda business key is the aggregate's id, so the id
-   * spaces of the application's aggregates must not overlap.
+   * An id range of its own. The Camunda business key is the aggregate's id. So the id
+   * ranges of the application's aggregates must not overlap.
    */
   @Id
   @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "c7E2eSeq")

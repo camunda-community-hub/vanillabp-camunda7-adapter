@@ -13,10 +13,10 @@ import lombok.Getter;
 import lombok.Setter;
 
 /**
- * The workflow aggregate of pushing a changed aggregate. It annotates nothing, so all of
- * it travels to the engine and the test application allows that (see "Sharing the workflow
+ * The workflow aggregate for pushing a changed aggregate. It annotates nothing, so all of
+ * it travels to the engine. The test application allows that (see "Sharing the workflow
  * aggregate" in the README). The engine looks at the condition of a conditional event when
- * a variable of that event's scope changes, and the push is what changes one.
+ * a variable of that event's scope changes. The push is what changes one.
  */
 @Entity
 @Table(name = "C7_E2E_PUSH_AGGREGATE")
@@ -25,8 +25,8 @@ import lombok.Setter;
 public class C7PushAggregate {
 
   /**
-   * An id range of its own: the Camunda business key is the aggregate's id, so the id
-   * spaces of the application's aggregates must not overlap.
+   * An id range of its own. The Camunda business key is the aggregate's id. So the id
+   * ranges of the application's aggregates must not overlap.
    */
   @Id
   @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "c7E2ePushSeq")
@@ -46,8 +46,8 @@ public class C7PushAggregate {
   private String processedBy;
 
   /**
-   * The parked executions as "item=taskId", comma-separated - a list attribute would
-   * need a table of its own for what two strings do here.
+   * The parked executions as "item=taskId", comma-separated. A list attribute would need a
+   * table of its own for what two strings do here.
    */
   private String taskIds;
 

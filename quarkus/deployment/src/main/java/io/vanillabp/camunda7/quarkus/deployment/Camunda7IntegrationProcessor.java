@@ -13,20 +13,19 @@ import io.vanillabp.integration.deployment.pipeline.VanillaBpAdapterDeploymentSe
 import io.vanillabp.integration.deployment.processservice.VanillaBpMigratableProcessServiceBuildItem;
 
 /**
- * Quarkus extension of the VanillaBP Camunda 7 adapter (embedded plain engine;
- * JVM mode only). Announces the adapter type, its process-service and its
- * deployment-service beans to the VanillaBP Quarkus integration and registers the
- * engine producer plus the startup observer forcing the engine construction (and
- * with it the configuration validation) at boot.
+ * Quarkus extension of the VanillaBP Camunda 7 adapter (embedded plain engine, JVM mode
+ * only). It announces the adapter type, its process-service bean and its
+ * deployment-service bean to the VanillaBP Quarkus integration. It also registers the
+ * engine producer and the startup observer. The observer forces the engines to be built
+ * at boot, and with them the configuration to be validated.
  */
 class Camunda7IntegrationProcessor {
 
   private static final String FEATURE = "vanillabp-camunda7";
 
   /**
-   * Builds the {@link VanillaBpMigratableProcessServiceBuildItem} used by the
-   * VanillaBP Quarkus integration to determine the process-service bean of the
-   * Camunda 7 adapter.
+   * Builds the {@link VanillaBpMigratableProcessServiceBuildItem}. The VanillaBP Quarkus
+   * integration uses it to find the process-service bean of the Camunda 7 adapter.
    *
    * @param properties Camunda 7 build-time properties (forces config-root registration)
    * @param featureProducer Feature build-item producer used to register the extension
@@ -42,19 +41,18 @@ class Camunda7IntegrationProcessor {
     return VanillaBpMigratableProcessServiceBuildItem
         .builder()
         .adapterType(Camunda7Adapter.ADAPTER_TYPE)
-        // the announced bean class is registered by the VanillaBP extension - it
-        // has to be the producer, not the core process-service class
+        // the VanillaBP extension registers the announced bean class. So it has to
+        // be the producer, not the core process-service class
         .migratableProcessServiceBeanClass(Camunda7AdapterProducer.class.getName())
         .build();
 
   }
 
   /**
-   * Builds the {@link VanillaBpAdapterDeploymentServiceBuildItem} used by the
-   * VanillaBP Quarkus integration to determine the deployment-service bean of the
-   * Camunda 7 adapter - consumed by the platform's runtime deployment pipeline
-   * (readBpmn &rarr; prepareBpmn &rarr; wireBpmn &rarr; deployResources &rarr;
-   * startWorkflowProcessing).
+   * Builds the {@link VanillaBpAdapterDeploymentServiceBuildItem}. The VanillaBP Quarkus
+   * integration uses it to find the deployment-service bean of the Camunda 7 adapter. The
+   * platform's runtime deployment pipeline uses that bean (readBpmn &rarr; prepareBpmn
+   * &rarr; wireBpmn &rarr; deployResources &rarr; startWorkflowProcessing).
    *
    * @return The {@link VanillaBpAdapterDeploymentServiceBuildItem}
    */
@@ -70,17 +68,17 @@ class Camunda7IntegrationProcessor {
   }
 
   /**
-   * Registers the remaining runtime beans: the engine producer (one embedded engine
-   * per configured adapter id) and the startup observer forcing it at boot.
+   * Registers the other runtime beans: the engine producer (one embedded engine per
+   * configured adapter id) and the startup observer which forces it at boot.
    *
    * @return The bean registration build item
    */
   @BuildStep
   AdditionalBeanBuildItem registerEngineProducer() {
 
-    // the process-service and deployment-service producers are registered by the
-    // VanillaBP extension via the build items above - only the other beans are
-    // registered here
+    // the VanillaBP extension registers the process-service and deployment-service
+    // producers through the build items above. Only the other beans are registered
+    // here
     return AdditionalBeanBuildItem
         .builder()
         .addBeanClass(Camunda7EngineProducer.class)
@@ -91,9 +89,9 @@ class Camunda7IntegrationProcessor {
   }
 
   /**
-   * Keeps the engine customizers of an extension alive. Nothing of the application
-   * injects them - the engine holder looks them up while it builds its engine - and ArC
-   * removes beans nobody injects.
+   * Keeps the engine customizers of an extension alive. Nothing in the application
+   * injects them. The engine holder looks them up while it builds its engine. And ArC
+   * removes beans which nobody injects.
    *
    * @return What must not be removed
    */

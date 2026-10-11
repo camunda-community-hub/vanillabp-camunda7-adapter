@@ -8,9 +8,9 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 
 /**
- * Owns <code>ModelledListenerProcess</code>, whose end event carries both listener forms a
- * <code>&#64;WorkflowTask</code> method can serve: a <code>camunda:expression</code> and a
- * <code>camunda:delegateExpression</code>.
+ * Owns <code>ModelledListenerProcess</code>. Its end event carries both listener forms
+ * which a <code>&#64;WorkflowTask</code> method can serve: a
+ * <code>camunda:expression</code> and a <code>camunda:delegateExpression</code>.
  */
 @ApplicationScoped
 @WorkflowService(
@@ -36,7 +36,7 @@ public class ListenerWorkflowService {
   }
 
   /**
-   * The <code>camunda:expression</code> form: the engine evaluates the expression and the
+   * The <code>camunda:expression</code> form. The engine evaluates the expression, and the
    * handler runs while it is evaluated.
    */
   @WorkflowTask(taskDefinition = "theEndIsReached")
@@ -48,8 +48,8 @@ public class ListenerWorkflowService {
   }
 
   /**
-   * The <code>camunda:delegateExpression</code> form: the engine expects the expression to
-   * yield a listener object, which is what the adapter's EL resolver hands it.
+   * The <code>camunda:delegateExpression</code> form. The engine expects the expression to
+   * give a listener object, and the adapter's EL resolver hands it one.
    */
   @WorkflowTask(taskDefinition = "theEndIsDone")
   public void theEndIsDone(

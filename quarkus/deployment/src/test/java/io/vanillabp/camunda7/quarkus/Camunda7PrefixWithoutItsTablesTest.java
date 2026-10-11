@@ -14,13 +14,14 @@ import io.vanillabp.camunda7.quarkus.sample.TestWorkflowService;
 import io.vanillabp.integration.test.utils.SuppressOutputExtension;
 
 /**
- * A table prefix together with the promise that its tables are already there, made by an
- * application whose database has none of them. An engine which believed that would fail on
- * its first query, at a moment nobody connects with the configuration, so the check reads
- * the database while the application boots and names the tables it did not find.
+ * A table prefix together with the promise that its tables are already there. The
+ * application which makes the promise has none of them in its database. An engine which
+ * believed it would fail on its first query. Nobody would connect that moment with the
+ * configuration. So the check reads the database while the application boots, and names
+ * the tables it did not find.
  * <p>
- * The other half of the prefix rule, that the engine may not create prefixed tables itself,
- * is {@code Camunda7TablePrefixValidationTest}.
+ * The other half of the prefix rule is in {@code Camunda7TablePrefixValidationTest}: the
+ * engine may not create prefixed tables itself.
  */
 @ExtendWith(SuppressOutputExtension.class)
 public class Camunda7PrefixWithoutItsTablesTest {

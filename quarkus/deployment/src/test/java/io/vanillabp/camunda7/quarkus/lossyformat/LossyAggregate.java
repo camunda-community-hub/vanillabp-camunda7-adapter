@@ -12,8 +12,8 @@ import lombok.Getter;
 import lombok.Setter;
 
 /**
- * The workflow aggregate of the lossy-format check. It shares the same decimal twice: once at
- * the top, where the engine has a variable type of its own for it, and once inside an order,
+ * The workflow aggregate of the lossy-format check. It shares the same decimal twice. Once at
+ * the top, where the engine has a variable type of its own for it. And once inside an order,
  * where the configured format decides what comes back.
  */
 @Entity

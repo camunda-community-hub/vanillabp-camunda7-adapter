@@ -7,7 +7,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 
 /**
- * Owns {@code LossyFormat}. What is measured happens while its model is deployed, so the
+ * Owns {@code LossyFormat}. What is measured happens while its model is deployed. So the
  * service has nothing but the binding.
  */
 @ApplicationScoped

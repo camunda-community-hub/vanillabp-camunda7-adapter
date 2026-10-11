@@ -6,8 +6,8 @@ import jakarta.inject.Inject;
 import jakarta.persistence.EntityManager;
 
 /**
- * JPA persistence of {@link QTaskAggregate} - loads and saves within the caller's
- * JTA transaction (the engine's job transaction when processing tasks).
+ * JPA persistence of {@link QTaskAggregate}. It loads and saves within the caller's JTA
+ * transaction. While tasks are processed, that is the engine's job transaction.
  */
 @ApplicationScoped
 public class QTaskPersistence implements AggregatePersistenceAware<QTaskAggregate> {

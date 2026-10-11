@@ -8,8 +8,8 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 
 /**
- * One workflow aggregate, two BPMN processes: the called process is declared as a
- * secondary process of the class declaring the process to be started.
+ * One workflow aggregate, two BPMN processes. The called process is declared as a
+ * secondary process of the class which declares the process to be started.
  */
 @ApplicationScoped
 @WorkflowService(
@@ -28,8 +28,8 @@ public class CallActivityWorkflowService {
   }
 
   /**
-   * Runs in the CALLED process - it only finds its aggregate if the business key
-   * reached the child instance.
+   * Runs in the CALLED process. It only finds its aggregate if the business key reached
+   * the child instance.
    */
   @WorkflowTask
   public void calledTask(

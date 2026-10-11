@@ -10,11 +10,11 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 
 /**
- * The workflow service of pushing a changed aggregate. Two things are
- * worth a real engine here: a conditional event only ever looks at its condition when
- * a variable of its scope changes - so the push is what makes it fire - and a
- * task-scoped push has to land in the scope the task RUNS IN, because that is the
- * scope an event subprocess with a conditional start event listens on.
+ * The workflow service for pushing a changed aggregate. Two things here are worth a real
+ * engine. First, a conditional event only looks at its condition when a variable of its
+ * scope changes. So the push is what makes it fire. Second, a push for one task has to
+ * land in the scope the task RUNS IN. That is the scope an event subprocess with a
+ * conditional start event listens on.
  */
 @ApplicationScoped
 @WorkflowService(
@@ -60,8 +60,8 @@ public class C7PushWorkflowService {
   }
 
   /**
-   * The task of the boundary-event process: it has a boundary timer, so the engine
-   * gives the activity a scope of its own - the one a push must NOT write into.
+   * The task of the boundary-event process. It has a boundary timer, so the engine gives
+   * the activity a scope of its own. A push must NOT write into that scope.
    *
    * @param aggregate The workflow aggregate
    * @param taskId The parked execution
@@ -81,7 +81,7 @@ public class C7PushWorkflowService {
       @TaskId final String taskId,
       @MultiInstanceElement("MI_Sub") final String item) {
 
-    // parks this iteration: the test pushes into its scope afterwards
+    // parks this iteration. The test pushes into its scope afterwards
     aggregate.appendTaskId(item
         + "="
         + taskId);
@@ -89,8 +89,8 @@ public class C7PushWorkflowService {
   }
 
   /**
-   * The task behind the conditional start event of the event subprocess - it runs
-   * only in the iteration whose scope received the push.
+   * The task behind the conditional start event of the event subprocess. It runs only in
+   * the iteration whose scope received the push.
    *
    * @param aggregate The workflow aggregate
    * @param item The iteration's element

@@ -11,9 +11,9 @@ import lombok.Getter;
 import lombok.Setter;
 
 /**
- * The workflow aggregate the expressions of {@code ExprCheckProcess} read through. Nothing
- * of it is ever started: what this aggregate exists for is the shape its attributes give the
- * startup check.
+ * The workflow aggregate which the expressions of {@code ExprCheckProcess} read through.
+ * Nothing of it is ever started. This aggregate exists only for the shape its attributes
+ * give the startup check.
  */
 @Entity
 @Table(name = "C7_EXPR_AGGREGATE")

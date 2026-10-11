@@ -18,9 +18,10 @@ import io.vanillabp.camunda7.engine.Camunda7EngineCustomizer;
 import jakarta.enterprise.context.ApplicationScoped;
 
 /**
- * An extension reaching into the embedded engine on Quarkus: a parse listener seeing the
- * service tasks of the deployed models and a handler for the engine's history events.
- * Everything it sees is recorded, so the test can ask what happened.
+ * An extension which reaches into the embedded engine on Quarkus. It brings a parse
+ * listener, which sees the service tasks of the deployed models, and a handler for the
+ * engine's history events. Everything it sees is recorded, so the test can ask what
+ * happened.
  */
 @ApplicationScoped
 public class RecordingEngineCustomizer implements Camunda7EngineCustomizer {

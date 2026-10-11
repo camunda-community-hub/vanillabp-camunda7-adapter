@@ -9,8 +9,8 @@ import lombok.Getter;
 import lombok.Setter;
 
 /**
- * JPA workflow aggregate of the task-processing test - persisted in
- * the same H2 database and the same JTA transaction as the embedded engine.
+ * JPA workflow aggregate of the task-processing test. It is persisted in the same H2
+ * database and the same JTA transaction as the embedded engine.
  */
 @Entity
 @Table(name = "C7_QTASK_AGGREGATE")

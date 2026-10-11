@@ -15,25 +15,25 @@ import jakarta.enterprise.inject.Produces;
 import jakarta.inject.Singleton;
 
 /**
- * Produces the Camunda 7 adapter's per-adapter-id beans on Quarkus - ONE
- * {@link Camunda7ProcessService} and ONE {@link Camunda7DeploymentService} per
- * configured adapter id of type {@code camunda7}, each wired to ITS engine from the
- * {@link Camunda7QuarkusEngineRegistry} (the per-adapter-id shape: a CDI producer
- * cannot yield N element beans for N runtime-configured ids, so ONE bean of type
- * <code>List&lt;...&gt;</code> is produced per SPI).
+ * Produces the beans of the Camunda 7 adapter on Quarkus, per adapter id. For each
+ * configured adapter id of type {@code camunda7} there is ONE
+ * {@link Camunda7ProcessService} and ONE {@link Camunda7DeploymentService}. Each is wired
+ * to ITS engine from the {@link Camunda7QuarkusEngineRegistry}. A CDI producer cannot
+ * give N element beans for N ids which are only known at runtime. So ONE bean of type
+ * <code>List&lt;...&gt;</code> is produced per SPI.
  * <p>
- * Platform contract: the List's element type is the SPI interface with the type
- * parameters literally {@code Object} - CDI's parameterized-type matching of
- * differing type arguments is not reliable across modes, so the platform looks the
- * beans up with the exact type. The producer methods are {@code @Singleton}
- * (deployment services are not client-proxyable).
+ * Platform contract: the element type of the List is the SPI interface, with the type
+ * parameters literally {@code Object}. CDI does not match differing type arguments of a
+ * parameterized type reliably across modes. So the platform looks the beans up with the
+ * exact type. The producer methods are {@code @Singleton}, because deployment services
+ * cannot get a client proxy.
  */
 @ApplicationScoped
 public class Camunda7AdapterProducer {
 
   /**
-   * Quarkus builds the bean to call the producers below. It keeps no state: what they
-   * return are beans of their own and live as long as the application does.
+   * Quarkus builds the bean to call the producers below. It keeps no state. What they
+   * return are beans of their own, and they live as long as the application does.
    */
   public Camunda7AdapterProducer() {
 
@@ -102,15 +102,15 @@ public class Camunda7AdapterProducer {
                   .getHistoryService(), collaboratorsOf(
                       adapterId, workflowTaskRegistry, scoping, aggregateSync, preCommitRegistrar,
                       workflowEndedInvoker, bpmsInitiatedStartInvoker));
-          // an engine on a datasource of its own commits separately from the
-          // application, which makes its deliveries repeatable
+          // an engine on a datasource of its own commits apart from the application.
+          // That makes its deliveries repeatable
           processService.setEngineRunsOnItsOwnDataSource(engine.usesSeparateDataSource());
-          // a start reports the version of its process definition from the cache the
-          // deliveries of this engine read it from
+          // a start reports the version of its process definition. It reads it from the
+          // same cache the deliveries of this engine use
           processService.setTaskRegistry(engine.getTaskRegistry());
           processService.setConfiguredTenants(configuredTenantsOf(overlay, adapterId));
-          // Which serialization format nested shared values are stored in,
-          // resolved per workflow with a fallback to the module and the adapter
+          // which serialization format nested shared values are stored in. It is
+          // resolved per workflow, with a fallback to the module and the adapter
           final io.vanillabp.camunda7.sync.Camunda7SerializationFormats formats = (
               workflowModuleId,
               bpmnProcessId) -> serializationFormatOf(overlay, adapterId, workflowModuleId, bpmnProcessId);
@@ -178,22 +178,22 @@ public class Camunda7AdapterProducer {
                   .getProcessEngine()
                   .getRuntimeService());
           deploymentService.setAcceptUnscopedIdentifiers(acceptUnscopedIdentifiersOf(overlay, adapterId));
-          // Which format a workflow's values travel in, and what this engine's
-          // serializers make of them - the startup check reads both
+          // which format a workflow's values travel in, and what this engine's
+          // serializers make of them. The startup check reads both
           deploymentService.setSerializationFormats(
               (
                   workflowModuleId,
                   bpmnProcessId) -> serializationFormatOf(overlay, adapterId, workflowModuleId, bpmnProcessId));
           deploymentService.setSerializationRoundTrip(
               io.vanillabp.camunda7.sync.Camunda7SerializationRoundTrip.of(engine.getProcessEngine()));
-          // Whether the listeners somebody modelled are served by this application, resolvable
-          // down to the workflow
+          // whether this application serves the listeners somebody modelled. It can be
+          // set down to the workflow
           deploymentService.setAllowListenersResolver(
               (
                   workflowModuleId,
                   bpmnProcessId) -> overlay.allowListenersFor(adapterId, workflowModuleId, bpmnProcessId));
-          // a key at a level which does not resolve it changes nothing and would be silent,
-          // which is worse than a line saying where the key is read
+          // a key at a level which does not resolve it changes nothing. Silence would be
+          // worse than a line which says where the key is read
           io.vanillabp.camunda7.wiring.Camunda7Listeners.reportKeysSetAtTaskLevel(
               adapterId,
               overlay.allowListenersKeysAtTaskLevel(adapterId),
@@ -205,12 +205,12 @@ public class Camunda7AdapterProducer {
   }
 
   /**
-   * What this adapter knows about its engines, for an extension running inside one: ONE
-   * {@link io.vanillabp.camunda7.api.Camunda7EngineFacts} per configured adapter id, built
-   * from what the engine wiring computed anyway rather than from a second reading of the
-   * configuration. The list shape is the per-adapter-id shape of this platform (see the
-   * class comment); an extension picks the entry whose
-   * {@code Camunda7EngineFacts#adapterId()} is the one it is dealing with.
+   * What this adapter knows about its engines, for an extension which runs in one. There
+   * is ONE {@link io.vanillabp.camunda7.api.Camunda7EngineFacts} per configured adapter id.
+   * It is built from what the engine wiring computed anyway, not from a second reading of
+   * the configuration. A list is how this platform gives one bean per adapter id (see the
+   * class comment). An extension picks the entry whose
+   * {@code Camunda7EngineFacts#adapterId()} is the one it deals with.
    *
    * @param properties The core's adapter configuration
    * @param engineRegistry The engines of this application
@@ -252,8 +252,8 @@ public class Camunda7AdapterProducer {
 
 
   /**
-   * What makes an adapter id a distinct engine: its datasource and table prefix
-   * (see {@code Camunda7InstanceIdentity}) - the adapter SPI hook
+   * What makes an adapter id a distinct engine: its datasource and table prefix (see
+   * {@code Camunda7InstanceIdentity}). The adapter SPI hook
    * {@code validateDistinctAdapterInstances} compares them.
    */
   private static io.vanillabp.camunda7.engine.Camunda7InstanceIdentity instanceIdentityOf(
@@ -360,11 +360,11 @@ public class Camunda7AdapterProducer {
   }
 
   /**
-   * What a workflow module's tenant is configured as, per workflow module
-   * (<code>vanillabp.workflow-modules.&lt;module&gt;.adapters.&lt;id&gt;.tenant-id</code>)
-   * with a fallback to the adapter (<code>vanillabp.adapters.&lt;id&gt;.tenant-id</code>) -
-   * <code>null</code> for a module neither names one for, which the workflow module id then
-   * names.
+   * The configured tenant of each workflow module. It is read per workflow module
+   * (<code>vanillabp.workflow-modules.&lt;module&gt;.adapters.&lt;id&gt;.tenant-id</code>),
+   * with a fallback to the adapter (<code>vanillabp.adapters.&lt;id&gt;.tenant-id</code>).
+   * It is <code>null</code> for a module which neither names. Then the workflow module id
+   * names the tenant.
    */
   private static java.util.function.Function<String, io.vanillabp.camunda7.wiring.Camunda7ConfiguredTenant> configuredTenantsOf(
       final VanillaBpCamunda7Properties overlay,

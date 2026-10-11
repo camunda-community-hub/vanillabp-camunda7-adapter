@@ -15,12 +15,12 @@ import io.vanillabp.integration.test.utils.SuppressOutputExtension;
 
 /**
  * A task whose handler declares {@code @TaskId}, wired by {@code camunda:expression}. Such a
- * task completes when the expression returns, so the handler's whole reason for the parameter
- * is gone: nothing stays open and the id it was handed names a task which no longer exists.
- * The boot stops and names the attribute to write instead.
+ * task completes when the expression returns. So the handler's whole reason for the
+ * parameter is gone. Nothing stays open, and the id it was handed names a task which no
+ * longer exists. The boot stops and names the attribute to write instead.
  * <p>
- * The same model runs through {@code Camunda7TaskProcessingTest} with the correct wiring, so
- * what is measured here is the check and not the model.
+ * The same model runs through {@code Camunda7TaskProcessingTest} with the correct wiring.
+ * So this test measures the check, not the model.
  */
 @ExtendWith(SuppressOutputExtension.class)
 public class Camunda7AsyncTaskWiredByExpressionTest {

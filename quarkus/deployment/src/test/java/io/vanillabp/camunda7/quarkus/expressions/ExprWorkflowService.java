@@ -8,7 +8,7 @@ import jakarta.inject.Inject;
 
 /**
  * Owns {@code ExprCheckProcess}. It has no {@code @WorkflowTask} method, because the model
- * has no task: what is measured here happens while the model is deployed.
+ * has no task. What is measured here happens while the model is deployed.
  */
 @ApplicationScoped
 @WorkflowService(

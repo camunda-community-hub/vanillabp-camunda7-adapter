@@ -10,21 +10,21 @@ import io.smallrye.config.ConfigMapping;
 
 /**
  * The Camunda 7 adapter's OVERLAY of the shared <code>vanillabp.*</code> configuration
- * tree: the adapter's engine settings live at the canonical per-adapter location
- * <code>vanillabp.adapters.&lt;id&gt;.*</code>. A second RUN_TIME
- * {@code @ConfigMapping} over the same prefix coexists with the platform's mapping;
- * since the platform dropped the blanket {@code withMappingIgnore}, this overlay
- * doubles as the unknown-key validation coverage for the adapter's keys.
+ * tree. The adapter's engine settings live at the canonical place of every adapter,
+ * <code>vanillabp.adapters.&lt;id&gt;.*</code>. So this is a second RUN_TIME
+ * {@code @ConfigMapping} over the same prefix. It lives next to the platform's mapping.
+ * The platform dropped the blanket {@code withMappingIgnore}. Since then this overlay
+ * also covers the adapter's keys when unknown keys are validated.
  * <p>
- * The keys are IDENTICAL to the Spring Boot module: an adapter id's own datasource is
- * referenced BY NAME on both platforms (<code>data-source-name</code>; always
- * application-/runtime-provided - VanillaBP never builds a pool). On Quarkus the name
- * points at a declared <code>quarkus.datasource.&lt;name&gt;.*</code> datasource, on
- * Spring Boot at a {@code DataSource} bean.
+ * The keys are IDENTICAL to the Spring Boot module. On both platforms an adapter id names
+ * its own datasource BY NAME (<code>data-source-name</code>). The application or the
+ * runtime always provides it, VanillaBP never builds a pool. On Quarkus the name points at
+ * a declared <code>quarkus.datasource.&lt;name&gt;.*</code> datasource, on Spring Boot at a
+ * {@code DataSource} bean.
  * <p>
- * The adapter-id set is NEVER derived from this overlay map - it always comes from the
- * platform's core properties ({@code adapterTypes()} filtered by type
- * {@code camunda7}); the overlay is a per-known-id lookup only.
+ * The set of adapter ids NEVER comes from this overlay map. It always comes from the
+ * platform's core properties: {@code adapterTypes()}, filtered by the type
+ * {@code camunda7}. The overlay only looks up the settings of an id that is known.
  */
 @StaticInitSafe
 @ConfigRoot(phase = ConfigPhase.RUN_TIME)
@@ -32,8 +32,8 @@ import io.smallrye.config.ConfigMapping;
 public interface VanillaBpCamunda7Properties {
 
   /**
-   * The adapter sections of the shared tree, keyed by adapter ID - only the
-   * Camunda 7 engine keys are modeled here.
+   * The adapter sections of the shared tree, keyed by adapter ID. Only the Camunda 7
+   * engine keys are modeled here.
    *
    * @return The configured adapter sections, keyed by adapter id
    */
@@ -105,8 +105,8 @@ public interface VanillaBpCamunda7Properties {
   }
 
   /**
-   * Every <code>allow-listeners</code> this configuration puts at TASK level, fully spelled out -
-   * the level which does not resolve this key.
+   * Every <code>allow-listeners</code> this configuration puts at TASK level, fully spelled
+   * out. That level does not resolve this key.
    *
    * @param adapterId The adapter id
    * @return The keys found
@@ -177,9 +177,10 @@ public interface VanillaBpCamunda7Properties {
     Map<String, Camunda7ScopedKeys> adapters();
 
     /**
-     * The tasks of this workflow. Modelled here for one reason only: a key set at this level
-     * which the adapter does not resolve there has to be findable, so the boot can say where
-     * the key IS read instead of leaving a line which does nothing.
+     * The tasks of this workflow. They are modelled here for one reason only. A key may be
+     * set at this level although the adapter does not resolve it there. The boot has to
+     * find such a key, so it can say where the key IS read. Otherwise the line would just
+     * do nothing.
      *
      * @return The task sections of this workflow, keyed by task definition
      */
@@ -188,8 +189,8 @@ public interface VanillaBpCamunda7Properties {
   }
 
   /**
-   * The Camunda 7 keys of one task - the most specific level, and the one
-   * <code>allow-listeners</code> does not resolve at.
+   * The Camunda 7 keys of one task. This is the most specific level, and
+   * <code>allow-listeners</code> is not resolved at it.
    */
   interface Camunda7TaskKeys {
 
@@ -215,7 +216,7 @@ public interface VanillaBpCamunda7Properties {
     Optional<String> pluginClass();
 
     /**
-     * The plugin's own properties in kebab-case - Camunda converts them to the types the
+     * The plugin's own properties in kebab-case. Camunda converts them to the types the
      * plugin declares.
      *
      * @return The plugin's properties, empty where it has none
@@ -238,9 +239,9 @@ public interface VanillaBpCamunda7Properties {
 
     /**
      * Whether the execution listeners somebody modelled are served by
-     * <code>@WorkflowTask</code> methods, for this scope. Empty rather than <code>false</code>
-     * where nothing is configured, which is what lets a workflow module switch OFF what the
-     * adapter switched on.
+     * <code>@WorkflowTask</code> methods, for this scope. It is empty, not <code>false</code>,
+     * where nothing is configured. That lets a workflow module switch OFF what the adapter
+     * switched on.
      *
      * @return The configured answer, empty where this scope says nothing
      */
@@ -249,9 +250,10 @@ public interface VanillaBpCamunda7Properties {
   }
 
   /**
-   * The Camunda 7 keys of one workflow module's adapter section: the scoped keys every level
-   * has, plus the tenant, which only a workflow module may override because a tenant id is an
-   * attribute of the deployment this adapter makes per workflow module.
+   * The Camunda 7 keys of one workflow module's adapter section. These are the scoped keys
+   * every level has, plus the tenant. Only a workflow module may override the tenant. The
+   * reason: a tenant id belongs to the deployment, and this adapter makes one deployment
+   * per workflow module.
    */
   interface Camunda7ModuleScopedKeys extends Camunda7ScopedKeys {
 
@@ -272,18 +274,18 @@ public interface VanillaBpCamunda7Properties {
   interface Camunda7AdapterKeys {
 
     /**
-     * Create/upgrade the engine schema on boot (engine values, e.g.
-     * <code>true</code>, <code>false</code>, <code>create-drop</code>); default
-     * <code>true</code>.
+     * Whether the engine schema is created or upgraded on boot. It takes the engine's
+     * values, e.g. <code>true</code>, <code>false</code>, <code>create-drop</code>. The
+     * default is <code>true</code>.
      *
      * @return The configured value, empty for the default
      */
     Optional<String> databaseSchemaUpdate();
 
     /**
-     * Engine-wide default history time to live (Camunda 7.24 rejects deployments
-     * of processes without one); default <code>P180D</code>, overridable per
-     * process via <code>camunda:historyTimeToLive</code>.
+     * The default history time to live for the whole engine. Camunda 7.24 rejects
+     * deployments of processes without one. The default is <code>P180D</code>. A process
+     * may override it through <code>camunda:historyTimeToLive</code>.
      *
      * @return The configured duration, empty for the default
      */
@@ -291,12 +293,12 @@ public interface VanillaBpCamunda7Properties {
 
     /**
      * OPTIONAL name of a declared Quarkus datasource
-     * (<code>quarkus.datasource.&lt;name&gt;.*</code>) this adapter id's embedded
-     * engine runs on. Without it the engine shares the application's default
-     * datasource (the embedded-engine guarantee: engine commands join the caller's
-     * JTA transaction). With it the engine runs on its own schema - required for
-     * engine-side-by-side migrations - and starting workflows uses VanillaBP's
-     * two-phase pattern (see the README's transaction caveat).
+     * (<code>quarkus.datasource.&lt;name&gt;.*</code>) which this adapter id's embedded
+     * engine runs on. Without it the engine shares the application's default datasource.
+     * That is the embedded-engine guarantee: engine commands join the caller's JTA
+     * transaction. With it the engine runs on its own schema. Engines which run side by
+     * side for a migration need that. Starting a workflow then uses VanillaBP's two-phase
+     * pattern (see the README's transaction caveat).
      *
      * @return The configured datasource name, empty for the application's default one
      */
@@ -304,36 +306,35 @@ public interface VanillaBpCamunda7Properties {
 
     /**
      * OPTIONAL prefix of the engine's database tables (engine setting
-     * <code>databaseTablePrefix</code>). It lets two adapter ids share ONE
-     * datasource while running separate engines - the side-by-side migration setup
-     * on a single database. The tables of the prefix have to exist before the
-     * application starts, and <code>database-schema-update</code> has to be
-     * <code>false</code>: Camunda's schema management ignores the prefix and would
-     * create a set of unprefixed <code>ACT_*</code> tables instead (see
-     * {@code Camunda7TablePrefixSchema}).
+     * <code>databaseTablePrefix</code>). With it two adapter ids share ONE datasource and
+     * still run separate engines. This is the side-by-side migration setup on a single
+     * database. The tables of the prefix have to exist before the application starts. And
+     * <code>database-schema-update</code> has to be <code>false</code>, because Camunda's
+     * schema management ignores the prefix. It would create a set of unprefixed
+     * <code>ACT_*</code> tables instead (see {@code Camunda7TablePrefixSchema}).
      *
      * @return The configured prefix, empty where the engine uses the plain table names
      */
     Optional<String> tablePrefix();
 
     /**
-     * OPTIONAL serialization format a shared value the engine has no variable type for
-     * is stored in, e.g. <code>application/json</code> (the SPIN JSON dataformat) or
-     * <code>application/xstream</code> (camunda-xstream). Applied to the engine's
-     * <code>defaultSerializationFormat</code> and to the variables VanillaBP writes;
-     * overridable per workflow module and per workflow (see
-     * {@link VanillaBpCamunda7Properties#workflowModules()}). The matching dataformat is
-     * the application's dependency.
+     * OPTIONAL serialization format for a shared value which has no variable type in the
+     * engine, e.g. <code>application/json</code> (the SPIN JSON dataformat) or
+     * <code>application/xstream</code> (camunda-xstream). It is applied to the engine's
+     * <code>defaultSerializationFormat</code> and to the variables VanillaBP writes. A
+     * workflow module or a workflow may override it (see
+     * {@link VanillaBpCamunda7Properties#workflowModules()}). The matching dataformat is a
+     * dependency of the application.
      *
      * @return The configured format, empty where the engine's own default applies
      */
     Optional<String> serializationFormat();
 
     /**
-     * OPTIONAL Camunda engine plugins of this adapter id: named sections, each naming a
-     * class and carrying its own properties - which Camunda applies, exactly like the
-     * <code>&lt;property&gt;</code> elements of a <code>bpm-platform.xml</code>.
-     * This is how a serialization dataformat reaches the embedded engine.
+     * OPTIONAL Camunda engine plugins of this adapter id. Each is a named section which
+     * names a class and carries its own properties. Camunda applies them, exactly like the
+     * <code>&lt;property&gt;</code> elements of a <code>bpm-platform.xml</code>. This is how
+     * a serialization dataformat reaches the embedded engine.
      *
      * @return The configured plugin sections, empty where there are none
      */
@@ -341,8 +342,8 @@ public interface VanillaBpCamunda7Properties {
 
     /**
      * OPTIONAL name of the Camunda tenant a workflow module is deployed to under the
-     * name-clash-avoidance mode <code>by-adapter</code>. Without it the
-     * workflow module ID names the tenant - VanillaBP 1's behavior.
+     * name-clash-avoidance mode <code>by-adapter</code>. Without it the workflow module ID
+     * names the tenant, as in VanillaBP 1.
      *
      * @return The configured tenant, empty where the workflow module id names it
      */
@@ -360,18 +361,18 @@ public interface VanillaBpCamunda7Properties {
 
     /**
      * OPTIONAL: whether the execution listeners somebody MODELLED are served by
-     * <code>@WorkflowTask</code> methods. Adapter-level base of a resolution over three levels
-     * (workflow &gt; workflow-module &gt; adapter), default <code>false</code>, see
-     * {@link io.vanillabp.camunda7.wiring.Camunda7AllowListenersResolver}.
+     * <code>@WorkflowTask</code> methods. This is the adapter level, the base of a resolution
+     * over three levels (workflow &gt; workflow-module &gt; adapter). The default is
+     * <code>false</code>. See {@link io.vanillabp.camunda7.wiring.Camunda7AllowListenersResolver}.
      *
      * @return The configured answer, empty for <code>false</code>
      */
     Optional<Boolean> allowListeners();
 
     /**
-     * OPTIONAL: the job executor waits until the next job is due instead of polling every
-     * 5 to 60 seconds, and a transaction which writes a job wakes it. Default
-     * <code>false</code> - see {@code Camunda7JobExecutorSleep}.
+     * OPTIONAL: the job executor waits until the next job is due, and does not poll every
+     * 5 to 60 seconds. A transaction which writes a job wakes it. The default is
+     * <code>false</code>. See {@code Camunda7JobExecutorSleep}.
      *
      * @return The configured answer, empty for <code>false</code>
      */
@@ -379,9 +380,8 @@ public interface VanillaBpCamunda7Properties {
 
     /**
      * OPTIONAL: whether the engine's metrics reporter writes its counters to the database
-     * every 900 seconds. Unset means the opposite of
-     * {@link #sleepUntilSomethingIsDue()}, so an engine which is allowed to sleep is not
-     * woken by its own metrics.
+     * every 900 seconds. If unset, it is the opposite of {@link #sleepUntilSomethingIsDue()}.
+     * So an engine which may sleep is not woken by its own metrics.
      *
      * @return The configured answer, empty to follow the setting above
      */

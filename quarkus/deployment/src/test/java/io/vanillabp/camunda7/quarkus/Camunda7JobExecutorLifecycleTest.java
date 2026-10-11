@@ -17,13 +17,13 @@ import jakarta.inject.Inject;
 import jakarta.transaction.UserTransaction;
 
 /**
- * Deferred job-executor activation on Quarkus, with the same semantics as on Spring
- * Boot: asynchronous continuations ({@code asyncBefore} jobs) are executed
- * ONLY while workflow processing is started. The test pauses processing via the
- * engine holder, creates an instance whose async-before job therefore stays
- * pending, and resumes processing - the job executor picks the job up (executing it
- * in its OWN JTA transaction: without the engine's JTA command interceptor the job
- * would fail on Agroal) and the instance completes.
+ * Deferred job-executor activation on Quarkus, with the same semantics as on Spring Boot.
+ * Asynchronous continuations ({@code asyncBefore} jobs) are executed ONLY while workflow
+ * processing is started. The test pauses processing through the engine holder. Then it
+ * creates an instance, whose async-before job therefore stays pending. Then it resumes
+ * processing. The job executor picks the job up and the instance completes. The job runs
+ * in its OWN JTA transaction. Without the engine's JTA command interceptor the job would
+ * fail on Agroal.
  */
 @ExtendWith(SuppressOutputExtension.class)
 @SuppressOutputExtension.SuppressBackgroundOutput
@@ -52,16 +52,16 @@ public class Camunda7JobExecutorLifecycleTest {
   UserTransaction userTransaction;
 
   /**
-   * How long the engine is watched while its job executor is stopped, before a job which
-   * was not executed counts as one which will not be.
+   * How long the engine is watched while its job executor is stopped. After that, a job
+   * which was not executed counts as one which will not be.
    * <p>
-   * One second, against the moment a running job executor needs: this engine is told about
-   * a new job by the transaction which wrote it, so it acquires the job at the commit
-   * rather than on the next sweep of its own.
+   * One second, compared with the moment a running job executor needs. The transaction
+   * which wrote a new job tells this engine about it. So the engine takes the job at the
+   * commit, not on its own next sweep.
    * <p>
-   * A guard and not a budget anybody has to be faster than: what is asserted afterwards is
-   * an instance which is still there, and a machine which leaves this JVM without a turn
-   * only makes the silence longer.
+   * This is a guard, not a budget anybody has to beat. What is asserted afterwards is an
+   * instance which is still there. A machine which gives this JVM no turn only makes the
+   * silence longer.
    */
   private static final long UNTIL_A_RUNNING_EXECUTOR_WOULD_HAVE_TAKEN_THE_JOB = 1000;
 
@@ -86,7 +86,7 @@ public class Camunda7JobExecutorLifecycleTest {
     // the deployment pipeline started processing at boot
     Assertions.assertTrue(engine.isJobExecutorActive(), "processing was started at boot");
 
-    // pause processing: the only module stops -> the engine-global executor stops
+    // pause processing: the only module stops, so the executor of the whole engine stops
     engine.stopWorkflowProcessing(MODULE_ID);
     Assertions.assertFalse(engine.isJobExecutorActive());
 
@@ -102,23 +102,23 @@ public class Camunda7JobExecutorLifecycleTest {
     userTransaction.commit();
     final var businessKey = String.valueOf(aggregate.getId());
 
-    // ...and stays pending while the executor is stopped (completing would end
-    // the instance - the trivial ${true} service task is the only wait state)
+    // ...and stays pending while the executor is stopped. Completing would end the
+    // instance, because the trivial ${true} service task is the only wait state
     Thread.sleep(UNTIL_A_RUNNING_EXECUTOR_WOULD_HAVE_TAKEN_THE_JOB);
     Assertions.assertEquals(
         1,
         countInstances(businessKey),
         "the async-before job must not be executed while processing is stopped");
 
-    // resuming processing lets the job executor pick the job up: the service task
-    // completes (in its own JTA transaction) and the instance ends
+    // resuming processing lets the job executor pick the job up. The service task
+    // completes (in its own JTA transaction), and the instance ends
     engine.startWorkflowProcessing(MODULE_ID);
     Assertions.assertTrue(engine.isJobExecutorActive());
 
     final var deadline = System.currentTimeMillis() + 15000;
     while (countInstances(businessKey) > 0) {
       if (System.currentTimeMillis() >= deadline) {
-        // failed jobs park with an exception - surface it for diagnosis
+        // failed jobs park with an exception. Show it, to help the diagnosis
         final var failedJob = engine
             .getProcessEngine()
             .getManagementService()

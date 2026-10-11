@@ -5,8 +5,8 @@ import io.quarkus.runtime.annotations.ConfigRoot;
 import io.smallrye.config.ConfigMapping;
 
 /**
- * Camunda 7 adapter build-time properties. Empty - the adapter's engine settings
- * are RUN_TIME configuration (see the runtime module's
+ * Camunda 7 adapter build-time properties. It is empty, because the adapter's engine
+ * settings are RUN_TIME configuration (see the runtime module's
  * {@code VanillaBpCamunda7Properties} overlay).
  */
 @ConfigRoot(phase = ConfigPhase.BUILD_TIME)

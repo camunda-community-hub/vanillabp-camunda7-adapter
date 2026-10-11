@@ -22,24 +22,24 @@ import io.vanillabp.camunda7.quarkus.expressions.ExprWorkflowService;
 import io.vanillabp.integration.test.utils.SuppressOutputExtension;
 
 /**
- * The startup check which reports BPMN expressions reading attributes the workflow aggregate
- * does not share, on Quarkus. An expression like this is the quiet kind of mistake: the
- * engine reads null, a gateway takes the other flow and a conditional event waits for good,
- * and nothing anywhere says why. So the check reads every expression of every deployed model
- * while the application boots and says per element where the path stops.
+ * The startup check on Quarkus which reports BPMN expressions that read attributes the
+ * workflow aggregate does not share. Such an expression is the quiet kind of mistake. The
+ * engine reads null, a gateway takes the other flow, a conditional event waits for good, and
+ * nothing anywhere says why. So the check reads every expression of every deployed model
+ * while the application boots. It says per element where the path stops.
  * <p>
- * It is written once, in the platform-neutral core, and until now it ran on Spring Boot only.
- * A check nobody runs on a platform is a promise nobody kept there, which is the whole reason
- * this repository measures its coverage per platform.
+ * It is written once, in the platform-neutral core. Until this test it ran on Spring Boot
+ * only. A check nobody runs on a platform is a promise nobody kept there. That is the whole
+ * reason why this repository measures its coverage per platform.
  * <p>
  * The model deploys one process whose expressions stop in five different places, plus three
  * which read what is shared and have to stay unmentioned. Nothing of it ever runs: every
  * branch parks in a timer, and what is measured is the deployment.
  * <p>
- * The same boot answers the second question about the same expressions, which is what an
- * expression reading more than the name of one variable costs the application. That one is
- * asserted here as well rather than in a boot of its own, because the expensive part of this
- * test is the boot.
+ * The same boot answers the second question about the same expressions: what does an
+ * expression which reads more than the name of one variable cost the application? That one
+ * is checked here as well, not in a boot of its own, because the boot is the expensive part
+ * of this test.
  */
 @ExtendWith(SuppressOutputExtension.class)
 @SuppressOutputExtension.SuppressBackgroundOutput
@@ -61,8 +61,9 @@ public class Camunda7UnsharedExpressionCheckTest {
               "c7-expressions/processes/expr-check.bpmn",
               "c7-expressions/processes/expr-check.bpmn")
           .addAsResource("workflow-module-descriptor/workflow-module", "META-INF/workflow-module"))
-      // what the check writes while the application boots is the result here, and a
-      // prod-mode-style capture cannot reach it: the boot logs into a log context of its own
+      // what the check writes while the application boots is the result here. A
+      // prod-mode-style capture cannot reach it, because the boot logs into a log context
+      // of its own
       .setLogRecordPredicate(record -> record
           .getLoggerName()
           .startsWith("io.vanillabp"))
@@ -102,7 +103,7 @@ public class Camunda7UnsharedExpressionCheckTest {
         () -> noCollection);
     Assertions.assertTrue(noCollection.contains("did not resolve to a collection"), () -> noCollection);
 
-    // what is shared is what the application meant to share, and saying so per element would
+    // what is shared is what the application meant to share. Saying so per element would
     // make the report unreadable exactly where somebody has to read it
     final var everything = String.join("\n", log);
     Assertions
@@ -112,9 +113,9 @@ public class Camunda7UnsharedExpressionCheckTest {
                 + everything);
 
     // the second check over the same expressions, on this platform too: what an expression
-    // reading more than the name of one variable costs the application. The adapter reports
-    // what it read, the core judges it, and '${order.customer.vip}' is a path whichever
-    // attribute it reads
+    // which reads more than the name of one variable costs the application. The adapter
+    // reports what it read, and the core judges it. '${order.customer.vip}' is a path,
+    // whichever attribute it reads
     Assertions
         .assertTrue(
             everything.contains("'${order.customer.vip}' at 'XC_yes_shared' (the condition of a sequence flow)"),
@@ -137,8 +138,8 @@ public class Camunda7UnsharedExpressionCheckTest {
                     "vanillabp.workflow-modules.c7-test.workflows.ExprCheckProcess.accept-expressions-in-the-model"),
             () -> "expected the key which accepts the expressions of this process but got: "
                 + everything);
-    // a timer written as a plain duration is no expression, so neither parked element is
-    // named by that check
+    // a timer written as a plain duration is no expression. So that check names neither
+    // parked element
     Assertions
         .assertFalse(
             everything.contains("at 'XC_Park'"),
@@ -175,7 +176,7 @@ public class Camunda7UnsharedExpressionCheckTest {
   }
 
   /**
-   * What a record says, with its parameters filled in. The adapter logs through SLF4J, so a
+   * What a record says, with its parameters filled in. The adapter logs through SLF4J. So a
    * record still carries the pattern and the values apart.
    */
   private static String textOf(

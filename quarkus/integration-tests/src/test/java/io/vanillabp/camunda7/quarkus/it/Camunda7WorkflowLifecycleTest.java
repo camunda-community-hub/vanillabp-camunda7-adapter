@@ -28,19 +28,18 @@ import io.vanillabp.integration.test.utils.SuppressOutputExtension;
  * The Camunda 7 adapter's documented features, run end to end on a BOOTED Quarkus
  * application against the embedded engine on H2.
  * <p>
- * This duplicates what the Spring Boot suite in {@code integration-tests} proves, and
- * the duplication is the point: the adapter's platform-neutral core being correct
- * says nothing about a platform's glue ever calling it. Coverage is measured per
- * platform for exactly that reason, so the core lines Quarkus never reaches name the
- * features Quarkus never runs - deploying into a tenant, starting a workflow through
- * the two-phase outbox, delivering a task, completing and cancelling one, notifying
- * about user tasks, correlating a message, broadcasting a signal, pushing a changed
- * aggregate and matching process versions.
+ * This repeats what the Spring Boot suite in {@code integration-tests} proves, and the
+ * repetition is the point. A correct platform-neutral core says nothing about whether a
+ * platform's glue ever calls it. That is exactly why coverage is measured per platform.
+ * So the core lines which Quarkus never reaches name the features Quarkus never runs:
+ * deploying into a tenant, starting a workflow through the two-phase outbox, delivering a
+ * task, completing and cancelling one, notifying about user tasks, correlating a message,
+ * broadcasting a signal, pushing a changed aggregate and matching process versions.
  * <p>
  * Everything is observed through the application's own <code>introspect/...</code>
- * endpoints, because a prod-mode test runs the application in a forked JVM. The
- * JaCoCo agent is forwarded into it, otherwise the run would prove the features and
- * count as nothing.
+ * endpoints, because a prod-mode test runs the application in a forked JVM. The JaCoCo
+ * agent is forwarded into it. Otherwise the run would prove the features and count as
+ * nothing.
  * <p>
  * Four things of the Spring Boot suite are deliberately NOT repeated here, and the
  * reason is the same for all of them - they are about a second boot or a second
@@ -74,18 +73,18 @@ public class Camunda7WorkflowLifecycleTest {
           .addAsResource("c7-e2e/processes/aggregate-changed.bpmn")
           .addAsResource("c7-e2e/processes/timer-start.bpmn")
           .addAsResource("c7-e2e/processes/versioned-process.bpmn")
-          // deployed by the test WHILE the application runs, so it must travel with
-          // it but must not sit in the workflow module's resources location
+          // the test deploys it WHILE the application runs. So it must travel with the
+          // application, but must not sit in the workflow module's resources location
           .addAsResource("c7-e2e/versioned/versioned-process-v2.bpmn")
           .addAsResource("workflow-module-descriptor/workflow-module", "META-INF/workflow-module"))
-      // JVM args needed for tracking coverage - check this module's POM for the
-      // systemPropertyVariables feeding 'jacoco.agent'
+      // JVM args needed for tracking coverage. See this module's POM for the
+      // systemPropertyVariables which feed 'jacoco.agent'
       .setJVMArgs(testCoverageJavaAgent(quarkusProdModeTestDefaults()))
       .setRun(true)
       .setRuntimeProperties(Map.of(
           "quarkus.http.port", Integer.toString(OneFreePortPerJvm.getPort()),
-          // the application runs in a forked JVM, so its own log is the only place a
-          // failure inside it can be read afterwards
+          // the application runs in a forked JVM. So its own log is the only place
+          // where a failure inside it can be read afterwards
           "quarkus.log.file.enable", "true",
           "quarkus.log.file.path", Path
               .of("target", "c7-e2e-application.log")
@@ -184,9 +183,9 @@ public class Camunda7WorkflowLifecycleTest {
   }
 
   /**
-   * Two seconds is more than the outbox needs to dispatch (poll interval 0.5 s) and
-   * more than the job executor needs to pick a job up - long enough to make "nothing
-   * happened" a statement rather than a race.
+   * Two seconds is more than the outbox needs to dispatch (poll interval 0.5 s). It is
+   * also more than the job executor needs to pick a job up. So it is long enough to make
+   * "nothing happened" a statement, not a race.
    */
   private static void awaitNothingElseHappens() throws InterruptedException {
 
@@ -201,8 +200,8 @@ public class Camunda7WorkflowLifecycleTest {
 
     final var reported = post("introspect/workflows/"
         + approved);
-    // the workflow is created by the phase-two outbox, so nothing may
-    // exist while the caller's transaction is still open
+    // the phase-two outbox creates the workflow. So nothing may exist while the
+    // caller's transaction is still open
     assertEquals(
         0,
         ((Number) reported.get("instancesInsideTransaction")).intValue(),
@@ -303,8 +302,8 @@ public class Camunda7WorkflowLifecycleTest {
             .allMatch(definition -> definition.contains("|%s|".formatted(MODULE))),
         "no definition may be deployed without the tenant: "
             + definitions);
-    // every BPMN of the resources location is deployed, the ones nobody starts
-    // included
+    // every BPMN of the resources location is deployed, including the ones which
+    // nobody starts
     assertTrue(
         definitions
             .stream()
@@ -351,7 +350,7 @@ public class Camunda7WorkflowLifecycleTest {
     await(() -> ended(approved), "the approved TaskProcess to end");
     assertEquals("happy|approved", resultsOf(approved));
 
-    // approved=false: the gateway's default flow skips 'afterApproval' - the
+    // approved=false: the gateway's default flow skips 'afterApproval'. The
     // condition is evaluated against the aggregate, not against a copy
     final var rejected = startProcess("TaskProcess", false);
     await(() -> ended(rejected), "the rejected TaskProcess to end");
@@ -385,7 +384,7 @@ public class Camunda7WorkflowLifecycleTest {
     final var aggregateId = startProcess("ErrorProcess", true);
     await(() -> ended(aggregateId), "ErrorProcess to end through the error boundary");
 
-    // the mutation of the THROWING handler is visible, together with the boundary path
+    // the change of the THROWING handler is visible, together with the boundary path
     assertEquals("error-raised|handled", resultsOf(aggregateId));
 
   }
@@ -413,8 +412,8 @@ public class Camunda7WorkflowLifecycleTest {
   @DisplayName("A transaction annotation in the handler's call chain fails the job with VanillaBP's message")
   public void aNestedTransactionAnnotationIsReportedAtTheEngine() throws Exception {
 
-    // the handler carries no annotation itself (that would fail the boot), it calls a
-    // bean that does - and the engine shares the transaction that
+    // the handler carries no annotation itself, because that would fail the boot. It
+    // calls a bean which does. And the engine shares the transaction which that
     // bean's interceptor marks rollback-only
     final var aggregateId = startProcess("RollbackOnlyProcess", true);
 
@@ -423,8 +422,8 @@ public class Camunda7WorkflowLifecycleTest {
             + aggregateId).contains("marked rollback-only"),
         "the job to fail with VanillaBP's message");
 
-    // the message names the task, the process and the workflow module, so nobody
-    // reading an incident has to guess where it came from
+    // the message names the task, the process and the workflow module. So nobody who
+    // reads an incident has to guess where it came from
     final var failure = text("introspect/engine/job-failure/"
         + aggregateId);
     assertTrue(failure.contains("nestedTransaction"), failure);
@@ -648,8 +647,8 @@ public class Camunda7WorkflowLifecycleTest {
     postWithoutResponse(
         "introspect/engine/message-executions/%s/correlation-id/PaymentReceived/payment-42".formatted(execution));
 
-    // a mismatching correlation id does not correlate - and phase one says so where
-    // the application called it, instead of failing behind the commit
+    // a correlation id which does not match does not correlate. And phase one says so
+    // where the application called it, and does not fail behind the commit
     final var mismatch = post("introspect/messages/PaymentReceived/correlate/%s/wrong-id".formatted(aggregateId));
     assertTrue(
         mismatch
@@ -826,8 +825,8 @@ public class Camunda7WorkflowLifecycleTest {
         () -> object("introspect/engine/local-variables/"
             + instanceId).containsKey("escalate"),
         "the scope around the task is the workflow itself here");
-    // the boundary event makes the engine give the activity a scope of its own, and
-    // that scope is the task's context - not the scope the task RUNS in
+    // the boundary event makes the engine give the activity a scope of its own. That
+    // scope is the task's context, not the scope the task RUNS in
     assertFalse(
         object("introspect/engine/local-variables/"
             + taskId).containsKey("escalate"),
@@ -845,8 +844,8 @@ public class Camunda7WorkflowLifecycleTest {
     final var first = startProcess("VersionedProcess", true);
     await(() -> "firstVersion".equals(resultsOf(first)), "version 1 to be served by the method naming version '1'");
 
-    // a second version, deployed while the application runs and tagged 'release-2' -
-    // the way another node of a rolling deployment does it
+    // a second version, deployed while the application runs and tagged 'release-2'.
+    // That is the way another node of a rolling deployment does it
     postWithoutResponse("introspect/engine/deploy-version-two");
 
     final var second = startProcess("VersionedProcess", true);
@@ -863,7 +862,7 @@ public class Camunda7WorkflowLifecycleTest {
   @DisplayName("A timer start event creates the aggregate, the task finds it and the end is reported")
   public void theEngineStartsAWorkflowOnItsOwn() throws Exception {
 
-    // the timer fires one second after the deployment, and the job executor runs
+    // the timer fires one second after the deployment. The job executor runs,
     // because the workflow module started its processing
     await(() -> !strings("introspect/timer-aggregates").isEmpty(), "the timer to fire and the aggregate to be created");
 
@@ -874,8 +873,8 @@ public class Camunda7WorkflowLifecycleTest {
         "the task following the timer start event to run and the end to be reported, but got: "
             + strings("introspect/timer-aggregates"));
 
-    // the name of the workflow is the one the application gave in its
-    // @WorkflowStartedByBpms method, and the engine holds it as the business key
+    // the workflow has the name which the application gave in its
+    // @WorkflowStartedByBpms method. The engine holds it as the business key
     assertTrue(
         strings("introspect/timer-aggregates")
             .stream()
@@ -890,7 +889,7 @@ public class Camunda7WorkflowLifecycleTest {
   public void aWorkflowStartedPastVanillaBpUnderItsOwnName() throws Exception {
 
     // the same process, started through the engine by somebody who never asked
-    // VanillaBP - which is what anybody with access to the engine can do
+    // VanillaBP. Anybody with access to the engine can do that
     final var refused = post("introspect/started-past-vanillabp/started-past-vanillabp")
         .get("refused");
 

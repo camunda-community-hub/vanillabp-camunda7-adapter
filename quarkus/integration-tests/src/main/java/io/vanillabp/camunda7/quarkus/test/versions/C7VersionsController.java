@@ -15,8 +15,8 @@ import jakarta.ws.rs.core.MediaType;
 
 /**
  * What the old-process-versions test can see of the running application. A prod-mode test
- * runs the application in a forked JVM, so nothing of it can be injected into the test and
- * everything travels through these endpoints.
+ * runs the application in a forked JVM. So nothing of it can be injected into the test,
+ * and everything travels through these endpoints.
  */
 @Path("/versions")
 @Produces(MediaType.APPLICATION_JSON)
@@ -33,10 +33,10 @@ public class C7VersionsController {
   Camunda7QuarkusEngineRegistry engineRegistry;
 
   /**
-   * Deploys the old model of the process the way a node still running the older release
-   * deploys it while this application runs: as a deployment of the workflow module, into the
-   * tenant the module's name-clash-avoidance ('by-adapter') gives it. The engine numbers it
-   * after the new model this application deployed while it booted.
+   * Deploys the old model of the process, the way a node which still runs the older release
+   * deploys it while this application runs. It is a deployment of the workflow module, into
+   * the tenant which the module's name-clash-avoidance ('by-adapter') gives it. The engine
+   * numbers it after the new model which this application deployed while it booted.
    */
   @POST
   @Path("/old-model")
@@ -47,10 +47,10 @@ public class C7VersionsController {
         .getProcessEngine()
         .getRepositoryService()
         .createDeployment()
-        // deployment name, source and file name are the ones this application's adapter
-        // deploys the new model under. The engine compares a deployment with the latest file
-        // of the same name, so the next boot finds the old model there and deploys the new
-        // one again, as version 3, instead of taking it for a duplicate
+        // deployment name, source and file name are the ones under which this
+        // application's adapter deploys the new model. The engine compares a deployment
+        // with the latest file of the same name. So the next boot finds the old model there
+        // and deploys the new one again, as version 3. It does not take it for a duplicate
         .name("c7-versions")
         .source("camunda7:c7")
         .tenantId("c7-versions")
@@ -79,7 +79,7 @@ public class C7VersionsController {
   }
 
   /**
-   * @return One "id|servedBy|openTaskId" per aggregate - an aggregate with an open task id
+   * @return One "id|servedBy|openTaskId" per aggregate. An aggregate with an open task id
    *         is a workflow parked in the task which the new model no longer has
    */
   @GET

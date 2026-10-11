@@ -19,17 +19,17 @@ import jakarta.persistence.EntityManager;
 import jakarta.transaction.UserTransaction;
 
 /**
- * Workflow modules kept apart by prefixed identifiers instead of a Camunda tenant. The mode
- * exists for engines an operator does not want tenants on, and it changes what the engine
- * holds: the deployed process carries the module in its own id and no tenant at all.
+ * Workflow modules kept apart by prefixed identifiers, not by a Camunda tenant. The mode
+ * exists for engines on which an operator does not want tenants. It changes what the engine
+ * holds: the deployed process carries the module in its own id, and has no tenant at all.
  * <p>
- * That is a different deployment AND a different runtime - every query for a definition,
- * every start and every task has to ask for the prefixed id - so proving it on Spring Boot
- * says nothing about Quarkus. This is the Quarkus half.
+ * That is a different deployment AND a different runtime. Every query for a definition,
+ * every start and every task has to ask for the prefixed id. So a proof on Spring Boot says
+ * nothing about Quarkus. This is the Quarkus half.
  * <p>
  * The id itself is not written down here. What matters is that the engine no longer holds
- * the plain name and that a workflow still runs from end to end; how the core builds a
- * prefixed identifier is the core's business and its own tests hold it.
+ * the plain name, and that a workflow still runs from end to end. How the core builds a
+ * prefixed identifier is the core's business, and the core's own tests check it.
  */
 @ExtendWith(SuppressOutputExtension.class)
 @SuppressOutputExtension.SuppressBackgroundOutput
@@ -40,7 +40,7 @@ public class Camunda7PrefixedIdentifiersTest {
   private static final String BPMN_PROCESS_ID = "TestProcess";
 
   /**
-   * How long the workflow may take. Generous: what is asserted is never a moment.
+   * How long the workflow may take. It is generous, because no assertion is about a moment.
    */
   private static final long PATIENCE = 15000;
 

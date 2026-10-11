@@ -20,12 +20,12 @@ import io.vanillabp.integration.test.utils.SuppressOutputExtension;
 /**
  * What a boot says about a call activity which calls a process of ANOTHER workflow module.
  * <p>
- * Everything VanillaBP scopes is scoped per workflow module, a BPMN error code among it. So a
- * called process of another module raises its errors under that module's prefix while the
- * error boundary event of the call activity waits for the prefix of the calling one, and the
- * called workflow fails with an incident instead. The only model which can get there names
- * {@code camunda:calledElementTenantId}: every other called element is resolved in the
- * tenant of the calling instance.
+ * Everything VanillaBP scopes is scoped per workflow module, a BPMN error code too. So a
+ * called process of another module raises its errors under that module's prefix. But the
+ * error boundary event of the call activity waits for the prefix of the calling module. So
+ * the called workflow fails with an incident instead. Only a model which names
+ * {@code camunda:calledElementTenantId} can get there. Every other called element is
+ * resolved in the tenant of the calling instance.
  */
 @ExtendWith(SuppressOutputExtension.class)
 public class Camunda7CrossModuleCallActivityTest {
@@ -96,7 +96,7 @@ public class Camunda7CrossModuleCallActivityTest {
   }
 
   /**
-   * What the adapter warned about while it wired a model carrying the given call activity.
+   * What the adapter warned about while it wired a model with the given call activity.
    * The module's logback-test.xml attaches no appender, so the list is this test's own.
    */
   private static List<String> warningsWhileDeploying(

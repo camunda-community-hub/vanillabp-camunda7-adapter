@@ -14,41 +14,41 @@ import io.vanillabp.integration.test.utils.SuppressOutputExtension;
 
 /**
  * What Camunda 7 really does with two compensation handlers of one workflow. The startup
- * warning about two writers on one workflow aggregate says what an engine can do, so what
- * this engine does had to be measured rather than assumed.
+ * warning about two writers on one workflow aggregate says what an engine can do. So what
+ * this engine does had to be measured, not assumed.
  * <p>
  * Measured on 2026-09-27 against the embedded engine of Camunda 7.24, on H2, with the model
- * of <code>api/compensation-facts.bpmn</code>: a throw event which compensates two finished
- * service tasks creates both compensating executions first and then signals them ONE AT A
- * TIME. The second handler starts once the first one returned, so no two handlers are inside
+ * of <code>api/compensation-facts.bpmn</code>. A throw event which compensates two finished
+ * service tasks first creates both compensating executions. Then it signals them ONE AT A
+ * TIME. The second handler starts once the first one returned. So no two handlers are inside
  * their delegate at the same moment.
  * <p>
  * The ORDER is not asserted, because it is not stable. The engine sorts the compensation
- * subscriptions by their creation time, which is a <code>java.util.Date</code>, and sorts
- * stably - so two activities whose subscriptions were created in the same millisecond are
- * compensated in the order they ran in rather than in the reverse one. Both orders were
- * observed in this very test within an hour, which is exactly why VanillaBP promises nothing
- * about the order of compensation.
+ * subscriptions by their creation time, which is a <code>java.util.Date</code>. And it sorts
+ * stably. So two activities whose subscriptions were created in the same millisecond are
+ * compensated in the order they ran in, not in the reverse order. This very test saw both
+ * orders within an hour. That is exactly why VanillaBP promises nothing about the order of
+ * compensation.
  * <p>
  * That holds for the model as a modeller writes it AND for the model as this adapter deploys
- * it. The adapter sets <code>asyncBefore</code> on every service task, the flag is set on the
- * handlers too, and the engine ignores it: it starts a compensation handler outside the
- * normal flow, where no job is created. One job exists at a time, and with the job executor
- * running both handlers ran on one thread.
+ * it. The adapter sets <code>asyncBefore</code> on every service task, so the handlers carry
+ * the flag too. The engine ignores it. It starts a compensation handler outside the normal
+ * flow, where no job is created. One job exists at a time. With the job executor running,
+ * both handlers ran on one thread.
  * <p>
- * Which transaction they share was read on 2026-10-01, against the same pinned engine 7.24.0,
- * because the deployment now says so and a sentence about a transaction has to be measured as
- * one. Both handlers ran in the same command context, the engine's own unit of work, and ONE
- * commit covered the two of them, while the two activities they compensated ran in a
- * transaction each. A handler which throws therefore takes the other one with it: the engine
- * rolls the whole compensation back, counts one retry off the single job and runs both
- * handlers again on the next attempt. That is what the warning of
- * {@code Camunda7CompensationTransactionReportTest} asks a reader to plan for.
+ * Which transaction they share was read on 2026-10-01, against the same pinned engine 7.24.0.
+ * The deployment says something about this transaction, and such a sentence has to be
+ * measured. Both handlers ran in the same command context, the engine's own unit of work. ONE
+ * commit covered the two of them. The two activities they compensated ran in a transaction
+ * each. So a handler which throws takes the other one with it. The engine rolls the whole
+ * compensation back, counts one retry off the single job and runs both handlers again on the
+ * next attempt. The warning of {@code Camunda7CompensationTransactionReportTest} asks a
+ * reader to plan for that.
  * <p>
- * Why the adapter reports compensation to the core all the same is the decision this test
- * belongs to: the check asks whether the process can hold more than one token, and both
- * compensating executions exist from the moment the throw event runs. A handler which WAITS,
- * a user task among them, also keeps its token while the next handler is started.
+ * The decision this test belongs to says why the adapter still reports compensation to the
+ * core. The check asks whether the process can hold more than one token. Both compensating
+ * executions exist from the moment the throw event runs. A handler which WAITS, a user task
+ * for example, also keeps its token while the next handler is started.
  */
 @ExtendWith(SuppressOutputExtension.class)
 public class Camunda7CompensationTokensTest {
@@ -58,8 +58,8 @@ public class Camunda7CompensationTokensTest {
   private static final String SECOND_COMPENSATED = "RefundPayment";
 
   /**
-   * Both handlers, as a set: WHICH of them ran is a fact of this engine, in which order is
-   * not. See the class comment.
+   * Both handlers, as a set. WHICH of them ran is a fact of this engine. In which order they
+   * ran is not. See the class comment.
    */
   private static final Set<String> BOTH_HANDLERS = Set.of(FIRST_COMPENSATED, SECOND_COMPENSATED);
 
@@ -95,8 +95,8 @@ public class Camunda7CompensationTokensTest {
 
       engine.start();
 
-      // the engine spawns a concurrent execution per handler before it signals any of them,
-      // so the workflow holds two tokens although only one of them is being worked on
+      // the engine creates a concurrent execution per handler before it signals any of them.
+      // So the workflow holds two tokens, although only one of them is being worked on
       assertEquals(List.of(2, 1), CompensationRecorder.siblingExecutions());
 
     }
@@ -175,7 +175,7 @@ public class Camunda7CompensationTokensTest {
         engine.executeJob(jobs.getFirst().getId());
       }
 
-      // the two activities which are compensated later DO get a transaction each, so the
+      // the two activities which are compensated later DO get a transaction each. So the
       // flags the adapter writes work where the engine makes a job of an activity
       assertEquals(
           2,
@@ -221,7 +221,7 @@ public class Camunda7CompensationTokensTest {
       }
 
       assertEquals(1, failures, "one job of the workflow failed, the one holding the compensation");
-      // the handler which had already returned is entered a second time: its work was in the
+      // the handler which had already returned is entered a second time. Its work was in the
       // transaction the failure rolled back, so the engine asks for it again
       assertEquals(
           4,

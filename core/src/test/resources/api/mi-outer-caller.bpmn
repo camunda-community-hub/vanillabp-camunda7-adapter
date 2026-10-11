@@ -4,8 +4,8 @@
     id="Definitions_MiOuterCaller" targetNamespace="http://vanillabp.io/test">
 
   <!-- the outermost level of the two-call-activity chain. It lives in a file of its own,
-       like the process it calls and like the process that one calls: with two of them in
-       one file the lookup finds the enclosing element by chance -->
+       like the process it calls and like the process that one calls. With two of them in
+       one file, the lookup finds the enclosing element by chance -->
   <bpmn:process id="TwoLevelCaller" isExecutable="true">
     <bpmn:startEvent id="TwoLevelCallerStart" />
     <bpmn:sequenceFlow id="TwoLevelCallerStartFlow" sourceRef="TwoLevelCallerStart" targetRef="Regions" />

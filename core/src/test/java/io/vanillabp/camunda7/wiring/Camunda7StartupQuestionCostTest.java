@@ -20,18 +20,18 @@ import io.vanillabp.integration.test.utils.SuppressOutputExtension;
  * What this adapter asks the engine while an application boots, counted.
  * <p>
  * The startup check for old process versions asks the catalog two things about every
- * version older than the one the boot deployed: the model of that version and how many
- * workflows still run on it. Both need the engine's process definition id, and looking
- * that up used to be a definition query of its own - so a process with fifty versions
- * behind it paid a hundred queries nobody could see, on top of the one list which had
- * already brought every id back.
+ * version older than the one the boot deployed: the model of that version, and how many
+ * workflows still run on it. Both need the engine's process definition id. Looking that up
+ * used to be a definition query of its own. So a process with fifty versions behind it paid
+ * a hundred queries nobody could see. That came on top of the one list which had already
+ * brought every id back.
  * <p>
- * Decision 10 in the repository's DECISIONS.md is what this holds: an engine query while
- * booting is counted, and the count belongs to the versions, never to the workflows.
+ * This test holds decision 10 in the repository's DECISIONS.md. An engine query while
+ * booting is counted. The count grows with the versions, never with the workflows.
  * <p>
  * The same counting applies to the one question the job acquisition asks while it is idle.
- * Version 1 listed every job with a due date in the future and used the first row, which is
- * a list whose length is the application's backlog; the answer needed is one row.
+ * Version 1 listed every job with a due date in the future and used the first row. The
+ * length of that list is the application's backlog. The answer needed is one row.
  */
 @ExtendWith(SuppressOutputExtension.class)
 public class Camunda7StartupQuestionCostTest {
@@ -41,35 +41,35 @@ public class Camunda7StartupQuestionCostTest {
   private static final String PROCESS = "TestProcess";
 
   /**
-   * How many versions the engine holds - enough that a query per version is a different
-   * number from a query per process.
+   * How many versions the engine holds. That is enough to make a query per version a
+   * different number from a query per process.
    */
   private static final int VERSIONS = 4;
 
   /**
    * How many of the questions about an older version read its model: its tasks, what starts
    * it, and which of its elements can put a second token into a workflow. The engine parses
-   * a definition once and answers the rest from its deployment cache, so the number to watch
+   * a definition once and answers the rest from its deployment cache. So the number to watch
    * is the definition query below.
    */
   private static final int MODEL_READING_QUESTIONS = 3;
 
   /**
-   * How many BPMN processes the workflow module brings - a process definition key takes a
-   * batch filter, so the question about what the engine already holds is asked once for all
+   * How many BPMN processes the workflow module brings. A process definition key takes a
+   * batch filter. So the question about what the engine already holds is asked once for all
    * of them.
    */
   private static final int PROCESSES = 2;
 
   /**
    * How many decision tables the workflow module brings. A decision definition key has no
-   * batch filter, so this is the one number the count grows with, and it is a property of the
-   * application rather than of its history.
+   * batch filter. So this is the one number the count grows with. It is a property of the
+   * application, not of its history.
    */
   private static final int DECISIONS = 3;
 
   /**
-   * The deployment every definition of these tests belongs to - this adapter's own, so
+   * The deployment every definition of these tests belongs to. It is this adapter's own, so
    * nothing here needs a second deployment query to attribute a finding.
    */
   private static final String OUR_DEPLOYMENT = "deployment-1";
@@ -119,7 +119,7 @@ public class Camunda7StartupQuestionCostTest {
         .when(definitionQuery.list())
         .thenReturn(definitions);
     // the engine answers with the version it was asked for, whether or not the list above
-    // held it: a version deployed by another node after the list was read is exactly the
+    // held it. A version deployed by another node after the list was read is exactly the
     // case the second test is about
     final var askedFor = new int[]{
         1
@@ -197,7 +197,7 @@ public class Camunda7StartupQuestionCostTest {
   }
 
   /**
-   * What the startup check does per BPMN process: it asks for the versions once and then
+   * What the startup check does per BPMN process. It asks for the versions once, and then
    * asks four questions about every older one.
    */
   private void whatAStartAsks() {
@@ -242,8 +242,8 @@ public class Camunda7StartupQuestionCostTest {
   }
 
   /**
-   * The identifiers of a workflow module, keyed by what the engine knows them as - the shape
-   * the check about what the engine already holds is asked in.
+   * The identifiers of a workflow module, keyed by what the engine knows them as. The check
+   * about what the engine already holds is asked in this shape.
    */
   private static java.util.Map<String, String> identifiers(
       final String prefix,
@@ -333,8 +333,8 @@ public class Camunda7StartupQuestionCostTest {
 
     final var context = Mockito.mock(org.camunda.bpm.engine.impl.jobexecutor.JobAcquisitionContext.class);
     Mockito.lenient().when(context.areAllEnginesIdle()).thenReturn(Boolean.TRUE);
-    // an idle cycle asked for three jobs and got none, which is not the same thing as not
-    // having asked: an empty map reads to the engine as an executor whose threads are full
+    // an idle cycle asked for three jobs and got none. That is not the same as not having
+    // asked. The engine reads an empty map as an executor whose threads are full
     Mockito
         .lenient()
         .when(context.getAcquiredJobsByEngine())
@@ -394,7 +394,7 @@ public class Camunda7StartupQuestionCostTest {
   @DisplayName("A version the list did not hold is looked up once, not once per question")
   public void aVersionDeployedLaterIsLookedUpOnce() {
 
-    // a version another cluster node deployed after the list was read: the engine has to
+    // a version another cluster node deployed after the list was read. The engine has to
     // be asked for it, and asked once
     versions.activeInstanceCountOf(MODULE, PROCESS, "7");
     versions.tasksOfVersion(MODULE, PROCESS, "7");

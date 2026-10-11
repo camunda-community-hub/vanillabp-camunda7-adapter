@@ -20,8 +20,8 @@
     <bpmn:endEvent id="MiSubprocessCallerEnd" />
   </bpmn:process>
 
-  <!-- the shape which worked before this fix, because the call activity carries the
-       multi-instance characteristics itself -->
+  <!-- the shape which worked even before the walk was fixed, because the call activity
+       carries the multi-instance characteristics itself -->
   <bpmn:process id="MiCallActivityCaller" isExecutable="true">
     <bpmn:startEvent id="MiCallActivityCallerStart" />
     <bpmn:sequenceFlow id="MiCallActivityCallerStartFlow" sourceRef="MiCallActivityCallerStart" targetRef="HandleEach" />
@@ -52,9 +52,9 @@
     <bpmn:endEvent id="OwnLoopCallerEnd" />
   </bpmn:process>
 
-  <!-- the called process named by an EXPRESSION: the deployment reads a string nobody can
-       resolve yet, so nothing is written onto this call activity and the walk has to ask
-       the core while the workflow runs -->
+  <!-- the called process named by an EXPRESSION. The deployment reads a string which
+       nobody can resolve yet. So nothing is written onto this call activity, and the walk
+       has to ask the core while the workflow runs -->
   <bpmn:process id="ExpressionCaller" isExecutable="true">
     <bpmn:startEvent id="ExpressionCallerStart" />
     <bpmn:sequenceFlow id="ExpressionCallerStartFlow" sourceRef="ExpressionCallerStart" targetRef="ExpressionBatch" />
@@ -70,8 +70,8 @@
     <bpmn:endEvent id="ExpressionCallerEnd" />
   </bpmn:process>
 
-  <!-- the same naming, reaching a process with an aggregate of its own: the core says no
-       and the walk ends there, exactly as it does for a statically named one -->
+  <!-- the same naming, reaching a process with an aggregate of its own. The core says no
+       and the walk ends there, exactly as for a process named directly -->
   <bpmn:process id="ForeignByExpressionCaller" isExecutable="true">
     <bpmn:startEvent id="ForeignByExpressionCallerStart" />
     <bpmn:sequenceFlow id="ForeignByExpressionCallerStartFlow" sourceRef="ForeignByExpressionCallerStart" targetRef="ForeignByExpressionBatch" />

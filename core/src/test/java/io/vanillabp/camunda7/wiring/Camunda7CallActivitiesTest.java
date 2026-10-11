@@ -22,9 +22,9 @@ import io.vanillabp.integration.adapter.spi.workflowtask.WorkflowTaskWiring;
 import io.vanillabp.integration.test.utils.SuppressOutputExtension;
 
 /**
- * Camunda 7 does not pass its business key - which carries the workflow
- * aggregate's ID - to a called process. VanillaBP injects the propagation while
- * preparing the BPMN, but only where it is right.
+ * Camunda 7 does not pass its business key to a called process. The business key carries
+ * the workflow aggregate's ID. VanillaBP adds the hand-over while it prepares the BPMN, but
+ * only where it is right.
  */
 @ExtendWith(SuppressOutputExtension.class)
 public class Camunda7CallActivitiesTest {
@@ -73,8 +73,8 @@ public class Camunda7CallActivitiesTest {
       """;
 
   /**
-   * The core's answer: everything of this module works on the aggregate of
-   * 'LoanApproval' except 'Payment', which has one of its own.
+   * The core's answer. Every process of this module works on the aggregate of
+   * 'LoanApproval', except 'Payment', which has an aggregate of its own.
    */
   private static final WorkflowTaskWiring CORE = new WorkflowTaskWiring() {
 
@@ -157,7 +157,7 @@ public class Camunda7CallActivitiesTest {
     assertEquals(
         List.of(Camunda7CallActivities.PARENT_BUSINESS_KEY_EXPRESSION),
         businessKeysOf(model, "assessRisk"));
-    // also inside a subprocess - the call activity's process is found by walking up
+    // also inside a subprocess. The call activity's process is found by walking up
     assertEquals(
         List.of(Camunda7CallActivities.PARENT_BUSINESS_KEY_EXPRESSION),
         businessKeysOf(model, "collectDocuments"));

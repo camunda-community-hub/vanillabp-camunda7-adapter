@@ -93,7 +93,7 @@ public class Camunda7ViewerOfACalledProcessTest {
         .setJdbcUrl("jdbc:h2:mem:viewer-called-%s;DB_CLOSE_DELAY=-1".formatted(System.nanoTime()));
     configuration.setJobExecutorActivate(false);
     configuration.setHistory(historyLevel);
-    // the engine refuses to parse a model without one, and a test needs no cleanup policy
+    // the engine refuses to parse a model without one. A test needs no cleanup policy
     configuration.setHistoryTimeToLive("P30D");
     engine = configuration.buildProcessEngine();
     deploy(CALLER, caller());

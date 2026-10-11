@@ -25,19 +25,17 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import io.vanillabp.integration.test.utils.SuppressOutputExtension;
 
 /**
- * What the engine hands a TASK LISTENER, which is the one thing the levels of a user task
- * depend on.
+ * What the engine hands a TASK LISTENER. The levels of a user task depend on this one thing.
  * <p>
- * This adapter notifies a <code>&#64;WorkflowTask</code> method about a user task from a task
- * listener, and a task listener is given a {@link DelegateTask} rather than an execution. So
- * the question of story 884 was whether that task can say which iteration it runs in at all.
- * It can: the task hands out the execution it hangs on, the walk starts there the way it
- * starts on the service-like side, and it answers while the task is created as well as while
- * it is cancelled. The levels of a user task therefore cost nothing but the call, which is
- * why this adapter makes it.
+ * This adapter tells a <code>&#64;WorkflowTask</code> method about a user task from a task
+ * listener. A task listener is given a {@link DelegateTask}, not an execution. So the
+ * question was whether that task can say which iteration it runs in at all. It can. The task
+ * hands out the execution it hangs on. The walk starts there, the same way as on the
+ * service-like side. It answers while the task is created and also while it is cancelled. So
+ * the levels of a user task cost nothing but the call. That is why this adapter makes it.
  * <p>
- * Measured against a real embedded engine, because a listener which runs inside the engine's
- * own command is not something a test double says anything about.
+ * This is measured against a real embedded engine. A test double says nothing about a
+ * listener which runs inside the engine's own command.
  */
 @ExtendWith(SuppressOutputExtension.class)
 public class Camunda7MultiInstancesAtAUserTaskTest {
@@ -48,14 +46,14 @@ public class Camunda7MultiInstancesAtAUserTaskTest {
 
   /**
    * What the walk reported for every task event the engine fired, in the order the events
-   * arrived. One line per event: the event name, the task and the levels.
+   * came in. One line per event: the event name, the task and the levels.
    */
   private static final List<String> REPORTED = new ArrayList<>();
 
   /**
-   * Walks from the execution a task listener is handed and writes down what it finds. Built
-   * the way this adapter builds its own listener, which is what makes the answer the answer
-   * of the adapter.
+   * Walks from the execution a task listener is handed and writes down what it finds. It is
+   * built the way this adapter builds its own listener. That makes the answer the adapter's
+   * answer.
    */
   private static class WhatTheTaskKnows implements TaskListener {
 
@@ -74,7 +72,7 @@ public class Camunda7MultiInstancesAtAUserTaskTest {
   }
 
   /**
-   * Attaches that listener to every user task of the deployed models, which is where
+   * Attaches that listener to every user task of the deployed models. That is where
    * {@code Camunda7AsyncBpmnParseListener} attaches the listener of this adapter.
    */
   private static class ListeningToEveryUserTask extends AbstractBpmnParseListener {
@@ -104,7 +102,7 @@ public class Camunda7MultiInstancesAtAUserTaskTest {
     configuration.setJobExecutorActivate(false);
     configuration.setProcessEngineName(databaseName);
     configuration.setHistoryTimeToLive("P1D");
-    // a list of its own: the engine adds its own listeners to the one it is given
+    // a list of its own, because the engine adds its own listeners to the list it is given
     configuration.setCustomPostBPMNParseListeners(new ArrayList<>(List.of(new ListeningToEveryUserTask())));
     final var engine = configuration.buildProcessEngine();
     engine
@@ -135,7 +133,7 @@ public class Camunda7MultiInstancesAtAUserTaskTest {
 
       final var firstTask = engine.getTaskService().createTaskQuery().taskDefinitionKey("Review").singleResult();
       assertNotNull(firstTask, "the first iteration waits at the user task");
-      // the second iteration follows the first: the subprocess iterates sequentially
+      // the second iteration follows the first, because the subprocess iterates sequentially
       engine.getTaskService().complete(firstTask.getId());
       final var secondTask = engine.getTaskService().createTaskQuery().taskDefinitionKey("Review").singleResult();
       engine.getTaskService().complete(secondTask.getId());
@@ -168,8 +166,7 @@ public class Camunda7MultiInstancesAtAUserTaskTest {
 
       final var task = engine.getTaskService().createTaskQuery().taskDefinitionKey("ReviewEach").singleResult();
       assertNotNull(task, "the first round waits at the user task");
-      // the cancellation of the whole workflow, which is what a CANCELED notification
-      // travels with
+      // cancel the whole workflow. A CANCELED notification comes with such a cancellation
       engine.getRuntimeService().deleteProcessInstance(workflowId, "the test is done with it");
 
       assertEquals(

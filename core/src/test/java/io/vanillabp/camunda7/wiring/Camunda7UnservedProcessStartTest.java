@@ -20,13 +20,13 @@ import io.vanillabp.integration.test.utils.SuppressOutputExtension;
 import io.vanillabp.spi.service.BpmsStartTrigger;
 
 /**
- * Whose starts the listener reports, now that it sits on every start event of every model
+ * Whose starts the listener reports. The listener sits on every start event of every model
  * the engine parses.
  * <p>
  * An embedded engine holds whatever was deployed against its database: the processes of
- * this application, the ones it deploys without serving them, and another application's on
- * a shared database. The core can only answer for the first kind, so the listener asks
- * before it reports - see decision 28 in the repository's DECISIONS.md.
+ * this application, the ones it deploys without serving them, and those of another
+ * application on a shared database. The core can only answer for the first kind. So the
+ * listener asks before it reports, see decision 28 in the repository's DECISIONS.md.
  */
 @ExtendWith(SuppressOutputExtension.class)
 public class Camunda7UnservedProcessStartTest {
@@ -107,7 +107,7 @@ public class Camunda7UnservedProcessStartTest {
           return true;
         });
 
-    // an instance which already carries its name: the listener then has nothing to write
+    // an instance which already carries its name. Then the listener has nothing to write
     // back, so this test needs no engine execution to write it into
     testee.notify(anInstanceStarting("4711"));
 

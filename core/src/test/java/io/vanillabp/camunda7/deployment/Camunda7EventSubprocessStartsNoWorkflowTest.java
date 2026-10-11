@@ -31,12 +31,12 @@ import io.vanillabp.spi.service.BpmsStartTrigger;
 
 /**
  * A start event inside an event subprocess is no start of a WORKFLOW. It fires while the
- * workflow is already running and already has its aggregate, so the application owes it
+ * workflow is already running and already has its aggregate. So the application owes it
  * neither a <code>&#64;WorkflowStartedByBpms</code> method nor a second aggregate.
  * <p>
- * Both places which read a start event are held against that here: the deployment tells
- * the core which starts a BPMN process has, and the parse listener decides which start
- * event of the engine's process definition gets the listener building an aggregate.
+ * Both places which read a start event are checked against that here. The deployment tells
+ * the core which starts a BPMN process has. The parse listener decides which start event of
+ * the engine's process definition gets the listener which builds an aggregate.
  */
 @ExtendWith(SuppressOutputExtension.class)
 public class Camunda7EventSubprocessStartsNoWorkflowTest {
@@ -141,8 +141,8 @@ public class Camunda7EventSubprocessStartsNoWorkflowTest {
   }
 
   /**
-   * A process the application starts, which waits at a timer it never reaches the end of
-   * because an event subprocess takes it over on a signal.
+   * A process the application starts, which waits at a timer. It never reaches the end of the
+   * timer, because an event subprocess takes it over on a signal.
    */
   private static final String A_WORKFLOW_AN_EVENT_SUBPROCESS_TAKES_OVER = """
       <?xml version="1.0" encoding="UTF-8"?>
@@ -182,8 +182,8 @@ public class Camunda7EventSubprocessStartsNoWorkflowTest {
   @DisplayName("The event subprocess still takes the running workflow over, and its start event tells VanillaBP nothing")
   public void theEventSubprocessStillFires() {
 
-    // which start events the listener was notified at: the plain one of the process is
-    // among them since story 653, the one of the event subprocess is not
+    // which start events the listener was notified at. The plain one of the process is
+    // among them, the one of the event subprocess is not
     final var notifiedAt = new java.util.ArrayList<String>();
     final ExecutionListener startListener = execution -> notifiedAt.add(execution.getCurrentActivityId());
     engine = anEngineParsingWith(new Camunda7AsyncBpmnParseListener(null, null, kind -> startListener));
@@ -239,8 +239,8 @@ public class Camunda7EventSubprocessStartsNoWorkflowTest {
         .processDefinitionKey(PROCESS_ID)
         .singleResult()
         .getId();
-    // the parsed process definition is read through a command: the engine's deployment
-    // cache asks the command context for the definition it does not hold yet
+    // the parsed process definition is read through a command. The engine's deployment
+    // cache asks the command context for a definition it does not hold yet
     return configuration
         .getCommandExecutorTxRequired()
         .execute(commandContext -> {
@@ -255,8 +255,8 @@ public class Camunda7EventSubprocessStartsNoWorkflowTest {
   }
 
   /**
-   * An engine which parses models with the given listener in place and runs nothing: the
-   * job executor stays off, so the nightly timer of the model creates a job and nobody
+   * An engine which parses models with the given listener in place and runs nothing. The
+   * job executor stays off. So the nightly timer of the model creates a job, and nobody
    * picks it up.
    *
    * @param parseListener What sees every element while the engine parses it
@@ -274,9 +274,9 @@ public class Camunda7EventSubprocessStartsNoWorkflowTest {
   }
 
   /**
-   * What the deployment reports to the core about the start events of that model, read
-   * through the walk a version the engine holds goes through - the same walk a model this
-   * boot deploys goes through.
+   * What the deployment reports to the core about the start events of that model. It is
+   * read through the walk for a version the engine holds. A model of this boot goes through
+   * the same walk.
    *
    * @return The start events the core judges the application's methods by
    */

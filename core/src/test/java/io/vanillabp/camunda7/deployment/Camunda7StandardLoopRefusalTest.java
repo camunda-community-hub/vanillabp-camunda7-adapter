@@ -31,12 +31,12 @@ import io.vanillabp.integration.test.utils.SuppressOutputExtension;
 
 /**
  * What this adapter says about a standard loop. The engine runs such an activity once and
- * says nothing (see {@code Camunda7StandardLoopTest}), so a model this boot deploys is refused
- * where the application claims its process. A process nobody claims is somebody else's model and
- * is not looked at. A version the engine already holds is a warning where workflows still run on
- * it.
+ * says nothing (see {@code Camunda7StandardLoopTest}). So a model of this boot is refused
+ * where the application claims its process. A process which nobody claims is somebody else's
+ * model, and it is not looked at. A version the engine already holds gets a warning where
+ * workflows still run on it.
  * <p>
- * Every refusal stands next to the model which must NOT be refused: a multi-instance element
+ * Every refusal stands next to the model which must NOT be refused. A multi-instance element
  * is the form which does repeat an activity, and the message points to it.
  */
 @ExtendWith(SuppressOutputExtension.class)
@@ -83,8 +83,8 @@ public class Camunda7StandardLoopRefusalTest {
       """;
 
   /**
-   * One file with the process under test and a second process carrying a standard loop, which
-   * is the finding of that other process only.
+   * One file with the process under test and a second process with a standard loop. That
+   * loop is a finding of the other process only.
    */
   private static BpmnModelInstance model(
       final String processContent) {
@@ -116,7 +116,8 @@ public class Camunda7StandardLoopRefusalTest {
 
   /**
    * Deploys the model with a core in which a <code>&#64;WorkflowService</code> class claims the
-   * process or none does. A claimed process is one whose workflow aggregate the core knows.
+   * process, or in which none does. The core knows the workflow aggregate of a claimed
+   * process.
    */
   private static void deploy(
       final BpmnModelInstance model,

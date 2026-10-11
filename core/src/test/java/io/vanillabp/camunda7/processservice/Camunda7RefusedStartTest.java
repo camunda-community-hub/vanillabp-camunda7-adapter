@@ -21,26 +21,26 @@ import io.vanillabp.integration.test.utils.SuppressOutputExtension;
 
 /**
  * What Camunda 7 does with the two starts a Camunda 8 cluster refuses, and what the
- * adapter makes of the answers. Both are measured against a real engine, because both are
- * the engine's own behaviour and neither of them is written down anywhere else.
+ * adapter makes of the answers. Both are measured against a real engine. Both are the
+ * engine's own behaviour, and neither of them is written down anywhere else.
  * <p>
  * The first is a process nothing deployed. Camunda 7 answers it with a
- * {@link NullValueException}, which is a {@code ProcessEngineException} and therefore
- * everything the outbox repeats - the start of a committed aggregate was retried for as
- * long as its attempts lasted, and the workflow never came into being. The adapter calls
- * it permanent now, and only where a START met it.
+ * {@link NullValueException}. That is a {@code ProcessEngineException}, and the outbox
+ * repeats every such exception. So the start of a committed aggregate was retried for as
+ * long as its attempts lasted, and the workflow never came into being. The adapter now
+ * calls it permanent, but only where a START met it.
  * <p>
  * The second is a model whose only start event is a timer or a message. Camunda 8 refuses
- * such a create with a conflict; Camunda 7 simply starts the instance at that event, so
- * there is no refusal to classify and nothing for the adapter to do. That difference is
- * the reason this class exists next to {@code Camunda8RefusedStartIT} rather than
- * mirroring it.
+ * such a create with a conflict. Camunda 7 simply starts the instance at that event. So
+ * there is no refusal to classify and nothing for the adapter to do. Because of that
+ * difference, this class exists next to {@code Camunda8RefusedStartIT} and does not mirror
+ * it.
  */
 @ExtendWith(SuppressOutputExtension.class)
 public class Camunda7RefusedStartTest {
 
   /**
-   * The workflow module of this test, which is also the tenant the adapter addresses:
+   * The workflow module of this test. It is also the tenant the adapter addresses, because
    * the collaborators of these tests answer with the mode which isolates by tenant.
    */
   private static final String WORKFLOW_MODULE = "refused-start-module";
@@ -90,8 +90,8 @@ public class Camunda7RefusedStartTest {
     final var configuration = new StandaloneProcessEngineConfiguration();
     configuration.setDataSource(dataSource);
     configuration.setDatabaseSchemaUpdate("true");
-    // nothing here waits for a job: the timer of the model below would be the only one,
-    // and the test is about the create command rather than about what runs afterwards
+    // nothing here waits for a job. The timer of the model below would be the only one,
+    // and the test is about the create command, not about what runs afterwards
     configuration.setJobExecutorActivate(false);
     configuration.setHistoryTimeToLive("P180D");
     configuration.setProcessEngineName("refused-start");
@@ -133,7 +133,7 @@ public class Camunda7RefusedStartTest {
         Camunda7RefusedStart.class,
         () -> testee.startProcessInstance(WORKFLOW_MODULE, "NothingDeployedThis", "1"));
 
-    // what the engine answered stays readable: it is a NullValueException naming the key
+    // what the engine answered stays readable. It is a NullValueException naming the key
     // and the tenant it looked under
     final var answer = assertInstanceOf(NullValueException.class, refusal.getCause());
     assertTrue(
@@ -141,8 +141,8 @@ public class Camunda7RefusedStartTest {
         "the engine names the process it did not find, but said: "
             + answer.getMessage());
 
-    // and the aggregate whose transaction is already committed stops paying for it: the
-    // entry is blocked after this attempt instead of being retried for hours
+    // and the aggregate whose transaction is already committed stops paying for it. The
+    // entry is blocked after this attempt, not retried for hours
     assertFalse(testee.isPhaseTwoFailureRepeatable(refusal));
     assertFalse(
         testee.isPhaseTwoFailureRepeatable(new IllegalStateException("dispatching failed", refusal)));
@@ -153,10 +153,10 @@ public class Camunda7RefusedStartTest {
   @DisplayName("The engine's own answer stays repeatable where no start produced it")
   public void theSameAnswerFromAnotherOperationStaysRepeatable() {
 
-    // the engine uses this exception wherever something it was asked for is missing, and
-    // for an operation on a workflow which exists that is the at-least-once residual
-    // rather than a request nobody can carry out. So the verdict hangs on the start
-    // having wrapped it, not on the exception
+    // the engine uses this exception wherever something it was asked for is missing. For
+    // an operation on a workflow which exists, that is the at-least-once residual, not a
+    // request nobody can carry out. So the verdict depends on whether a start wrapped it,
+    // not on the exception
     assertTrue(adapter().isPhaseTwoFailureRepeatable(new NullValueException("task is null")));
 
   }
@@ -168,9 +168,8 @@ public class Camunda7RefusedStartTest {
     final var testee = adapter();
 
     // Camunda 8 refuses both of these with a conflict and calls that refusal permanent.
-    // Camunda 7 creates the instance at that start event, so an
-    // application which calls startWorkflow on such a model gets a running workflow here
-    // and none on a cluster
+    // Camunda 7 creates the instance at that start event. So an application which calls
+    // startWorkflow on such a model gets a running workflow here, and none on a cluster
     assertNotNull(
         testee.startProcessInstance(WORKFLOW_MODULE, "TimerOnlyStartProcess", "1"),
         "Camunda 7 starts a process whose only start event is a timer");

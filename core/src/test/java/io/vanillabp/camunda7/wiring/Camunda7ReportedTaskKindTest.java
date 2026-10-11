@@ -17,12 +17,12 @@ import io.vanillabp.spi.service.TaskEvent;
 /**
  * Which kind of task this adapter says an id is.
  * <p>
- * Both contexts of this adapter answer that from what they are rather than from the
- * model: one is built for an execution the engine pushed to the application, the other for
- * an event of a user task. So the answer is asserted on the contexts themselves, next to
- * the two ids it is about. The id of an execution and the id of a row in ACT_RU_TASK are
- * different names, and a caller using one where the other belongs is the mistake the kind
- * is reported for.
+ * Both contexts of this adapter answer that from what they are, not from the model. One is
+ * built for an execution the engine pushed to the application. The other is built for an
+ * event of a user task. So the answer is asserted on the contexts themselves, next to the
+ * two ids it is about. The id of an execution and the id of a row in ACT_RU_TASK are
+ * different names. A caller might use one where the other belongs. The kind is reported to
+ * prevent that mistake.
  */
 @ExtendWith(SuppressOutputExtension.class)
 public class Camunda7ReportedTaskKindTest {
@@ -58,8 +58,8 @@ public class Camunda7ReportedTaskKindTest {
     final var execution = mock(DelegateExecution.class);
     when(execution.getId()).thenReturn("an-execution-id");
 
-    // the cancellation listener builds the same context with the other event, and the
-    // kind of an id does not change because the task is going away
+    // the cancellation listener builds the same context with the other event. The kind of
+    // an id does not change because the task is going away
     final var context = new Camunda7WorkflowTaskBehavior.Camunda7TaskInvocationContext(
         A_SERVICE_TASK, execution, TaskEvent.Event.CANCELED, null);
 

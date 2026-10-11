@@ -17,8 +17,8 @@ import org.camunda.bpm.model.bpmn.Bpmn;
 import org.mockito.Mockito;
 
 /**
- * An engine which holds the given versions of one BPMN process, each with its model -
- * what a check reading models an earlier generation of the application deployed sees.
+ * An engine which holds the given versions of one BPMN process, each with its model. A check
+ * which reads models deployed by an earlier generation of the application sees this.
  */
 public final class AnEngineHolding {
 
@@ -35,13 +35,13 @@ public final class AnEngineHolding {
       final String bpmnProcessId,
       final Map<String, String> modelsByVersion) {
 
-    // every mock is built BEFORE the first stubbing: creating one between when() and
+    // every mock is built BEFORE the first stubbing. Creating one between when() and
     // thenReturn() leaves Mockito with a stubbing it considers unfinished
     final var definitions = definitions(bpmnProcessId, modelsByVersion.keySet());
     final var repositoryService = mock(RepositoryService.class);
     final var query = mock(ProcessDefinitionQuery.class, RETURNS_SELF);
-    // a version the list did not hold is looked up on its own - these engines hold what
-    // they were built with, so the first definition is the honest answer, and an engine
+    // a version the list did not hold is looked up on its own. These engines hold what
+    // they were built with, so the first definition is the honest answer. An engine
     // holding nothing answers nothing
     final var singleResult = definitions.isEmpty()
         ? null
@@ -63,8 +63,8 @@ public final class AnEngineHolding {
   }
 
   /**
-   * The definitions as the engine's query reports them: oldest version first, the way
-   * the version catalog asks for them.
+   * The definitions as the engine's query reports them. The oldest version comes first,
+   * because the version catalog asks for them in that order.
    */
   private static List<ProcessDefinition> definitions(
       final String bpmnProcessId,

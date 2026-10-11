@@ -12,9 +12,9 @@ import io.vanillabp.integration.adapter.spi.workflowtask.WorkflowTaskInvoker;
 import io.vanillabp.integration.adapter.spi.workflowtask.WorkflowTaskWiring;
 
 /**
- * What the platform hands the adapter, for tests which need the adapter and not the
- * registration: the mandatory collaborators are mocks nobody calls unless the test says
- * so, and the two optional ones are supplied per test.
+ * What the platform hands the adapter. It is for tests which need the adapter and not the
+ * registration. The mandatory collaborators are mocks which nobody calls unless the test
+ * says so. The two optional ones are supplied per test.
  */
 public final class TestCollaborators {
 
@@ -24,14 +24,14 @@ public final class TestCollaborators {
 
   /**
    * The default of this adapter: identifiers are deployed as modelled. A bare mock would
-   * answer null here, which is not a value the adapter has to cope with - the platform
+   * answer null here. The adapter does not have to cope with null, because the platform
    * always answers with one of the three modes.
    */
   private static NameClashAvoidanceSupport scopingWithoutNameClashAvoidance() {
 
-    // every identifier passes through unchanged, and the mode is the one that isolates by
-    // tenant: a bare mock answers null to both, and null is not a value the platform ever
-    // gives an adapter
+    // every identifier passes through unchanged, and the mode is the one which isolates by
+    // tenant. A bare mock answers null to both, and the platform never gives an adapter
+    // null
     final var scoping = mock(NameClashAvoidanceSupport.class, invocation -> {
       final var method = invocation.getMethod();
       if ("modeFor".equals(method.getName())) {
@@ -39,8 +39,8 @@ public final class TestCollaborators {
         return io.vanillabp.integration.adapter.spi.NameClashAvoidance.BY_ADAPTER;
       }
       if (method.getReturnType() == String.class) {
-        // every one of them ends with the adapter id and carries the identifier right
-        // before it - scopedTaskDefinition has four parameters, the others three
+        // every one of them ends with the adapter id and has the identifier right before
+        // it. scopedTaskDefinition has four parameters, the others three
         return invocation.getArgument(invocation.getArguments().length - 2);
       }
       return org.mockito.Answers.RETURNS_DEFAULTS.answer(invocation);
@@ -51,8 +51,8 @@ public final class TestCollaborators {
 
   /**
    * The core's wiring as a mock in which a <code>&#64;WorkflowService</code> claims every BPMN
-   * process. A bare mock answers <code>false</code> for a default method, and this adapter wires
-   * nothing of a process nobody claims.
+   * process. A bare mock answers <code>false</code> for a default method. And this adapter wires
+   * nothing of a process which nobody claims.
    *
    * @return The mock, to be stubbed further by the test
    */
@@ -82,9 +82,9 @@ public final class TestCollaborators {
   }
 
   /**
-   * The start entry of a core which answers what the core answers for a process that is no
+   * The start entry of a core. It answers what the core answers for a process which is not a
    * called process. A plain mock would answer <code>false</code> to
-   * <code>startsAWorkflowOfItsOwn</code>, and every process would look like a called one.
+   * <code>startsAWorkflowOfItsOwn</code>. Then every process would look like a called one.
    *
    * @return The mock
    */

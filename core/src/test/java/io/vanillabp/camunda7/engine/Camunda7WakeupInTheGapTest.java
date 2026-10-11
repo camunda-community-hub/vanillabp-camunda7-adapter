@@ -28,24 +28,24 @@ import io.vanillabp.integration.test.utils.SuppressOutputExtension;
  * The window in which a wake-up used to disappear, and what it cost here.
  * <p>
  * The engine's acquisition loop copies its "a job was added" flag into the cycle it just
- * ran, asks the strategy how long to wait, and clears the flag afterwards. Camunda pays
- * one idle interval for a wake-up landing in that window. This adapter asks the database
- * for the next due date inside that same window, and the wait it comes back with reaches
- * to that due date - or to a year where no job is due at all. So the same lost wake-up
- * stops being a late cycle and becomes a job which never runs.
+ * ran. Then it asks the strategy how long to wait, and clears the flag afterwards. Camunda
+ * pays one idle interval for a wake-up which lands in that window. This adapter asks the
+ * database for the next due date inside that same window. The wait it comes back with lasts
+ * until that due date, or a year where no job is due at all. So the same lost wake-up is no
+ * longer a late cycle. It becomes a job which never runs.
  * <p>
- * Both tests hang on state and not on a clock. The first arranges the job to be written
- * from inside the window itself, so there is nothing to time; the second asks the strategy
- * what it decides for a cycle somebody woke, which is a question with one answer.
+ * Both tests depend on state, not on a clock. The first makes the job get written from
+ * inside the window itself, so there is nothing to time. The second asks the strategy what
+ * it decides for a cycle somebody woke. That question has one answer.
  */
 @ExtendWith(SuppressOutputExtension.class)
 @SuppressOutputExtension.SuppressBackgroundOutput
 public class Camunda7WakeupInTheGapTest {
 
   /**
-   * How long a test waits for a workflow which should have run. Generous, because a busy
-   * build machine is allowed to be slow; what fails the test is the year-long sleep, not a
-   * second of delay.
+   * How long a test waits for a workflow which should have run. It is generous, because a
+   * busy build machine may be slow. The test fails because of the year-long sleep, not
+   * because of a second of delay.
    */
   private static final long PATIENCE = 20000;
 
@@ -68,10 +68,10 @@ public class Camunda7WakeupInTheGapTest {
   }
 
   /**
-   * What the job of the workflow below does, and the only thing this test watches. It is
-   * a bean of the engine rather than a question the test asks, because every question
-   * asked of this engine is an engine command, and a committed engine command wakes the
-   * acquisition - a test polling the engine would wake the sleep it is measuring.
+   * What the job of the workflow below does, and the only thing this test watches. It is a
+   * bean of the engine, not a question the test asks. Every question asked of this engine
+   * is an engine command, and a committed engine command wakes the acquisition. So a test
+   * polling the engine would wake the sleep it is measuring.
    */
   public static final class TheJobRan {
 
@@ -105,9 +105,9 @@ public class Camunda7WakeupInTheGapTest {
   }
 
   /**
-   * An acquisition which lets the test act exactly once, inside the window: after the
-   * strategy asked the database for the next due date and before the loop clears the flag
-   * a wake-up sets. Everything the loop does from there on is what production does.
+   * An acquisition which lets the test act exactly once, inside the window. That is after
+   * the strategy asked the database for the next due date, and before the loop clears the
+   * flag a wake-up sets. From there on, the loop does what production does.
    */
   private static final class AcquisitionOpeningTheWindow extends Camunda7SleepingAcquisition {
 
@@ -140,8 +140,8 @@ public class Camunda7WakeupInTheGapTest {
   }
 
   /**
-   * The executor of such an acquisition. The engine creates its loop while it initializes
-   * and keeps no factory for it, which is why the adapter's own executor subclasses it as
+   * The executor of such an acquisition. The engine creates its loop while it initializes,
+   * and keeps no factory for it. That is why the adapter's own executor subclasses it as
    * well.
    */
   private static final class ExecutorOpeningTheWindow extends Camunda7SleepingJobExecutor {
@@ -169,10 +169,10 @@ public class Camunda7WakeupInTheGapTest {
   }
 
   /**
-   * Starts the workflow from a thread of its own and waits for its commit, so that by the
-   * time this returns the job is in the database and the wake-up has been sent. Called
-   * from the acquisition thread, which must not start the workflow itself: a commit of the
-   * acquisition thread is deliberately not a wake-up (see
+   * Starts the workflow from a thread of its own and waits for its commit. So when this
+   * returns, the job is in the database and the wake-up has been sent. It is called from
+   * the acquisition thread, which must not start the workflow itself. A commit of the
+   * acquisition thread is not a wake-up, on purpose (see
    * {@link Camunda7WakeupAfterCommit}).
    */
   private void aJobIsWrittenByAnotherThread() {
@@ -211,8 +211,8 @@ public class Camunda7WakeupInTheGapTest {
     jobExecutor = ((ProcessEngineConfigurationImpl) processEngine.getProcessEngineConfiguration())
         .getJobExecutor();
     // every wait this loop could decide on is turned up beyond the patience below, the
-    // engine's own backoff included, so the test says nothing about which of them was
-    // chosen: any wait at all is a job which does not run
+    // engine's own backoff included. So the test does not care which of them was chosen.
+    // Any wait at all is a job which does not run
     jobExecutor.setWaitTimeInMillis((int) (PATIENCE * 10));
     jobExecutor.setMaxWait(PATIENCE * 10);
     processEngine
@@ -221,8 +221,8 @@ public class Camunda7WakeupInTheGapTest {
         .addModelInstance("worker.bpmn", aWorkflowWithSomethingToDoNow())
         .deploy();
 
-    // the first cycle finds an engine without a single job, so the wait it decides on is
-    // the one with no end in sight - and the workflow is started inside that decision
+    // the first cycle finds an engine without a single job. So it decides on the wait with
+    // no end in sight, and the workflow is started inside that decision
     jobExecutor.start();
 
     assertTrue(
@@ -240,9 +240,9 @@ public class Camunda7WakeupInTheGapTest {
     final var context = new JobAcquisitionContext();
 
     context.setAcquisitionTime(System.currentTimeMillis());
-    // one engine which was asked for jobs and handed out none, which is what a cycle
-    // finding nothing looks like; an untouched context reads as an executor whose queue
-    // is full instead
+    // one engine which was asked for jobs and handed out none. That is what a cycle finding
+    // nothing looks like. An untouched context would read as an executor whose queue is
+    // full
     context.submitAcquiredJobs("an-engine", new AcquiredJobs(3));
     context.setJobAdded(false);
     strategy.reconfigure(context);

@@ -145,8 +145,8 @@ public class Camunda7ListenersReportTest {
   }
 
   /**
-   * What the core answers about the methods this application has. A listener is served where a
-   * method names its task definition and nowhere else, so every case below says which names exist.
+   * What the core answers about the methods this application has. A listener is served only
+   * where a method names its task definition. So every case below says which names exist.
    */
   private static WorkflowTaskInvoker aCoreWithMethodsFor(
       final String... taskDefinitions) {

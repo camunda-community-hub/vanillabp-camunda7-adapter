@@ -21,10 +21,10 @@ import io.vanillabp.integration.test.utils.SuppressOutputExtension;
  * them while it boots.
  * <p>
  * The second key is the engine's metrics reporter. It writes its counters through a
- * database command every 900 seconds on a timer of its own, which would wake a sleeping
- * engine four times an hour and give the whole saving back, so it follows the sleep unless
- * the application says otherwise. The timing of an adapter id which configured neither key
- * does not change by a single statement, which is the other half of what is asserted here.
+ * database command every 900 seconds, on a timer of its own. That would wake a sleeping
+ * engine four times an hour and give the whole saving back. So it follows the sleep, unless
+ * the application says otherwise. The other half of what is asserted here: for an adapter id
+ * which configured neither key, the timing does not change by a single statement.
  */
 @ExtendWith(SuppressOutputExtension.class)
 public class Camunda7JobExecutorSleepTest {
@@ -91,8 +91,8 @@ public class Camunda7JobExecutorSleepTest {
             .size(),
         "a retry is rescheduled in a transaction of its own, and its new due date counts");
 
-    // the startup message has to carry what the operator still has to do and which key
-    // brings the metrics back, so nobody needs the documentation for either
+    // the startup message has to say what the operator still has to do, and which key
+    // brings the metrics back. So nobody needs the documentation for either
     assertTrue(output.getAll().contains("acquired by due date"), output.getAll());
     assertTrue(output.getAll().contains("ACT_RU_JOB"), output.getAll());
     assertTrue(output.getAll().contains("vanillabp.adapters.c7.db-metrics-reporting: true"), output.getAll());
@@ -134,8 +134,8 @@ public class Camunda7JobExecutorSleepTest {
 
     final var strategy = new Camunda7SleepUntilSomethingIsDue(ADAPTER_ID, jobExecutor);
 
-    // a cycle which lost a job to another node's lock is about load, and the superclass
-    // backs off for exactly that
+    // a cycle which lost a job to another node's lock is about load. The superclass backs
+    // off for exactly that
     final var context = Mockito.mock(JobAcquisitionContext.class);
     Mockito.when(context.hasJobAcquisitionLockFailureOccurred()).thenReturn(Boolean.TRUE);
     Mockito.when(context.getAcquiredJobsByEngine()).thenReturn(java.util.Map.of());

@@ -20,13 +20,13 @@ import io.vanillabp.integration.adapter.spi.workflowtask.WorkflowTaskInvoker;
 import io.vanillabp.integration.test.utils.SuppressOutputExtension;
 
 /**
- * Which rounds a task of a version the ENGINE STILL HOLDS iterates in without being handed
- * their value. A handler reads the item of an iteration out of the variable the model names
- * in <code>camunda:elementVariable</code>, and an element naming none hands nothing over, so
- * a method serving that version receives <code>null</code> and nothing says why.
+ * Which rounds a task iterates in without being handed their value, in a version the ENGINE
+ * STILL HOLDS. A handler reads the item of an iteration out of the variable which the model
+ * names in <code>camunda:elementVariable</code>. An element which names none hands nothing
+ * over. So a method serving that version receives <code>null</code>, and nothing says why.
  * <p>
- * Reading the model is this adapter's job and judging the methods is the core's, so what is
- * measured here is the shape the adapter hands over at the boundary to the migration SPI:
+ * Reading the model is this adapter's job, and judging the methods is the core's job. So this
+ * test measures the shape the adapter hands over at the boundary to the migration SPI:
  * {@link BpmnTaskSpec#multiInstanceElementsWithoutAnItem()} of a task of a held version.
  */
 @ExtendWith(SuppressOutputExtension.class)
@@ -107,7 +107,7 @@ public class Camunda7ItemsOfHeldVersionsTest {
   @DisplayName("Only the elements of the task's own chain are named, outermost first")
   public void onlyTheChainOfTheTask() {
 
-    // the subprocess hands no item over and the task inside it does, so the one round
+    // the subprocess hands no item over, but the task inside it does. So the one round
     // without a value is the outer one
     assertEquals(List.of("SubProcess_Applications"), itemsNeverNamedBy(A_SUBPROCESS_NAMING_NO_ITEM));
 
@@ -117,7 +117,7 @@ public class Camunda7ItemsOfHeldVersionsTest {
   @DisplayName("A modelled listener of a held version names the rounds around it too")
   public void aListenerOfAHeldVersion() {
 
-    // a listener method reads its item out of the same iteration a task's method does, so
+    // a listener method reads its item out of the same iteration as a task's method. So
     // leaving the chain off a listener would hide the finding for that half of the model
     assertEquals(
         List.of("SubProcess_Applications"),
@@ -148,8 +148,8 @@ public class Camunda7ItemsOfHeldVersionsTest {
                 .builder()
                 .workflowTaskInvoker(aCoreServingEveryListener())
                 .build(), new Camunda7TaskRegistry());
-    // the key an application switched on before it deployed that version: without it a
-    // listener of a held model is nothing this application ever had a method for
+    // the key an application switched on before it deployed that version. Without it, this
+    // application never had a method for a listener of a held model
     service
         .setAllowListenersResolver((
             workflowModuleId,

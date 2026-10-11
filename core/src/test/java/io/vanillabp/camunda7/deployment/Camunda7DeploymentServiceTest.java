@@ -15,11 +15,11 @@ import io.vanillabp.integration.adapter.spi.NameClashAvoidance;
 import io.vanillabp.integration.test.utils.SuppressOutputExtension;
 
 /**
- * What the Camunda 7 adapter contributes to the name-clash-avoidance model: the mode
- * applying without configuration, and how an unscoped workflow module
- * is reported - the alternatives to {@link NameClashAvoidance#NONE} are Camunda 7's,
- * so the message is the adapter's. The default is {@link NameClashAvoidance#BY_ADAPTER}
- * because version 1 deployed a tenant per workflow module.
+ * What the Camunda 7 adapter adds to the name-clash-avoidance model: the mode which applies
+ * without configuration, and how an unscoped workflow module is reported. The alternatives
+ * to {@link NameClashAvoidance#NONE} are Camunda 7's, so the message is the adapter's. The
+ * default is {@link NameClashAvoidance#BY_ADAPTER}, because version 1 deployed a tenant per
+ * workflow module.
  */
 @ExtendWith(SuppressOutputExtension.class)
 public class Camunda7DeploymentServiceTest {
@@ -34,8 +34,8 @@ public class Camunda7DeploymentServiceTest {
   }
 
   /**
-   * The service with a core which knows the given end handlers - what the deployment
-   * asks while it decides whether a method of the application will ever be called.
+   * The service with a core which knows the given end handlers. The deployment asks the core
+   * about them while it decides whether a method of the application will ever be called.
    */
   private static Camunda7DeploymentService serviceReportingEndsTo(
       final String adapterId,
@@ -93,8 +93,8 @@ public class Camunda7DeploymentServiceTest {
     assertTrue(message.contains("LoanApproval"), () -> message);
     assertTrue(message.contains(MODULE), () -> message);
     assertTrue(message.contains("'c7'"), () -> message);
-    // Camunda 7 CAN report the end of a workflow, so this is not the application's
-    // problem to solve - the message has to say whose it is
+    // Camunda 7 CAN report the end of a workflow, so the application cannot solve this
+    // problem. The message has to say whose problem it is
     assertTrue(message.contains("wiring defect of the adapter"), () -> message);
 
   }
@@ -184,7 +184,7 @@ public class Camunda7DeploymentServiceTest {
     assertTrue(message.contains("data-source-name"), () -> message);
     assertTrue(message.contains("table-prefix"), () -> message);
 
-    // the mode being the adapter's default is worth saying - the developer configured
+    // it is worth saying that the mode is the adapter's default. The developer configured
     // nothing, so they may not know the mode at all
     final var byDefault = warningsOf(() -> service.warnAboutUnscopedIdentifiers(MODULE, true));
     assertTrue(byDefault.getFirst().contains("nothing is configured"), byDefault::toString);

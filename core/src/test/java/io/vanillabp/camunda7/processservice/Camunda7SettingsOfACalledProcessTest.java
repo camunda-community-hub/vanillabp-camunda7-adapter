@@ -62,8 +62,8 @@ public class Camunda7SettingsOfACalledProcessTest {
   private final List<String> processesAskedForTheirFormat = new CopyOnWriteArrayList<>();
 
   /**
-   * The process at the top: it calls the child and passes the business key, which is what the
-   * deployment adds to a call activity whose called process shares the workflow aggregate.
+   * The process at the top. It calls the child and passes the business key. The deployment
+   * adds the same to a call activity whose called process shares the workflow aggregate.
    */
   private static String caller() {
 
@@ -164,7 +164,7 @@ public class Camunda7SettingsOfACalledProcessTest {
     configuration
         .setJdbcUrl("jdbc:h2:mem:called-settings-%s;DB_CLOSE_DELAY=-1".formatted(System.nanoTime()));
     configuration.setJobExecutorActivate(false);
-    // the engine refuses to parse a model without one, and a test needs no cleanup policy
+    // the engine refuses to parse a model without one. A test needs no cleanup policy
     configuration.setHistoryTimeToLive("P30D");
     engine = configuration.buildProcessEngine();
     // without a name-clash-avoidance support the workflow module id is the tenant

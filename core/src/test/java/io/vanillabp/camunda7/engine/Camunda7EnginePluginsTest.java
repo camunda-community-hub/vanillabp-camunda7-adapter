@@ -18,14 +18,14 @@ import io.vanillabp.integration.test.utils.SuppressOutputExtension;
 import lombok.Setter;
 
 /**
- * The engine plugins an adapter id configures - and that their properties are
- * converted by CAMUNDA, the same way a <code>bpm-platform.xml</code> would.
+ * The engine plugins an adapter id configures. CAMUNDA converts their properties, the same
+ * way as for a <code>bpm-platform.xml</code>.
  */
 @ExtendWith(SuppressOutputExtension.class)
 public class Camunda7EnginePluginsTest {
 
   /**
-   * Stands in for a dataformat plugin: it has the property types such a plugin has.
+   * Stands in for a dataformat plugin. It has the property types such a plugin has.
    */
   @Setter
   public static class TestPlugin extends AbstractProcessEnginePlugin {
@@ -39,7 +39,7 @@ public class Camunda7EnginePluginsTest {
     @Override
     public void preInit(
         final ProcessEngineConfigurationImpl processEngineConfiguration) {
-      // nothing to do - this plugin exists to be configured
+      // nothing to do, this plugin exists to be configured
     }
 
     @Override
@@ -89,7 +89,7 @@ public class Camunda7EnginePluginsTest {
     assertEquals(1, plugins.size());
     final var plugin = assertInstanceOf(TestPlugin.class, plugins.getFirst());
     assertEquals("UTF-8", plugin.encoding);
-    // a boolean and an int arrive as their types, not as text - Camunda's PropertyHelper
+    // a boolean and an int arrive as their types, not as text. Camunda's PropertyHelper
     // does that, and kebab-case maps to the setter
     assertTrue(plugin.ignoreUnknownElements);
     assertEquals(7, plugin.maxDepth);

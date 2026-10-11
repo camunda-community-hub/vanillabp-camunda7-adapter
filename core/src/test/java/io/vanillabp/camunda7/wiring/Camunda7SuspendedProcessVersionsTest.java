@@ -20,12 +20,12 @@ import io.vanillabp.integration.test.utils.CapturedOutput;
 import io.vanillabp.integration.test.utils.SuppressOutputExtension;
 
 /**
- * What a suspended process definition is worth to this adapter: a version like every
- * other one, unless the emergency exit is taken.
+ * What a suspended process definition is to this adapter: a version like every other one,
+ * unless the emergency exit is taken.
  * <p>
- * Suspending is reversible, so the workflows on a suspended version are still there and
- * the {@code @WorkflowTask} method they miss is still missing - which is why the switch
- * has to be set deliberately and why every start says loudly that it was.
+ * Suspending can be undone. So the workflows on a suspended version are still there, and
+ * the {@code @WorkflowTask} method they miss is still missing. That is why the switch has to
+ * be set on purpose, and why every start says loudly that it was.
  */
 @ExtendWith(SuppressOutputExtension.class)
 public class Camunda7SuspendedProcessVersionsTest {
@@ -62,8 +62,8 @@ public class Camunda7SuspendedProcessVersionsTest {
   @BeforeEach
   public void setUp() {
 
-    // built before the stubbing below: a mock created inside thenReturn() would be
-    // stubbed while the outer stubbing is still open, which Mockito refuses
+    // built before the stubbing below. A mock created inside thenReturn() would be stubbed
+    // while the outer stubbing is still open, and Mockito refuses that
     final var definitions = List.of(definition(1, true), definition(2, false));
 
     final var definitionQuery = Mockito.mock(ProcessDefinitionQuery.class, Mockito.RETURNS_SELF);
@@ -81,8 +81,8 @@ public class Camunda7SuspendedProcessVersionsTest {
   }
 
   /**
-   * The switch is a system property of the JVM, so a case which sets it takes it back -
-   * otherwise it colours every test running afterwards.
+   * The switch is a system property of the JVM. So a case which sets it takes it back.
+   * Otherwise it affects every test which runs afterwards.
    */
   @AfterEach
   public void takeTheSwitchBackOut() {
@@ -92,8 +92,8 @@ public class Camunda7SuspendedProcessVersionsTest {
   }
 
   /**
-   * The versions the startup check would work on. The catalog is built per case, because
-   * it asks the engine once and then answers from what it learned.
+   * The versions the startup check would work on. The catalog is built per case, because it
+   * asks the engine once and then answers from what it learned.
    */
   private List<String> versionsReportedByTheCatalog() {
 
@@ -110,8 +110,8 @@ public class Camunda7SuspendedProcessVersionsTest {
   }
 
   /**
-   * What ONE action wrote - the captured output accumulates over the whole class, so
-   * every case looks at its own tail of it.
+   * What ONE action wrote. The captured output grows over the whole class, so every case
+   * looks at its own tail of it.
    */
   private static String whatIsLoggedBy(
       final CapturedOutput output,

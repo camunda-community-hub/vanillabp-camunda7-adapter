@@ -18,15 +18,15 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import io.vanillabp.integration.test.utils.SuppressOutputExtension;
 
 /**
- * What Camunda 7 itself does with a message start event whose name is an expression,
+ * What Camunda 7 itself does with a message start event whose name is an expression. It is
  * recorded here without VanillaBP in the way. The answer decides what the adapter's check
  * before a start by message has to expect.
  * <p>
  * The engine refuses to deploy such a model. The expression below needs no variables, so
- * the engine could resolve it, and still the deployment fails. So no correlation can ever
- * reach a process whose message start event is named by an expression, whether it names
- * the process definition or not. Measured on Camunda 7.24.0. The refusal is
- * {@code BpmnParse#ensureNoExpressionInMessageStartEvent}, which the engine runs for every
+ * the engine could resolve it. Still the deployment fails. So no correlation can ever reach
+ * a process whose message start event is named by an expression, whether the correlation
+ * names the process definition or not. Measured on Camunda 7.24.0. The refusal is
+ * {@code BpmnParse#ensureNoExpressionInMessageStartEvent}. The engine runs it for every
  * message start event of a process.
  */
 @ExtendWith(SuppressOutputExtension.class)

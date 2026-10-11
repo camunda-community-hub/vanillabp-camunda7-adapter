@@ -19,9 +19,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import io.vanillabp.integration.test.utils.SuppressOutputExtension;
 
 /**
- * The table-prefix startup check: an adapter id running on a table prefix learns while
- * booting that its tables have to be there, instead of dying on a MyBatis query
- * against a table nobody created.
+ * The table-prefix startup check. An adapter id which runs on a table prefix learns while
+ * booting that its tables have to be there. It does not die on a MyBatis query against a
+ * table nobody created.
  */
 @ExtendWith(SuppressOutputExtension.class)
 public class Camunda7TablePrefixSchemaTest {
@@ -36,8 +36,8 @@ public class Camunda7TablePrefixSchemaTest {
   }
 
   /**
-   * The marker tables Camunda's schema check asks for - created empty here, which is
-   * all this check looks at.
+   * The marker tables Camunda's schema check asks for. They are created empty here, and that
+   * is all this check looks at.
    */
   private static void createMarkerTables(
       final DataSource dataSource,
@@ -119,8 +119,8 @@ public class Camunda7TablePrefixSchemaTest {
   public void missingTablesFailTheBoot() {
 
     final var dataSource = h2("prefix-check-missing");
-    // the engine tables are there, the decision ones are not - which is what an
-    // application applying only a part of Camunda's statements ends up with
+    // the engine tables are there, the decision ones are not. An application which applies
+    // only a part of Camunda's statements ends up like this
     createMarkerTables(dataSource, "NEW_", "ACT_RU_EXECUTION", "ACT_HI_PROCINST", "ACT_ID_USER");
 
     final var exception = assertThrows(
@@ -166,9 +166,9 @@ public class Camunda7TablePrefixSchemaTest {
   @DisplayName("A prefix naming a schema is looked up in that schema")
   public void aPrefixNamingASchemaIsLookedUpThere() {
 
-    // Camunda derives databaseSchema from a prefix containing a dot, and this check
-    // asks the metadata the same way - a table of the same name in the DEFAULT schema
-    // must not count as present
+    // Camunda derives databaseSchema from a prefix containing a dot, and this check asks
+    // the metadata the same way. A table of the same name in the DEFAULT schema must not
+    // count as present
     final var dataSource = h2("prefix-check-schema;INIT=create schema if not exists NEW_ENGINE");
     createMarkerTables(dataSource, "", ALL_MARKER_TABLES);
 

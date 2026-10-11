@@ -28,15 +28,15 @@ import io.vanillabp.integration.test.utils.SuppressOutputExtension;
 
 /**
  * Two workflow modules of one application which use the same BPMN process id, deployed into
- * one engine, with the core's own name-clash-avoidance support in between. The clash lives
- * between the two modules and a deployment is per module, so the refusal can only come while
- * the SECOND one deploys, with the first already in the engine.
+ * one engine, with the core's own name-clash-avoidance support in between. The clash lies
+ * between the two modules, and a deployment is per module. So the refusal can only come
+ * while the SECOND one deploys, with the first one already in the engine.
  * <p>
- * Which of the two modules is deployed first is not the application's choice, so both orders
- * are driven. What decides whether the two ids are a clash at all is the tenant this adapter
- * would deploy them into: a name for the whole adapter puts both modules into one tenant and
- * the engine then keeps nothing apart, while the tenant named after each module is what lets
- * the same process id live twice.
+ * The application does not choose which of the two modules is deployed first. So both
+ * orders are tested. The tenant this adapter would deploy them into decides whether the two
+ * ids clash at all. A name for the whole adapter puts both modules into one tenant, and then
+ * the engine keeps nothing apart. A tenant named after each module lets the same process id
+ * exist twice.
  */
 @ExtendWith(SuppressOutputExtension.class)
 public class Camunda7CollidingProcessIdsTest {
@@ -76,7 +76,7 @@ public class Camunda7CollidingProcessIdsTest {
 
   /**
    * The configuration of an application with two workflow modules and one Camunda 7 adapter.
-   * No mode is configured anywhere, so the adapter's own default applies, which is the tenant
+   * No mode is configured anywhere. So the adapter's own default applies, which is the tenant
    * per workflow module.
    */
   private static MigrationAdapterProperties twoWorkflowModules() {

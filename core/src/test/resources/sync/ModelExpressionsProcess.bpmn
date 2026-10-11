@@ -5,8 +5,8 @@
                   id="Definitions_ModelExpressions" targetNamespace="http://bpmn.io/schema/bpmn">
   <bpmn:process id="ModelExpressionsProcess" isExecutable="true">
     <bpmn:startEvent id="ME_Start"/>
-    <!-- a gateway WITH a default flow: the two sequence-flow placements of the sync check
-         are one place for the core, and this is the one the other test model has not got -->
+    <!-- a gateway WITH a default flow. The two sequence-flow placements of the sync check
+         are one place for the core. This is the one which the other test model lacks -->
     <bpmn:exclusiveGateway id="ME_Gateway" default="ME_else"/>
     <bpmn:sequenceFlow id="ME_express" sourceRef="ME_Gateway" targetRef="ME_Ship">
       <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">#{order.shipping.express}</bpmn:conditionExpression>

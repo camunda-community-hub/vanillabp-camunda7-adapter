@@ -16,16 +16,16 @@ import io.vanillabp.integration.test.utils.SuppressOutputExtension;
 /**
  * What a task of a CALLED process is told about the iteration it runs in.
  * <p>
- * The walk leaves the called process through the call activity which started it, so the
+ * The walk leaves the called process through the call activity which started it. So the
  * models of these tests are split over files the way an application splits them: one file
- * per process which is called. Both halves of that sentence are measured here, because
- * one of them used to be wrong and the other one was never asked.
+ * per process which is called. Both halves of that sentence are measured here. One of them
+ * used to be wrong, and nobody ever asked about the other one.
  * <p>
- * Whether the walk may leave is a question about the workflow aggregate, and the answer
- * comes from two places: the note the deployment wrote onto a call activity whose called
- * process the model spells out, and the core itself for one which names that process in an
- * expression. The cases of both are here, and so is the case of a caller which cannot reach
- * the core.
+ * Whether the walk may leave is a question about the workflow aggregate. The answer comes
+ * from two places. For a call activity which names the called process directly, it is the
+ * note the deployment wrote onto the call activity. For one which names that process in an
+ * expression, it is the core itself. The cases of both are here, and so is the case of a
+ * caller which cannot reach the core.
  */
 @ExtendWith(SuppressOutputExtension.class)
 public class Camunda7MultiInstancesAcrossCallActivitiesTest {
@@ -273,8 +273,8 @@ public class Camunda7MultiInstancesAcrossCallActivitiesTest {
           "a process with an aggregate of its own runs a business case of its own and hears "
               + "nothing about the iteration which called it");
 
-      // and the chain is not broken, it ends: the calling process still reports its own
-      // iteration, which is where the values the called process does not get come from
+      // and the chain is not broken, it ends. The calling process still reports its own
+      // iteration. The values which the called process does not get come from there
       assertEquals(
           List.of("Shipments"),
           List.copyOf(Camunda7MultiInstances.of(engine.processEngine(), engine.executionStandingOn("Ship")).keySet()),

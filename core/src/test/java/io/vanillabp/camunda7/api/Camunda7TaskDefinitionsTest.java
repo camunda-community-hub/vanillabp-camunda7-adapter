@@ -16,8 +16,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import io.vanillabp.integration.test.utils.SuppressOutputExtension;
 
 /**
- * What {@link Camunda7TaskDefinitions} promises: the form key wins, the element id is the
- * fallback, and a form key which is an expression is the text the modeller wrote - the same
+ * What {@link Camunda7TaskDefinitions} promises. The form key wins, and the element id is the
+ * fallback. A form key which is an expression is the text the modeller wrote. It is the same
  * text while the model is read and while a workflow runs on it.
  */
 @ExtendWith(SuppressOutputExtension.class)
@@ -69,8 +69,8 @@ public class Camunda7TaskDefinitionsTest {
 
       final var written = AnEngineRunningTheFactsProcess.FORM_KEY_AS_WRITTEN;
 
-      // what a reader of the deployed definition gets, which is what a parse listener and a
-      // built-in task listener see
+      // what a reader of the deployed definition gets. A parse listener and a built-in task
+      // listener see the same
       assertEquals(
           written,
           Camunda7TaskDefinitions
@@ -80,8 +80,8 @@ public class Camunda7TaskDefinitionsTest {
                   AnEngineRunningTheFactsProcess.USER_TASK_ID),
           "the form key read from the deployed definition is the written one");
 
-      // what asking the running task answers instead - the second identity this class exists
-      // to prevent
+      // what the running task answers instead. This is the second identity which the class
+      // exists to prevent
       final var evaluated = engine
           .waitingUserTask()
           .getFormKey();

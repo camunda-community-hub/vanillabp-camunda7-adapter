@@ -19,12 +19,11 @@ import io.vanillabp.integration.test.utils.CapturedOutput;
 import io.vanillabp.integration.test.utils.SuppressOutputExtension;
 
 /**
- * Reading a model the ENGINE holds must never refuse it: the refusals of the
- * deployment judge a model this boot brings, while the startup check about older
- * versions only READS models an earlier generation deployed - and a boot ended over a
- * model nobody can change any more would be the check costing more than it answers.
- * What such a model carries and VanillaBP cannot read is one warning, and the rest of
- * the model is still answered.
+ * Reading a model the ENGINE holds must never refuse it. The refusals of the deployment
+ * judge a model which this boot brings. The startup check about older versions only READS
+ * models an earlier generation deployed. Ending a boot over a model which nobody can change
+ * any more would make the check cost more than it is worth. Whatever such a model carries
+ * that VanillaBP cannot read is one warning. The rest of the model is still answered.
  */
 @ExtendWith(SuppressOutputExtension.class)
 public class Camunda7HeldModelReadingTest {
@@ -34,9 +33,9 @@ public class Camunda7HeldModelReadingTest {
   private static final String PROCESS_ID = "loan_approval";
 
   /**
-   * An older version wired by an external task next to an ordinary one - what a model
-   * deployed by another tool, or by a version of this application which accepted
-   * more, can look like.
+   * An older version with an external task next to an ordinary one. A model deployed by
+   * another tool, or by a version of this application which accepted more, can look like
+   * this.
    */
   private static final String AN_OLD_MODEL_WITH_AN_EXTERNAL_TASK = """
       <?xml version="1.0" encoding="UTF-8"?>

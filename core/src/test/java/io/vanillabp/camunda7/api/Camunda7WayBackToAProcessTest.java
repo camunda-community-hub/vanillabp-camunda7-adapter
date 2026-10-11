@@ -16,8 +16,8 @@ import io.vanillabp.integration.test.utils.SuppressOutputExtension;
 
 /**
  * The way back from what an engine reports to what the application wrote, and the version
- * behind a process definition id - the two answers a reader of this engine would otherwise
- * build a registry and a query of its own for.
+ * behind a process definition id. Without these two answers, a reader of this engine would
+ * build a registry and a query of its own.
  */
 @ExtendWith(SuppressOutputExtension.class)
 public class Camunda7WayBackToAProcessTest {
@@ -156,8 +156,8 @@ public class Camunda7WayBackToAProcessTest {
             workflowModuleId -> io.vanillabp.camunda7.wiring.Camunda7ConfiguredTenant
                 .firstConfigured(ADAPTER_ID, workflowModuleId, "big-bank", null));
 
-    // the first thing which happens to a BPMN process of a workflow module, and the
-    // place the way back has to exist from
+    // this is the first thing which happens to a BPMN process of a workflow module. From
+    // here on the way back has to exist
     deployment.processVersionCatalogOf(MODULE, "RiskAssessment");
 
     final var resolved = registry.resolve("big-bank", "RiskAssessment");
@@ -185,7 +185,7 @@ public class Camunda7WayBackToAProcessTest {
 
     assertEquals("4", deployed.version());
     assertEquals("release-7", deployed.versionTag());
-    // the platform writes how an operator reads it, so every BPMS spells a deployment alike
+    // the platform writes how an operator reads it. So every BPMS spells a deployment alike
     assertEquals("release-7:4", deployed.displayVersion());
     assertEquals("4", registry.versionOfDefinition("definition-4"), "the same cache answers the number");
 

@@ -22,15 +22,15 @@ import io.vanillabp.integration.adapter.spi.NameClashAvoidance;
 import io.vanillabp.integration.test.utils.SuppressOutputExtension;
 
 /**
- * The sentences the published types promise for the cases a running engine hardly ever
- * produces: an execution the engine holds nothing for, a multi-instance level whose counters
- * are gone, an element which cannot be named, a user task without a form key and an engine
- * facts object nobody configured a tenant with.
+ * What the published types promise for the cases a running engine hardly ever produces: an
+ * execution the engine holds nothing for, a multi-instance level whose counters are gone, an
+ * element which cannot be named, a user task without a form key, and an engine facts object
+ * which nobody configured a tenant with.
  * <p>
- * Each of these is a claim in a javadoc, and a claim nothing measures is a claim which stops
- * being true without anybody noticing. They are written against mocks because that is what it
- * takes: the engine does not hand out an execution without a model element while a workflow
- * runs, which is exactly why the guard exists.
+ * Each of these is a claim in a javadoc. A claim which nothing measures stops being true
+ * without anybody noticing. The tests are written against mocks, because nothing else
+ * works here. While a workflow runs, the engine does not hand out an execution without a
+ * model element. That is exactly why the guard exists.
  */
 @ExtendWith(SuppressOutputExtension.class)
 public class Camunda7ApiEdgeCasesTest {
@@ -67,7 +67,7 @@ public class Camunda7ApiEdgeCasesTest {
     final var model = theFactsModel();
     final var execution = mock(ExecutionEntity.class);
     // the engine's own model element for the multi-instance subprocess, but none of the
-    // variables it keeps per iteration - which is how a level is reported as unknown
+    // variables it keeps per iteration. That is how a level counts as unknown
     when(execution.getBpmnModelElementInstance())
         .thenReturn((SubProcess) model.getModelElementById(AnEngineRunningTheFactsProcess.MULTI_INSTANCE_ELEMENT_ID));
     when(execution.getVariable("loopCounter")).thenReturn(null);

@@ -15,12 +15,12 @@ import io.vanillabp.integration.test.utils.SuppressOutputExtension;
 
 /**
  * What this adapter answers the core about its own isolation: would Camunda 7 deploy two
- * given workflow modules into two different TENANTS. The core asks it where two BPMN
- * processes of one application reach the engine under one process definition key and the
- * mode leaves the key plain, because then nothing but the engine could keep them apart.
+ * given workflow modules into two different TENANTS? The core asks this where two BPMN
+ * processes of one application reach the engine under one process definition key, and the
+ * mode leaves the key plain. Then nothing but the engine could keep them apart.
  * <p>
- * Every case here is a configuration, never a mode on its own: the tenant is resolved per
- * workflow module the way the deployment resolves it, and a name may be written for one
+ * Every case here is a configuration, never a mode on its own. The tenant is resolved per
+ * workflow module, the same way the deployment resolves it. A name may be written for one
  * module, for every module of the adapter, or nowhere.
  */
 @ExtendWith(SuppressOutputExtension.class)
@@ -33,8 +33,8 @@ public class Camunda7WorkflowModuleIsolationTest {
   private static final String PAYMENTS = "payment-handling";
 
   /**
-   * The adapter with the given modes and the given tenant names - built the way the platform
-   * builds it, so the answer comes out of the same resolution the deployment uses.
+   * The adapter with the given modes and the given tenant names. It is built the way the
+   * platform builds it. So the answer comes out of the same resolution the deployment uses.
    *
    * @param scoping The modes of this application
    * @param tenantPerWorkflowModule What a module's own section names, or <code>null</code>

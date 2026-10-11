@@ -18,14 +18,14 @@ import io.vanillabp.integration.test.utils.SuppressOutputExtension;
 import io.vanillabp.spi.service.BpmsStartTrigger;
 
 /**
- * What the engine starts on its own in a version it still HOLDS. The BPMN process id a
- * renamed process left behind is declared without a model, so nothing wires it while this
- * application boots and the <code>&#64;WorkflowStartedByBpms</code> methods kept for it
- * are judged by nothing - while the engine keeps firing the old model's timer and keeps
- * matching its signal subscription.
+ * What the engine starts on its own in a version it still HOLDS. A renamed process leaves
+ * its old BPMN process id behind, declared without a model. So nothing wires it while this
+ * application boots, and nothing judges the <code>&#64;WorkflowStartedByBpms</code> methods
+ * kept for it. Meanwhile the engine keeps firing the old model's timer and keeps matching
+ * its signal subscription.
  * <p>
- * The answer is the same walk a model this boot deploys goes through, so the core hears
- * about a start event of an old version in the words it hears about a new one.
+ * The answer comes from the same walk a model of this boot goes through. So the core hears
+ * about a start event of an old version in the same words as about a new one.
  */
 @ExtendWith(SuppressOutputExtension.class)
 public class Camunda7StartEventsOfHeldVersionsTest {
@@ -36,7 +36,7 @@ public class Camunda7StartEventsOfHeldVersionsTest {
 
   /**
    * The version which fires every night, next to a process of the same file which fires
-   * as well - only the one asked about belongs in the answer.
+   * as well. Only the one asked about belongs in the answer.
    */
   private static final String A_VERSION_STARTED_BY_A_TIMER = """
       <?xml version="1.0" encoding="UTF-8"?>

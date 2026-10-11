@@ -20,18 +20,18 @@ import io.vanillabp.integration.adapter.spi.WorkflowScope;
 import io.vanillabp.integration.test.utils.SuppressOutputExtension;
 
 /**
- * An aggregate may carry a second workflow once its first one ended. This is the probe the
- * core asks before it dispatches a start a second time, and the case where it used to lose
- * that second workflow:
+ * An aggregate may carry a second workflow once its first one ended. This test is about the
+ * probe the core asks before it dispatches a start a second time. It is also about the case
+ * where the probe used to lose that second workflow:
  * <ol>
  * <li>the first workflow of the aggregate runs and ends;</li>
  * <li>a second start of the same aggregate is planned;</li>
  * <li>the first attempt to dispatch it fails before the engine created anything;</li>
  * <li>the core repeats the dispatch and first asks the adapter whether the workflow exists.</li>
  * </ol>
- * The history holds the first workflow. A probe which counts it answers "it is there", the
- * core consumes the entry, and the second workflow never starts. The probe counts only the
- * workflows started at or after the moment the start was planned.
+ * The history holds the first workflow. A probe which counts it answers "it is there". Then
+ * the core consumes the entry, and the second workflow never starts. So the probe counts only
+ * the workflows started at or after the moment the start was planned.
  * <p>
  * The engine is a real one, in memory, because the history query is the subject. The engine's
  * clock is set by hand, so the start times do not depend on how fast the test runs.
@@ -90,7 +90,7 @@ public class Camunda7SecondWorkflowOfAnAggregateTest {
         .setJdbcUrl("jdbc:h2:mem:second-workflow-%s;DB_CLOSE_DELAY=-1".formatted(System.nanoTime()));
     configuration.setJobExecutorActivate(false);
     configuration.setHistory("full");
-    // the engine refuses to parse a model without one, and a test needs no cleanup policy
+    // the engine refuses to parse a model without one. A test needs no cleanup policy
     configuration.setHistoryTimeToLive("P30D");
     engine = configuration.buildProcessEngine();
     // without a name-clash-avoidance support the workflow module id is the tenant
@@ -156,7 +156,7 @@ public class Camunda7SecondWorkflowOfAnAggregateTest {
 
     finish(startAt(FIRST_STARTED));
     // the second start is planned, and its first dispatch fails before the engine creates
-    // anything: the engine holds the first workflow and nothing else
+    // anything. So the engine holds the first workflow and nothing else
 
     assertEquals(
         WorkflowAwareness.UNKNOWN_TO_BPMS,
@@ -174,7 +174,7 @@ public class Camunda7SecondWorkflowOfAnAggregateTest {
   public void theSecondWorkflowCounts() {
 
     finish(startAt(FIRST_STARTED));
-    // the first dispatch of the second start did create the workflow, and only its
+    // the first dispatch of the second start did create the workflow. Only its
     // acknowledgement got lost
     final var second = startAt(SECOND_PLANNED.plusMillis(250));
 

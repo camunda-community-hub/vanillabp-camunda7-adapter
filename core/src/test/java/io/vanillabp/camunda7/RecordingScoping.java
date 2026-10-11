@@ -8,24 +8,24 @@ import io.vanillabp.integration.adapter.spi.NameClashAvoidance;
 import io.vanillabp.integration.adapter.spi.NameClashAvoidanceSupport;
 
 /**
- * The core's name-clash-avoidance support as a test sees it: it scopes the way the core
- * does, and it keeps what the adapter reports to it. A test which needs the core's verdict
- * rather than the adapter's report uses the real implementation instead, which
- * {@link io.vanillabp.camunda7.deployment.Camunda7CollidingProcessIdsTest} does.
+ * The core's name-clash-avoidance support as a test sees it. It scopes the way the core
+ * does, and it keeps what the adapter reports to it. A test which needs the core's verdict,
+ * not the adapter's report, uses the real implementation instead.
+ * {@link io.vanillabp.camunda7.deployment.Camunda7CollidingProcessIdsTest} does that.
  * <p>
- * The adapter hands its findings about names over the SPI and writes no message of its own,
- * so this is where a test about them asserts: what the adapter found, which identifier it
- * named and how sure it was. Prefixing is implemented rather than mocked, because a test
- * under {@code use-prefix} has to see the very strings the engine does.
+ * The adapter hands its findings about names over the SPI and writes no message of its own.
+ * So a test about them asserts here: what the adapter found, which identifier it named and
+ * how sure it was. Prefixing is implemented, not mocked. A test under {@code use-prefix}
+ * has to see exactly the strings the engine sees.
  */
 public class RecordingScoping implements NameClashAvoidanceSupport {
 
   private final NameClashAvoidance mode;
 
   /**
-   * The mode of a workflow module which does not run in the one every other module of the
-   * test runs in - a mixed configuration, which the modes being resolvable per workflow
-   * module makes possible.
+   * The mode of a workflow module which runs in another mode than every other module of the
+   * test. Such a mixed configuration is possible, because the mode is resolvable per
+   * workflow module.
    */
   private final java.util.Map<String, NameClashAvoidance> modePerWorkflowModule = new java.util.HashMap<>();
 

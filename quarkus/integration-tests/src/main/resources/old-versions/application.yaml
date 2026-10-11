@@ -18,7 +18,7 @@ vanillabp:
     c7-versions:
       adapters:
         c7:
-          resources-location: classpath:c7-versions/v1
+          resources-location: classpath:c7-versions/v2
       workflows:
         OldProcessVersionsProcess:
           allow-full-sync-with-bpms: true

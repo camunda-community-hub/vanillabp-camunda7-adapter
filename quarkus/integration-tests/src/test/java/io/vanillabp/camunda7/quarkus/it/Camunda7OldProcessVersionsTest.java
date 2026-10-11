@@ -37,13 +37,19 @@ import io.vanillabp.integration.test.utils.SuppressOutputExtension;
  * built once here and STARTED TWICE, because three things this repository already has line
  * up. {@code QuarkusProdModeTest} can stop and start the built artifact on demand; the
  * resources location is runtime configuration, which the build-time resource index was made
- * for, so one archive can carry both generations and each boot picks one; and the datasource
- * url is runtime configuration too, so the two boots can meet on a file database which
- * outlives the first JVM. The alternative was to measure this one check on Spring Boot only
+ * for, so one archive can carry both models and a boot picks the one it deploys; and the
+ * datasource url is runtime configuration too, so the two boots can meet on a file database
+ * which outlives the first JVM. The alternative was to measure this one check on Spring Boot only
  * and write that into the coverage gate, which would have been the first entry of a list
  * that grows.
  * <p>
- * What the second boot finds: version 1 with a workflow parked in the task which version 2
+ * Both boots run the new model. The old one comes in between, the way a node still running
+ * the older release deploys it during a rolling deployment: through the engine, while the first
+ * boot runs, so the engine numbers it 2. The application cannot deploy it itself, because a
+ * start refuses the version it deploys while a task of it has no method for that version, and
+ * the old model has such a task. The second boot deploys the new model again, as version 3.
+ * <p>
+ * What the second boot finds: version 2 with a workflow parked in the task which the new model
  * dropped, a method which still serves that task for that version, and a method naming a
  * version the engine never held.
  */
@@ -75,21 +81,21 @@ public class Camunda7OldProcessVersionsTest {
           .addPackage("io.vanillabp.camunda7.quarkus.test.versions")
           .addAsResource("old-versions/application.yaml", "application.yaml")
           .addAsResource(
-              "c7-versions/v1/old-process-versions-v1.bpmn",
-              "c7-versions/v1/old-process-versions-v1.bpmn")
+              "c7-versions/v1/old-process-versions.bpmn",
+              "c7-versions/v1/old-process-versions.bpmn")
           .addAsResource(
-              "c7-versions/v2/old-process-versions-v2.bpmn",
-              "c7-versions/v2/old-process-versions-v2.bpmn")
+              "c7-versions/v2/old-process-versions.bpmn",
+              "c7-versions/v2/old-process-versions.bpmn")
           .addAsResource("workflow-module-descriptor/c7-versions", "META-INF/workflow-module"))
       // JVM args needed for tracking coverage - check this module's POM for the
       // systemPropertyVariables feeding 'jacoco.agent'
       .setJVMArgs(testCoverageJavaAgent(quarkusProdModeTestDefaults()))
       .setRun(true)
-      .setRuntimeProperties(theBootDeploying("v1"));
+      .setRuntimeProperties(theBootDeploying("v2"));
 
   /**
-   * How long the test waits for the workflow of the first boot to park in the task version 2
-   * drops. Generous, because a build machine running other builds is allowed to be slow.
+   * How long the test waits for the workflow of the first boot to park in the task the new
+   * model drops. Generous, because a build machine running other builds is allowed to be slow.
    */
   private static final long PATIENCE = 60000;
 
@@ -129,8 +135,9 @@ public class Camunda7OldProcessVersionsTest {
 
   @Test
   @DisplayName("the boot after a model change reports the version its workflows still run on")
-  public void theSecondBootReportsWhatStillRunsOnVersionOne() throws Exception {
+  public void theSecondBootReportsWhatStillRunsOnTheOldVersion() throws Exception {
 
+    deployTheOldModelAsAnotherNodeWould();
     startAWorkflowAndLetItParkInTheDroppedTask();
 
     prodModeTest.stop();
@@ -140,7 +147,7 @@ public class Camunda7OldProcessVersionsTest {
     final var reported = prodModeTest.getStartupConsoleOutput();
 
     assertTrue(
-        reported.contains(A_VERSION_OF_A_PROCESS.formatted("1", "OldProcessVersionsProcess")),
+        reported.contains(A_VERSION_OF_A_PROCESS.formatted("2", "OldProcessVersionsProcess")),
         () -> "the check has to report the version the parked workflow runs on: "
             + reported);
     assertTrue(
@@ -158,8 +165,8 @@ public class Camunda7OldProcessVersionsTest {
         () -> "the report has to name the task definition nobody serves for that version: "
             + reported);
     assertTrue(
-        !reported.contains("definition(s) 'droppedInVersionTwo'"),
-        () -> "the task the version-1 method still serves must not be reported as unserved: "
+        !reported.contains("definition(s) 'droppedFromTheNewModel'"),
+        () -> "the task the version-2 method still serves must not be reported as unserved: "
             + reported);
     assertTrue(
         reported.contains("outfaded-versions"),
@@ -169,8 +176,24 @@ public class Camunda7OldProcessVersionsTest {
   }
 
   /**
-   * Starts a workflow on the model of the first boot and waits until it sits in the task
-   * version 2 no longer has. That parked workflow is the whole point: without it the engine
+   * Deploys the old model while the first boot runs, as a node still on the older release
+   * would.
+   */
+  private void deployTheOldModelAsAnotherNodeWould() {
+
+    RestAssured
+        .given()
+        .baseUri("http://localhost")
+        .port(PORT)
+        .post("versions/old-model")
+        .then()
+        .statusCode(204);
+
+  }
+
+  /**
+   * Starts a workflow on the old model and waits until it sits in the task the new model no
+   * longer has. That parked workflow is the whole point: without it the engine
    * would hold an older version nobody runs on, and the check would have nothing to say.
    */
   private void startAWorkflowAndLetItParkInTheDroppedTask() throws InterruptedException {
@@ -196,7 +219,7 @@ public class Camunda7OldProcessVersionsTest {
       }
       assertTrue(
           System.currentTimeMillis() < deadline,
-          () -> "the workflow never parked in the task version 2 drops: "
+          () -> "the workflow never parked in the task the new model drops: "
               + aggregates());
       Thread.sleep(250);
     }

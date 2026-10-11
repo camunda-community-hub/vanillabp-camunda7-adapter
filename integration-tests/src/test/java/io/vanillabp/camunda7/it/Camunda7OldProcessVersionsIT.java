@@ -26,6 +26,12 @@ import io.vanillabp.integration.test.utils.SuppressOutputExtension;
  * dropped one of its tasks. What the application still serves of that older version is
  * what the engine can answer and this test proves.
  * <p>
+ * The first boot is an earlier generation of the application
+ * ({@link OldProcessVersionsBeforeWorkflowService}), which serves every task of version 1. The
+ * boots after it run {@link OldProcessVersionsWorkflowService}, which no longer serves one of
+ * them in version 1. The first boot cannot be that later generation: a start refuses the version
+ * it deploys itself while a task of it has no method for that version.
+ * <p>
  * The last two cases suspend version 1 and ask the same question again: a suspended
  * definition is not a deleted one, so it keeps its place in the check, and the only way
  * past it is the emergency exit which says on every start that it was taken.
@@ -52,9 +58,14 @@ public class Camunda7OldProcessVersionsIT {
   @DisplayName("Version 1 is deployed and a workflow is left running on it")
   public void deployVersionOneAndLeaveAWorkflowRunning() throws Exception {
 
-    final var application = new SpringApplicationBuilder(TestApplication.class).run(DATABASE, resources("v1"));
+    // the generation which deploys version 1 serves every task of it - a start refuses the
+    // version it deploys while a task of it has no method for that version. The boots after
+    // this one are the next generation, which no longer serves one of those tasks
+    final var application = new SpringApplicationBuilder(TestApplication.class)
+        .run(DATABASE, resources("v1"), "--spring.profiles.active="
+            + OldProcessVersionsBeforeWorkflowService.PROFILE);
     try {
-      final var workflowService = application.getBean(OldProcessVersionsWorkflowService.class);
+      final var workflowService = application.getBean(OldProcessVersionsBeforeWorkflowService.class);
       final var repository = application.getBean(OldProcessVersionsRepository.class);
       final var aggregate = application
           .getBean(org.springframework.transaction.support.TransactionTemplate.class)

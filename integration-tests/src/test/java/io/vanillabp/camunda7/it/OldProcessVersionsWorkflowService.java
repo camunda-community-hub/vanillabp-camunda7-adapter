@@ -1,5 +1,6 @@
 package io.vanillabp.camunda7.it;
 
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
 
 import io.vanillabp.spi.process.ProcessService;
@@ -20,8 +21,15 @@ import io.vanillabp.spi.service.WorkflowTask;
  * <li>{@code servedForAnUnknownVersion} names a version this engine does not hold, so it never runs
  * and the task it would serve is unserved in version 1.</li>
  * </ul>
+ * <p>
+ * Version 1 is deployed by the generation before this one,
+ * {@link OldProcessVersionsBeforeWorkflowService}, which still serves every task of it. This
+ * class cannot deploy version 1 itself: a start refuses the version it deploys when a task of it
+ * has no method for that version, and here 'servedForAnUnknownVersion' has none.
  */
 @Service
+@Profile("!"
+    + OldProcessVersionsBeforeWorkflowService.PROFILE)
 @WorkflowService(
     workflowAggregateClass = OldProcessVersionsAggregate.class,
     bpmnProcess = @BpmnProcess(bpmnProcessId = "OldProcessVersionsProcess"))

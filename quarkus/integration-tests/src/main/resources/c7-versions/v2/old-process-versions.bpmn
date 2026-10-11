@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- Version 2 of the process: the task 'droppedInVersionTwo' is gone. Workflows
-     started on version 1 still sit in it, and whether this application still serves
-     them is what the startup check reports. -->
+<!-- The new model of the process: the task 'droppedFromTheNewModel' is gone. The
+     application deploys it on both of its boots. Workflows started on the old model still
+     sit in that task, and whether this application still serves them is what the startup
+     check reports. -->
 <bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" id="Definitions_OldProcessVersionsV2" targetNamespace="http://bpmn.io/schema/bpmn">
   <bpmn:process id="OldProcessVersionsProcess" isExecutable="true">
     <bpmn:startEvent id="OPV_Start">

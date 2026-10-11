@@ -22,13 +22,13 @@ public class C7VersionsAggregate {
   private Long id;
 
   /**
-   * Which method served the task which survived into version 2.
+   * Which method served the task which survived into the new model.
    */
   private String servedBy;
 
   /**
-   * The id of the task which exists in version 1 only. It stays open, which keeps a workflow
-   * of version 1 running while the second boot deploys version 2.
+   * The id of the task which exists in the old model only. It stays open, which keeps a
+   * workflow of that version running while the application boots again.
    */
   private String openTaskId;
 

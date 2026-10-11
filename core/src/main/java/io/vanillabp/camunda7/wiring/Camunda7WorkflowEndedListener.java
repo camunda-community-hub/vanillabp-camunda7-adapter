@@ -13,16 +13,15 @@ import io.vanillabp.integration.adapter.spi.workflowend.WorkflowEndedInvoker;
 import io.vanillabp.spi.service.WorkflowEnd;
 
 /**
- * Attached as an END execution listener to the PROCESS scope of processes whose
- * workflow service declares a <code>&#64;WorkflowEnded</code> method (see
- * {@link Camunda7AsyncBpmnParseListener}), this listener tells the application that
- * a workflow ended.
+ * Tells the application that a workflow ended. It is attached as an END execution listener
+ * to the PROCESS scope of processes whose workflow service declares a
+ * <code>&#64;WorkflowEnded</code> method (see {@link Camunda7AsyncBpmnParseListener}).
  * <p>
- * It runs inside the engine's own transaction, so the application's change to the
- * workflow aggregate commits together with the end of the process instance - and
- * rolls back with it. What the engine reports decides the KIND: an execution
- * carrying a delete reason was cancelled (by the API, by a terminate end event or
- * by an interrupting event), everything else reached an end event.
+ * It runs inside the engine's own transaction. So the application's change to the
+ * workflow aggregate commits together with the end of the process instance, and it
+ * rolls back with it. What the engine reports decides the KIND. An execution which
+ * carries a delete reason was cancelled: by the API, by a terminate end event or by an
+ * interrupting event. Every other execution reached an end event.
  * <p>
  * Why a listener is added to the deployed model, and only where a handler exists, is decision 5 in
  * the repository's DECISIONS.md.
@@ -36,8 +35,8 @@ public class Camunda7WorkflowEndedListener implements ExecutionListener {
   private final Camunda7TaskRegistry taskRegistry;
 
   /**
-   * One listener for the whole engine, attached to the process scope of every model whose
-   * application has a method for the end of a workflow.
+   * One listener for the whole engine. It is attached to the process scope of every model
+   * whose application has a method for the end of a workflow.
    *
    * @param workflowEndedInvoker Where the core is told that a workflow ended
    * @param taskRegistry What the workflow module of the ended process is looked up in
@@ -57,7 +56,7 @@ public class Camunda7WorkflowEndedListener implements ExecutionListener {
 
     final var businessKey = execution.getProcessBusinessKey();
     if ((businessKey == null) || businessKey.isBlank()) {
-      // not a VanillaBP workflow: without a business key there is no workflow
+      // not a VanillaBP workflow. Without a business key there is no workflow
       // aggregate this end could be reported for
       return;
     }
@@ -85,8 +84,8 @@ public class Camunda7WorkflowEndedListener implements ExecutionListener {
     final var kind = deleteReason == null
         ? WorkflowEnd.Kind.COMPLETED
         : WorkflowEnd.Kind.CANCELED;
-    // the activity the process instance ends at: the end event for a regular end,
-    // nothing where the instance was cancelled
+    // the activity the process instance ends at. It is the end event for a regular end,
+    // and nothing where the instance was cancelled
     final var endEventId = kind == WorkflowEnd.Kind.COMPLETED
         ? execution.getCurrentActivityId()
         : null;
@@ -115,8 +114,8 @@ public class Camunda7WorkflowEndedListener implements ExecutionListener {
 
               @Override
               public Instant getEndTime() {
-                // the engine does not hand the listener an end time; this is the
-                // moment the instance ends, which is the same transaction
+                // the engine does not hand the listener an end time. This is the
+                // moment the instance ends, because it is the same transaction
                 return Instant.now();
               }
 
@@ -132,10 +131,10 @@ public class Camunda7WorkflowEndedListener implements ExecutionListener {
 
               @Override
               public boolean runInCurrentTransaction() {
-                // an embedded engine: the notification belongs into the transaction
+                // an embedded engine. The notification belongs into the transaction
                 // which ends the workflow. An engine on a datasource of its own ends it
-                // where the application's persistence cannot join, so VanillaBP opens
-                // its own transaction and the notification is at-least-once like every
+                // where the application's persistence cannot join. So VanillaBP opens
+                // its own transaction, and the notification is at-least-once like every
                 // other delivery of that mode
                 return !taskRegistry.engineRunsOnItsOwnDataSource();
               }

@@ -1,11 +1,11 @@
 package io.vanillabp.camunda7.wiring;
 
 /**
- * One BPMN task of an executable process wired to a <code>&#64;WorkflowTask</code>
- * method, extracted from the model during <code>wireBpmn</code>. The task
- * definition is the unwrapped expression text (<code>${processPayment}</code>
- * &rarr; <code>processPayment</code>) - VanillaBP's Camunda 7 convention: the
- * task's implementation expression names the task definition.
+ * One BPMN task of an executable process which is wired to a <code>&#64;WorkflowTask</code>
+ * method. It is read from the model during <code>wireBpmn</code>. The task definition is the
+ * unwrapped expression text (<code>${processPayment}</code> &rarr;
+ * <code>processPayment</code>). That is VanillaBP's Camunda 7 convention: the task's
+ * implementation expression names the task definition.
  *
  * @param workflowModuleId The workflow module ID (the Camunda tenant, unless the
  *          module's name-clash-avoidance mode uses no tenant)
@@ -27,7 +27,7 @@ public record Camunda7TaskConnectable(
                                       Type type) {
 
   /**
-   * Convenience constructor for an unscoped process (the engine knows the plain id).
+   * For an unscoped process. The engine knows it under its plain id.
    *
    * @param workflowModuleId The workflow module ID
    * @param bpmnProcessId The BPMN process ID, which the engine knows under the same name
@@ -48,48 +48,48 @@ public record Camunda7TaskConnectable(
   }
 
   /**
-   * How the model wires the task to the application, which decides what the engine does
-   * with the expression and therefore when the task is completed.
+   * How the model wires the task to the application. It decides what the engine does with
+   * the expression, and so it decides when the task is completed.
    */
   public enum Type {
     /**
-     * <code>camunda:expression</code>: the expression is evaluated - the handler
-     * runs during evaluation and the task completes when the expression returns.
-     * Tasks of <code>&#64;TaskId</code> methods cannot be wired this way (they
-     * could never stay open).
+     * <code>camunda:expression</code>: the expression is evaluated. The handler runs
+     * during evaluation, and the task completes when the expression returns. The tasks of
+     * <code>&#64;TaskId</code> methods cannot be wired this way, because they could never
+     * stay open.
      */
     EXPRESSION,
     /**
-     * <code>camunda:delegateExpression</code>: the expression yields the
-     * adapter's {@link Camunda7WorkflowTaskBehavior} - the task stays open for
-     * <code>&#64;TaskId</code> methods and is completed asynchronously later.
+     * <code>camunda:delegateExpression</code>: the expression yields the adapter's
+     * {@link Camunda7WorkflowTaskBehavior}. For <code>&#64;TaskId</code> methods the task
+     * stays open, and it is completed later, asynchronously.
      */
     DELEGATE_EXPRESSION,
     /**
-     * A BPMN user task: the task definition is the task's
-     * <code>camunda:formKey</code>; the handler (if any) is notified via task
-     * listeners (CREATED/CANCELED) and never completes the task on return.
+     * A BPMN user task. The task definition is the task's <code>camunda:formKey</code>.
+     * The handler, if there is one, is told through task listeners (CREATED/CANCELED).
+     * It never completes the task when it returns.
      */
     USER_TASK,
     /**
      * A {@code camunda:executionListener} somebody modelled, written as
-     * {@code camunda:expression}: the engine evaluates the expression, the handler runs
-     * while it is evaluated and the listener returns when the handler does. Served only
+     * {@code camunda:expression}. The engine evaluates the expression, and the handler runs
+     * while it is evaluated. The listener returns when the handler does. It is served only
      * where the application asked for it, see {@link Camunda7Listeners}.
      */
     EXECUTION_LISTENER_EXPRESSION,
     /**
      * A {@code camunda:executionListener} somebody modelled, written as
-     * {@code camunda:delegateExpression}: the engine expects the expression to yield a
-     * listener object, which is what the EL resolver hands it.
+     * {@code camunda:delegateExpression}. The engine expects the expression to yield a
+     * listener object, and the EL resolver hands it one.
      */
     EXECUTION_LISTENER_DELEGATE_EXPRESSION
   }
 
   /**
-   * Whether this connectable serves a listener somebody modelled rather than a task of the
-   * model. A listener never leaves its element and never completes anything, which is the
-   * whole difference at runtime.
+   * Whether this connectable serves a listener somebody modelled, not a task of the model.
+   * A listener never leaves its element and never completes anything. That is the whole
+   * difference at runtime.
    *
    * @return Whether the connectable is one of the two execution-listener types
    */
@@ -101,12 +101,11 @@ public record Camunda7TaskConnectable(
 
   /**
    * The verdict about a task which has to stay open but is wired by
-   * <code>camunda:expression</code>. It is reported twice, and therefore
-   * lives once: while the application starts, where
-   * {@code Camunda7DeploymentService#wireBpmn} asks the core whether the serving
-   * method completes asynchronously, and at runtime in
-   * {@link Camunda7TaskELResolver}, which stays as the backstop for a model that
-   * reached the engine another way.
+   * <code>camunda:expression</code>. It is reported in two places, so it lives here once.
+   * The first is the start of the application. There
+   * {@code Camunda7DeploymentService#wireBpmn} asks the core whether the serving method
+   * completes asynchronously. The second is {@link Camunda7TaskELResolver} at runtime. It
+   * stays as the backstop for a model which reached the engine another way.
    *
    * @param taskDefinition The task definition (the unwrapped expression text)
    * @param bpmnProcessId The PLAIN BPMN process ID
@@ -128,10 +127,10 @@ public record Camunda7TaskConnectable(
   }
 
   /**
-   * Whether this connectable serves the given EL name evaluated at the given BPMN
-   * element - by NAME (the model's delegate expression is the task definition) or by
-   * ELEMENT (a method wired to the activity, whatever the model calls the
-   * expression).
+   * Whether this connectable serves the given EL name, evaluated at the given BPMN
+   * element. It does by NAME when the model's delegate expression is the task definition.
+   * It does by ELEMENT when a method is wired to the activity, whatever the model calls
+   * the expression.
    *
    * @param currentElementId The BPMN element the execution sits at while the engine
    *          evaluates
@@ -161,10 +160,10 @@ public record Camunda7TaskConnectable(
   }
 
   /**
-   * Whether this connectable is wired to the BPMN element the expression is
-   * evaluated at. That alone says nothing about the NAME: every expression evaluated
-   * while an execution sits at this element arrives here, including conditions
-   * reading the workflow aggregate.
+   * Whether this connectable is wired to the BPMN element the expression is evaluated at.
+   * That alone says nothing about the NAME. Every expression which is evaluated while an
+   * execution sits at this element arrives here. Conditions which read the workflow
+   * aggregate are among them.
    *
    * @param currentElementId The BPMN element the execution sits at
    * @return Whether this task is wired to that element

@@ -10,16 +10,16 @@ import java.util.function.Supplier;
 import org.camunda.bpm.model.bpmn.BpmnModelInstance;
 
 /**
- * The task connectables of ONE Camunda 7 engine (= one adapter id), registered by
- * the deployment service during <code>wireBpmn</code> and looked up by the
- * {@link Camunda7TaskELResolver} whenever the engine evaluates a top-level EL name.
- * Keyed by (workflow module ID, BPMN process ID) - one engine serves several workflow
- * modules. A caller which only has what the engine reports hands the tenant over and
- * gets the module back, see {@link #resolveWorkflowModuleId(String, String)}.
+ * The task connectables of ONE Camunda 7 engine, which is one adapter id. The deployment
+ * service registers them during <code>wireBpmn</code>. The {@link Camunda7TaskELResolver}
+ * looks them up whenever the engine evaluates a top-level EL name. They are keyed by
+ * (workflow module ID, BPMN process ID), because one engine serves several workflow
+ * modules. A caller which only has what the engine reports hands the tenant over and gets
+ * the module back, see {@link #resolveWorkflowModuleId(String, String)}.
  * <p>
  * A running workflow asks for the tasks of its OWN process definition, see
  * {@link #tasksOf(String, String, String, Supplier)}. Two versions of a process may name
- * different expressions at the same element, and only the version a workflow runs on says
+ * different expressions at the same element. Only the version a workflow runs on says
  * which of them it means.
  */
 // see decision 4 in the repository's DECISIONS.md
@@ -44,24 +44,24 @@ public class Camunda7TaskRegistry {
   private final Map<RegistryKey, List<Camunda7TaskConnectable>> connectables = new ConcurrentHashMap<>();
 
   /**
-   * The versions of the engine's process definitions - handed over by the
-   * deployment service, which owns the engine's {@code RepositoryService}. Every
-   * listener building an invocation context reaches it through this registry. May be
-   * <code>null</code> (tests): no version is reported then, which matches every
-   * method.
+   * The versions of the engine's process definitions. The deployment service hands them
+   * over, because it owns the engine's {@code RepositoryService}. Every listener which
+   * builds an invocation context reaches them through this registry. May be
+   * <code>null</code> (tests). Then no version is reported, and that matches every method.
    */
   private Camunda7ProcessVersions processVersions;
 
   /**
-   * The id of the adapter owning this engine. Reported with every inbound delivery,
-   * so VanillaBP can record which BPMS holds a workflow. May be
-   * <code>null</code> (tests): nothing is recorded then.
+   * The id of the adapter which owns this engine. It is reported with every inbound
+   * delivery, so VanillaBP can record which BPMS holds a workflow. May be
+   * <code>null</code> (tests). Then nothing is recorded.
    */
   private String adapterId;
 
   /**
-   * Hands over which adapter holds this engine. It arrives after construction because the
-   * registry is built with the engine configuration, before the adapter id is known there.
+   * Hands over which adapter holds this engine. It arrives after construction. The
+   * registry is built with the engine configuration, and the adapter id is not known there
+   * yet.
    *
    * @param adapterId The id of the adapter owning this engine
    */
@@ -85,17 +85,17 @@ public class Camunda7TaskRegistry {
   }
 
   /**
-   * The core's name-clash-avoidance model, which the {@link Camunda7TaskELResolver}
-   * needs to translate the error code of a {@code TaskException} into what the engine
-   * knows. It lives here for the same reason {@link #adapterId} does: the resolver is
-   * built by the engine configuration, so nothing which creates it can hand it
-   * anything. May be <code>null</code> (tests): the plain identifiers apply then.
+   * The core's name-clash-avoidance model. The {@link Camunda7TaskELResolver} needs it to
+   * translate the error code of a {@code TaskException} into what the engine knows. It
+   * lives here for the same reason {@link #adapterId} does. The engine configuration builds
+   * the resolver, so nothing which creates it can hand it anything. May be
+   * <code>null</code> (tests). Then the plain identifiers apply.
    */
   private io.vanillabp.integration.adapter.spi.NameClashAvoidanceSupport scoping;
 
   /**
    * Hands over how an identifier is kept apart from the one of another workflow module. It
-   * arrives after construction for the same reason the adapter id does.
+   * arrives after construction, for the same reason as the adapter id.
    *
    * @param scoping The core's name-clash-avoidance model
    */
@@ -108,7 +108,7 @@ public class Camunda7TaskRegistry {
 
   /**
    * What translates between the identifiers the application wrote and the ones the engine
-   * was given. Every path out of this registry needs it, which is why it is published.
+   * was given. Every path out of this registry needs it. That is why it is public.
    *
    * @return The core's name-clash-avoidance model or <code>null</code>
    */
@@ -120,19 +120,19 @@ public class Camunda7TaskRegistry {
 
   /**
    * Whether this engine was given a datasource of its own
-   * (<code>vanillabp.adapters.&lt;id&gt;.data-source-name</code>), which is the one thing
-   * about the engine every listener building an invocation context has to know: an engine
-   * on the application's datasource delivers inside the transaction which persists the
-   * workflow aggregate, an engine on its own datasource cannot. Set by the platform
-   * integration, which builds the engine; <code>false</code> in tests, which is the
-   * shared-datasource answer this adapter had before an own datasource was configurable.
+   * (<code>vanillabp.adapters.&lt;id&gt;.data-source-name</code>). Every listener which
+   * builds an invocation context has to know this one thing about the engine. An engine on
+   * the application's datasource delivers inside the transaction which saves the workflow
+   * aggregate. An engine on its own datasource cannot. The platform integration sets it,
+   * because it builds the engine. It is <code>false</code> in tests. That is the
+   * shared-datasource answer this adapter had before an own datasource could be configured.
    */
   private boolean engineRunsOnItsOwnDataSource;
 
   /**
    * Tells the registry whether the engine shares the application's datasource. A delivery
-   * of a shared engine commits together with the workflow aggregate, and one of a separate
-   * engine does not, which is the difference every delivery path asks about.
+   * of a shared engine commits together with the workflow aggregate. A delivery of a
+   * separate engine does not. Every delivery path asks about this difference.
    *
    * @param engineRunsOnItsOwnDataSource Whether the engine runs on a datasource of its
    *          own
@@ -156,8 +156,8 @@ public class Camunda7TaskRegistry {
   }
 
   /**
-   * Hands over what the engine knows about its deployed versions, which is how a delivery
-   * finds the method serving the version it belongs to.
+   * Hands over what the engine knows about its deployed versions. With it a delivery finds
+   * the method which serves the version the delivery belongs to.
    *
    * @param processVersions The versions of the engine's process definitions
    */
@@ -185,9 +185,9 @@ public class Camunda7TaskRegistry {
   }
 
   /**
-   * The deployed version behind a process definition id, answered from the same cache
-   * {@link #versionOfDefinition(String)} reads, so a caller pays the engine for that
-   * definition once.
+   * The deployed version behind a process definition id. The answer comes from the same
+   * cache {@link #versionOfDefinition(String)} reads. So a caller asks the engine about that
+   * definition only once.
    *
    * @param processDefinitionId The engine's process definition id
    * @return The version and its tag, or <code>null</code> where the engine does not know
@@ -228,7 +228,7 @@ public class Camunda7TaskRegistry {
 
   /**
    * Hands over who answers whether two BPMN processes work on the same workflow
-   * aggregate. That is the core, which reads it from the declarations of the workflow
+   * aggregate. That is the core. It reads it from the declarations of the workflow
    * services while the application starts.
    *
    * @param workflowAggregateSharing Who answers the question
@@ -242,12 +242,12 @@ public class Camunda7TaskRegistry {
 
   /**
    * Whether two BPMN processes of one workflow module work on the same workflow
-   * aggregate, which means that a call between them continues one business case.
+   * aggregate. If they do, a call between them continues one business case.
    * <p>
-   * {@link Camunda7CallActivities} asks the same question
-   * while a model is prepared and writes the answer into the model. A call activity
-   * naming the process to call in an EXPRESSION leaves nothing to write it onto, so the
-   * start listener of the called process asks again while the workflow runs.
+   * {@link Camunda7CallActivities} asks the same question while a model is prepared, and
+   * it writes the answer into the model. A call activity which names the process to call
+   * in an EXPRESSION leaves nothing to write it onto. So the start listener of the called
+   * process asks again while the workflow runs.
    *
    * @param workflowModuleId The workflow module id
    * @param bpmnProcessId The BPMN process id
@@ -267,15 +267,15 @@ public class Camunda7TaskRegistry {
 
   /**
    * Answers whether a <code>&#64;WorkflowService</code> class of the application claims a BPMN
-   * process: the core's {@code WorkflowTaskWiring#isClaimedByAWorkflowService}.
+   * process. It is the core's {@code WorkflowTaskWiring#isClaimedByAWorkflowService}. It is
    * <code>null</code> until the deployment service hands it over.
    */
   private java.util.function.BiPredicate<String, String> claimedProcesses;
 
   /**
-   * Hands over who answers whether the application claims a BPMN process. That is the core,
-   * and the deployment service hands its answer over while it is built, before anything is
-   * deployed or parsed.
+   * Hands over who answers whether the application claims a BPMN process. That is the core.
+   * The deployment service hands its answer over while the service is built, before anything
+   * is deployed or parsed.
    *
    * @param claimedProcesses Answers for a workflow module and a PLAIN BPMN process id
    */
@@ -288,12 +288,13 @@ public class Camunda7TaskRegistry {
 
   /**
    * Whether a <code>&#64;WorkflowService</code> class of the application claims the BPMN
-   * process. Only a claimed process gets anything from this adapter beyond being deployed with
-   * its file: no flag, no listener, no check. See decision 43 of {@code DECISIONS.md}.
+   * process. A process which is not claimed is deployed with its file, and it gets nothing
+   * else from this adapter: no flag, no listener, no check. See decision 43 of
+   * {@code DECISIONS.md}.
    *
    * @param workflowModuleId The workflow module id
    * @param bpmnProcessId The PLAIN BPMN process id
-   * @return Whether the application claims the process; <code>true</code> where nobody handed
+   * @return Whether the application claims the process. <code>true</code> where nobody handed
    *         over an answer, which is an engine built for a test without a deployment service
    */
   public boolean isClaimedByAWorkflowService(
@@ -306,10 +307,10 @@ public class Camunda7TaskRegistry {
 
   /**
    * Whether the application claims the process definition the engine reports. The engine holds
-   * every definition deployed against its database: the ones of this application, the ones it
-   * deploys without claiming them, and the ones somebody else deployed. Only the first kind is
-   * claimed. A definition this adapter did not deploy has no workflow module to be found under,
-   * and it is not claimed whatever its key is.
+   * every definition deployed against its database. Some are claimed by this application. Some
+   * it deploys without claiming them. And some somebody else deployed. Only the first kind is
+   * claimed. A definition this adapter did not deploy has no workflow module to be found under.
+   * So it is not claimed, whatever its key is.
    *
    * @param tenantId The tenant of the definition, <code>null</code> where it has none
    * @param processDefinitionKey The key of the definition, as the engine knows it
@@ -330,30 +331,30 @@ public class Camunda7TaskRegistry {
   }
 
   /**
-   * Which workflow module a process definition key belongs to - the way back when
-   * there is no tenant to ask (prefixed identifiers, see decision 3 in the
-   * repository's DECISIONS.md). Holds only the modules which deploy without a tenant.
+   * Which workflow module a process definition key belongs to. It is the way back when
+   * there is no tenant to ask (prefixed identifiers, see decision 3 in the repository's
+   * DECISIONS.md). It holds only the modules which deploy without a tenant.
    */
   private final Map<String, String> workflowModuleIdsByScopedProcessId = new ConcurrentHashMap<>();
 
   /**
-   * The plain BPMN process id per (workflow module, scoped process id) - filled for
+   * The plain BPMN process id per (workflow module, scoped process id). It is filled for
    * every wired process, so a process without tasks is found as well.
    */
   private final Map<RegistryKey, String> plainProcessIdsByScopedProcessId = new ConcurrentHashMap<>();
 
   /**
    * The PLAIN signal name per signal start event, keyed by (workflow module, scoped
-   * process id, start event id): the engine's parser cannot resolve a signalRef, and
-   * the name the application is told has to be the modelled one.
+   * process id, start event id). The engine's parser cannot resolve a signalRef. And the
+   * application has to be told the name that was modelled.
    */
   private final Map<String, String> signalNamesOfStartEvents = new ConcurrentHashMap<>();
 
   /**
-   * Which serialization format nested shared values are stored in - provided
-   * by the platform integration, which binds the configuration. The task path asks the
-   * registry because it has it at hand; <code>null</code> in tests, where the engine's
-   * default applies.
+   * Which serialization format nested shared values are stored in. The platform
+   * integration provides it, because it binds the configuration. The task path asks the
+   * registry because it has the registry at hand. It is <code>null</code> in tests, where
+   * the engine's default applies.
    */
   private io.vanillabp.camunda7.sync.Camunda7SerializationFormats serializationFormats;
 
@@ -401,8 +402,8 @@ public class Camunda7TaskRegistry {
 
   /**
    * Per process definition key the engine knows, the served listeners which have to be told
-   * about a cancellation. Read while the engine PARSES a model, which is why it is keyed by
-   * what the engine reports there.
+   * about a cancellation. It is read while the engine PARSES a model. That is why it is keyed
+   * by what the engine reports there.
    */
   private final Map<RegistryKey, List<ListenerNeedingACancellation>> listenersNeedingACancellation = new ConcurrentHashMap<>();
 
@@ -425,8 +426,8 @@ public class Camunda7TaskRegistry {
         .computeIfAbsent(
             new RegistryKey(workflowModuleId, scopedBpmnProcessId),
             key -> new CopyOnWriteArrayList<>());
-    // a second deployment of the same model registers the same listener again, and the engine
-    // would then notify the one method twice
+    // a second deployment of the same model registers the same listener again. Then the
+    // engine would notify the one method twice
     if (!known.contains(listener)) {
       known.add(listener);
     }
@@ -458,8 +459,8 @@ public class Camunda7TaskRegistry {
   public void register(
       final Camunda7TaskConnectable connectable) {
 
-    // keyed by what the ENGINE reports at runtime: the scoped process id (equal to
-    // the plain one unless the module's identifiers are prefixed)
+    // keyed by what the ENGINE reports at runtime, which is the scoped process id. It is
+    // equal to the plain one, unless the module's identifiers are prefixed
     connectables
         .computeIfAbsent(
             new RegistryKey(connectable.workflowModuleId(), connectable.scopedBpmnProcessId()),
@@ -474,11 +475,10 @@ public class Camunda7TaskRegistry {
   }
 
   /**
-   * Registers what a process is called on both sides, without any task being
-   * involved: a process the BPMS starts on its own (timer, signal or conditional
-   * start event) may have no tasks at all, and the start listener still has to find
-   * its way back from the engine's process-definition key to the workflow module and
-   * the plain BPMN process id.
+   * Registers what a process is called on both sides, without any task. A process which
+   * the BPMS starts on its own (timer, signal or conditional start event) may have no tasks
+   * at all. The start listener still has to find its way back from the engine's
+   * process-definition key to the workflow module and the plain BPMN process id.
    *
    * @param workflowModuleId The workflow module ID
    * @param bpmnProcessId The PLAIN BPMN process ID
@@ -499,9 +499,9 @@ public class Camunda7TaskRegistry {
    * Remembers which workflow module a process definition key belongs to, for an execution
    * which reports no tenant. Only a workflow module which deploys WITHOUT a tenant is
    * remembered. A definition without a tenant cannot belong to a module which deploys into
-   * one, so such a definition was deployed by somebody else, even where its key is the key of
-   * a process this application claims. The deployment registers the tenant of a module before
-   * any of its processes, which is why the tenant is known here already.
+   * one. So somebody else deployed such a definition, even where its key is the key of a
+   * process this application claims. The deployment registers the tenant of a module before
+   * any of its processes. That is why the tenant is known here already.
    *
    * @param workflowModuleId The workflow module ID
    * @param scopedBpmnProcessId The process definition key the engine knows
@@ -525,17 +525,17 @@ public class Camunda7TaskRegistry {
   }
 
   /**
-   * Which workflow module a Camunda TENANT belongs to. The two names are the same
-   * unless the application gave a workflow module a tenant name of its own, which
-   * {@link Camunda7ConfiguredTenant} lets it do, and then the engine reports a name
-   * this registry is not keyed by.
+   * Which workflow module a Camunda TENANT belongs to. The two names are the same, unless
+   * the application gave a workflow module a tenant name of its own.
+   * {@link Camunda7ConfiguredTenant} lets it do that. Then the engine reports a name this
+   * registry is not keyed by.
    */
   private final Map<String, String> workflowModuleIdsByTenantId = new ConcurrentHashMap<>();
 
   /**
-   * Registers under which Camunda tenant a workflow module reaches the engine, so an
-   * execution reporting that tenant leads back to the module. Called by the deployment
-   * service while it wires a workflow module, with the very name the deployment uses.
+   * Registers under which Camunda tenant a workflow module reaches the engine. So an
+   * execution which reports that tenant leads back to the module. The deployment service
+   * calls it while it wires a workflow module, with the same name the deployment uses.
    *
    * @param tenantId The tenant the module is deployed to, <code>null</code> where the
    *          mode uses none
@@ -576,8 +576,8 @@ public class Camunda7TaskRegistry {
 
   /**
    * Which signal started a workflow, in the name the application wrote. The engine reports
-   * the start event and not the signal, so the name is remembered while the model is wired
-   * and read back here.
+   * the start event and not the signal. So the name is remembered while the model is wired,
+   * and it is read back here.
    *
    * @param workflowModuleId The workflow module ID
    * @param scopedBpmnProcessId The process definition key the engine reported
@@ -603,18 +603,18 @@ public class Camunda7TaskRegistry {
   }
 
   /**
-   * The workflow module of a running execution. Camunda's tenant answers it whenever
-   * the module is isolated by a tenant; with prefixed identifiers there
-   * is no tenant, so the module is looked up by the process definition key the
-   * wiring registered - a KNOWN value, never parsed out of the key. That lookup finds only a
-   * module which deploys without a tenant: a definition without a tenant whose key is the key
-   * of a module deploying into one was deployed by somebody else, and it gets no answer.
+   * The workflow module of a running execution. Camunda's tenant answers it whenever a
+   * tenant keeps the module apart. With prefixed identifiers there is no tenant. Then the
+   * module is looked up by the process definition key which the wiring registered. That is
+   * a KNOWN value, never parsed out of the key. The lookup finds only a module which
+   * deploys without a tenant. Take a definition without a tenant whose key is the key of a
+   * module which deploys into one. Somebody else deployed it, and it gets no answer.
    * <p>
-   * The tenant is not the module id where the application named the tenant itself. It is
-   * therefore translated through what the deployment registered, and only a tenant nobody
-   * registered is taken as the module id: that is a tenant of another application on the
-   * same engine, and answering it unchanged keeps the old behaviour for everything which
-   * never configured a name.
+   * The tenant is not the module id where the application named the tenant itself. So it
+   * is translated through what the deployment registered. Only a tenant nobody registered
+   * is taken as the module id. That is a tenant of another application on the same engine.
+   * Answering it unchanged keeps the old behaviour for everything which never configured a
+   * name.
    *
    * @param tenantId The execution's tenant ID (may be <code>null</code>)
    * @param processDefinitionKey The execution's process definition key
@@ -673,41 +673,41 @@ public class Camunda7TaskRegistry {
   }
 
   /**
-   * The way back from what the engine reports to what the application wrote: a tenant and a
+   * The way back from what the engine reports to what the application wrote. A tenant and a
    * process definition key become the workflow module and the plain BPMN process id.
    *
    * <h4>When the answer is complete</h4>
    *
    * A process enters this registry while the deployment pipeline wires it, in
-   * <code>wireBpmn</code>, which is before the engine parses that workflow module's files
-   * and long before any workflow of it runs. A process the engine only still HOLDS under a
-   * declared id enters it while <code>startWorkflowProcessing</code> runs, which is the last
-   * step of the pipeline. So the answer is complete for a workflow module once
-   * <code>wireBpmn</code> ran for it, and complete for the application once the pipeline
-   * finished. Asking earlier is asking a registry which is still being filled, and that is
-   * what a second registry filled at another stage of the pipeline gets wrong: the two see a
-   * process at different moments and the process is reported under the wrong module.
+   * <code>wireBpmn</code>. That is before the engine parses the files of that workflow
+   * module, and long before any of its workflows runs. A process which the engine only still
+   * HOLDS under a declared id enters it while <code>startWorkflowProcessing</code> runs. That
+   * is the last step of the pipeline. So the answer is complete for a workflow module once
+   * <code>wireBpmn</code> ran for it. It is complete for the application once the pipeline
+   * finished. Asking earlier means asking a registry which is still being filled. A second
+   * registry, filled at another stage of the pipeline, gets exactly this wrong. The two see
+   * a process at different moments, and the process is reported under the wrong module.
    *
    * <h4>Which name a caller hands over</h4>
    *
-   * The one the ENGINE reports, which is what an execution, a task or a process definition
-   * carries. That name is the workflow module id only as long as nobody configured a tenant
-   * name of its own (<code>vanillabp.workflow-modules.&lt;id&gt;.adapters.&lt;adapter&gt;.tenant-id</code>
-   * and the adapter-wide key next to it); where somebody did, the engine reports the
-   * configured name and this registry translates it back. So a caller which has the module
-   * id at hand and no tenant may pass the module id as well, because the two are the same
-   * name for every application which left the key alone, and where they differ the
-   * translation answers both. Passing anything else is asking about another application's
-   * tenant, and the answer to that is empty.
+   * The one the ENGINE reports. An execution, a task or a process definition carries it.
+   * That name is the workflow module id only as long as nobody configured a tenant name of
+   * its own (<code>vanillabp.workflow-modules.&lt;id&gt;.adapters.&lt;adapter&gt;.tenant-id</code>
+   * and the adapter-wide key next to it). Where somebody did, the engine reports the
+   * configured name, and this registry translates it back. So a caller which has the module
+   * id at hand and no tenant may pass the module id as well. The two are the same name for
+   * every application which left the key alone. Where they differ, the translation answers
+   * both. Passing anything else means asking about another application's tenant, and the
+   * answer to that is empty.
    *
    * <h4>What an empty answer means</h4>
    *
    * That this application deployed no such process. An embedded engine may hold the
-   * definitions of another application on the same database, and a definition of a release
-   * this application no longer carries stays in the engine as well. Neither is an error and
-   * neither is guessed at: nothing is parsed out of the key, because a prefix somebody cuts
-   * off a string is a prefix which drifts apart from the one the adapter wrote (see decision
-   * 3 in the repository's DECISIONS.md).
+   * definitions of another application on the same database. A definition of a release which
+   * this application no longer carries stays in the engine as well. Neither is an error, and
+   * neither is guessed at. Nothing is parsed out of the key. A prefix which somebody cuts off
+   * a string drifts apart from the one the adapter wrote (see decision 3 in the repository's
+   * DECISIONS.md).
    *
    * @param tenantId The tenant the engine stored, <code>null</code> where it stored none
    * @param processDefinitionKey The process definition key the engine stored
@@ -724,9 +724,9 @@ public class Camunda7TaskRegistry {
     if (workflowModuleId == null) {
       return Optional.empty();
     }
-    // deliberately NOT plainBpmnProcessId(): that one answers the key itself for a process
-    // nobody registered, which is the right answer for a listener of a wired process and
-    // the wrong one here, where "this application did not deploy it" has to be sayable
+    // NOT plainBpmnProcessId(), on purpose. That one answers the key itself for a process
+    // nobody registered. This is the right answer for a listener of a wired process. It is
+    // the wrong one here, where we must be able to say "this application did not deploy it"
     final var bpmnProcessId = plainProcessIdsByScopedProcessId
         .get(new RegistryKey(workflowModuleId, processDefinitionKey));
     return bpmnProcessId == null
@@ -736,18 +736,18 @@ public class Camunda7TaskRegistry {
   }
 
   /**
-   * Resolves the connectable serving the given EL name - matching by the BPMN
-   * element the expression is evaluated at, or by the task definition (the EL
-   * name itself) - among the tasks of EVERY model wired under the process.
+   * Resolves the connectable which serves the given EL name, among the tasks of EVERY model
+   * wired under the process. It matches by the BPMN element the expression is evaluated at,
+   * or by the task definition (the EL name itself).
    * <p>
-   * The process id is the SCOPED one, the key the engine reports, because that is what
-   * {@link #register(Camunda7TaskConnectable)} stores under. Handing the plain id over
-   * works as long as nothing is prefixed and answers nothing as soon as something is,
-   * and nothing answers is the one outcome a caller cannot tell from "no handler here".
+   * The process id is the SCOPED one, the key the engine reports.
+   * {@link #register(Camunda7TaskConnectable)} stores under that key. The plain id works as
+   * long as nothing is prefixed. As soon as something is, it answers nothing. And a caller
+   * cannot tell "nothing answers" from "no handler here".
    * <p>
-   * A caller holding an execution asks {@link #tasksOf(String, String, String, Supplier)}
-   * instead: two versions of the process may wire different tasks to the same element, and
-   * this lookup cannot tell them apart.
+   * A caller which holds an execution asks
+   * {@link #tasksOf(String, String, String, Supplier)} instead. Two versions of the process
+   * may wire different tasks to the same element, and this lookup cannot tell them apart.
    *
    * @param workflowModuleId The workflow module (= tenant) ID
    * @param scopedBpmnProcessId The process definition key the engine knows
@@ -768,9 +768,9 @@ public class Camunda7TaskRegistry {
   }
 
   /**
-   * Whether a connectable serves this EL name by NAME (its task definition), as
-   * opposed to serving whatever is evaluated at its BPMN element. Asked among the tasks of
-   * every model wired under the process, like {@link #resolve(String, String, String, String)}.
+   * Whether a connectable serves this EL name by NAME (its task definition), and not just
+   * whatever is evaluated at its BPMN element. It asks among the tasks of every model wired
+   * under the process, like {@link #resolve(String, String, String, String)}.
    *
    * @param workflowModuleId The workflow module ID
    * @param scopedBpmnProcessId The process definition key the engine knows
@@ -796,8 +796,8 @@ public class Camunda7TaskRegistry {
   }
 
   /**
-   * Reads the tasks of the model one process definition carries, through the same extraction
-   * the deployment runs over a model it brings.
+   * Reads the tasks of the model which one process definition carries. It uses the same
+   * extraction the deployment runs over a model it brings.
    */
   public interface DefinitionReading {
 
@@ -821,9 +821,9 @@ public class Camunda7TaskRegistry {
   }
 
   /**
-   * Who reads the model of a process definition. Handed over by the deployment service, which
-   * owns the extraction. May be <code>null</code> (tests): every definition is then answered
-   * with the tasks of every wired model.
+   * Who reads the model of a process definition. The deployment service hands it over,
+   * because it owns the extraction. May be <code>null</code> (tests). Then every definition
+   * is answered with the tasks of every wired model.
    */
   private DefinitionReading definitionReading;
 
@@ -841,8 +841,8 @@ public class Camunda7TaskRegistry {
 
   /**
    * The tasks of each process definition a workflow ran on, read once per definition. A
-   * definition never changes, so the answer never goes stale, and the number of entries is the
-   * number of versions in use.
+   * definition never changes, so the answer never gets out of date. The number of entries is
+   * the number of versions in use.
    */
   private final Map<String, TasksOfAModel> tasksByDefinition = new ConcurrentHashMap<>();
 
@@ -850,12 +850,12 @@ public class Camunda7TaskRegistry {
    * The tasks of the process definition a workflow runs on, and nothing of any other version.
    * <p>
    * Camunda 7 evaluates the expressions of the model a workflow was STARTED with. An older
-   * version may name another expression at the same element than the version this application
-   * deploys, so a lookup over every model of the process finds the newer task by its element
-   * and hands the workflow a method its own model never named. The model is read when a
-   * workflow of that definition first asks, and kept for every later question, so a start
-   * pays nothing for the versions the engine holds (see decision 40 in the repository's
-   * DECISIONS.md).
+   * version may name another expression at the same element than the version this
+   * application deploys. Then a lookup over every model of the process finds the newer task
+   * by its element. It hands the workflow a method which its own model never named. The model
+   * is read when a workflow of that definition first asks, and it is kept for every later
+   * question. So a start pays nothing for the versions the engine holds (see decision 40 in
+   * the repository's DECISIONS.md).
    *
    * @param workflowModuleId The workflow module ID
    * @param scopedBpmnProcessId The process definition key the engine knows
@@ -872,8 +872,8 @@ public class Camunda7TaskRegistry {
     final var bpmnProcessId = plainProcessIdsByScopedProcessId
         .get(new RegistryKey(workflowModuleId, scopedBpmnProcessId));
     if ((definitionReading == null) || (processDefinitionId == null) || (bpmnProcessId == null)) {
-      // nothing to read the definition with, or a process this application never wired:
-      // the second answers nothing either way, the first only happens in tests
+      // nothing to read the definition with, or a process this application never wired.
+      // The second answers nothing either way. The first only happens in tests
       return tasksOfEveryWiredModel(workflowModuleId, scopedBpmnProcessId);
     }
     return tasksByDefinition
@@ -896,9 +896,9 @@ public class Camunda7TaskRegistry {
                               List<Camunda7TaskConnectable> connectables) {
 
     /**
-     * The connectable serving the given EL name, by NAME first: a name which IS a task
-     * definition means that task, wherever it is evaluated. Only then by element, which
-     * matches any name evaluated there.
+     * The connectable which serves the given EL name. It looks by NAME first. A name which IS
+     * a task definition means that task, wherever it is evaluated. Only then it looks by
+     * element, which matches any name evaluated there.
      *
      * @param currentElementId The BPMN element the expression evaluates at (may be
      *          <code>null</code>)
@@ -924,8 +924,8 @@ public class Camunda7TaskRegistry {
     }
 
     /**
-     * Whether a task of this model is named like this, as opposed to merely sitting at the
-     * element the name is evaluated at.
+     * Whether a task of this model is named like this. Sitting at the element the name is
+     * evaluated at is not enough.
      *
      * @param propertyName The EL name
      * @return Whether a connectable is named like this

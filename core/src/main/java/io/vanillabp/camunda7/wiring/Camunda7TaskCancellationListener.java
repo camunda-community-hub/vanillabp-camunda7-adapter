@@ -9,25 +9,27 @@ import io.vanillabp.spi.service.TaskEvent;
 import lombok.extern.slf4j.Slf4j;
 
 /**
- * Delivers {@link TaskEvent.Event#CANCELED} to <code>&#64;WorkflowTask</code>
- * methods subscribing to it: attached as an END execution listener at parse time
- * ({@link Camunda7AsyncBpmnParseListener}), it invokes the handler when the activity ends by
- * CANCELLATION (interrupting boundary event, process termination) - a normal completion does
- * not fire it. The core skips methods without a matching <code>&#64;TaskEvent</code> parameter
- * filter, so handlers not asking for lifecycle events never see the delivery.
+ * Delivers {@link TaskEvent.Event#CANCELED} to the <code>&#64;WorkflowTask</code> methods
+ * which subscribe to it. The parse listener ({@link Camunda7AsyncBpmnParseListener}) attaches
+ * it as an END execution listener. It calls the handler when the activity ends by
+ * CANCELLATION, for example by an interrupting boundary event or by the end of the process.
+ * A normal completion does not fire it. The core skips methods without a matching
+ * <code>&#64;TaskEvent</code> parameter filter. So a handler which does not ask for lifecycle
+ * events never sees the delivery.
  * <p>
- * Two kinds of method are told, and the activity decides which. The TASK of the activity is one
- * of them, which is why this listener sits on every service-like activity. The served LISTENERS
- * of the activity are the other: a listener somebody modelled fires at the moment the modeller
- * picked, and an element taken away by a boundary event never reaches that moment, so the method
- * serving it would never learn what happened. The parse listener attaches this listener to those
- * activities as well, and the registry says which listeners of an activity are waiting for it.
- * A listener the modeller put on <code>end</code> is not among them: the engine fires an END
- * execution listener on a cancellation too, so that method already hears the moment. Why a
- * listener knows these two events and no others is decision 26 in the repository's DECISIONS.md.
+ * Two kinds of method are told, and the activity decides which. One is the TASK of the
+ * activity. That is why this listener sits on every service-like activity. The other is a
+ * served LISTENER of the activity. A listener somebody modelled fires at the moment the
+ * modeller picked. An element which a boundary event takes away never reaches that moment.
+ * So the method serving it would never learn what happened. The parse listener attaches this
+ * listener to those activities as well. The registry says which listeners of an activity are
+ * waiting for it. A listener the modeller put on <code>end</code> is not among them. The
+ * engine fires an END execution listener on a cancellation too, so that method already hears
+ * the moment. Decision 26 in the repository's DECISIONS.md says why a listener knows these
+ * two events and no others.
  * <p>
  * The invocation runs INSIDE the engine's cancellation transaction
- * ({@code runInCurrentTransaction}): aggregate changes made by the handler commit
+ * ({@code runInCurrentTransaction}). The changes the handler makes to the aggregate commit
  * or roll back together with the cancellation itself.
  */
 @Slf4j
@@ -38,8 +40,8 @@ public class Camunda7TaskCancellationListener implements ExecutionListener {
   private final Camunda7TaskRegistry taskRegistry;
 
   /**
-   * One listener for the whole engine, attached to every activity whose cancelation a
-   * method of the application asks about.
+   * One listener for the whole engine. It is attached to every activity whose cancelation
+   * a method of the application asks about.
    *
    * @param workflowTaskInvoker Where the application's method is called
    * @param taskRegistry What the method serving the canceled element is looked up in
@@ -54,8 +56,8 @@ public class Camunda7TaskCancellationListener implements ExecutionListener {
   }
 
   /**
-   * The registry this listener resolves with, which the parse listener asks which elements of a
-   * process carry a served listener waiting for a cancellation.
+   * The registry this listener looks things up in. The parse listener asks it which elements
+   * of a process carry a served listener that waits for a cancellation.
    *
    * @return The registry of this engine
    */
@@ -70,24 +72,24 @@ public class Camunda7TaskCancellationListener implements ExecutionListener {
       final DelegateExecution execution) throws Exception {
 
     if (!(execution instanceof ExecutionEntity executionEntity) || !executionEntity.isCanceled()) {
-      // a normal completion - the regular invocation already happened
+      // a normal completion. The regular invocation already happened
       return;
     }
 
     final var processDefinition = executionEntity.getProcessDefinition();
-    // The tenant answers the workflow module only while the module IS
-    // isolated by one - with prefixed identifiers the registry knows which module a
-    // process definition key belongs to, and what its plain id is
+    // the tenant tells the workflow module only while a tenant keeps the module apart.
+    // With prefixed identifiers the registry knows which module a process definition key
+    // belongs to, and what its plain id is
     final var scopedBpmnProcessId = processDefinition.getKey();
     final var workflowModuleId = taskRegistry
         .resolveWorkflowModuleId(processDefinition.getTenantId(), scopedBpmnProcessId);
     final var bpmnProcessId = taskRegistry.plainBpmnProcessId(workflowModuleId, scopedBpmnProcessId);
 
-    // the SCOPED id, because that is what the registry is keyed by. The plain id
-    // belongs into the delivery and into the log, never into a lookup: with
-    // prefixed identifiers the two differ, the lookup finds nothing and the
-    // cancellation stays silent. And the tasks of the version this workflow runs on,
-    // because another version may wire another task to the same element
+    // the SCOPED id, because the registry is keyed by it. The plain id belongs into the
+    // delivery and into the log, never into a lookup. With prefixed identifiers the two
+    // differ. Then the lookup would find nothing, and the cancellation would stay silent.
+    // And the tasks of the version this workflow runs on, because another version may wire
+    // another task to the same element
     final var tasksOfTheOwnVersion = taskRegistry
         .tasksOf(
             workflowModuleId,
@@ -96,10 +98,10 @@ public class Camunda7TaskCancellationListener implements ExecutionListener {
             executionEntity::getBpmnModelInstance);
     final var connectable = tasksOfTheOwnVersion
         .resolve(execution.getCurrentActivityId(), null)
-        // a TASK of the element and nothing else. A user task is told about its cancellation by
-        // Camunda7UserTaskEventListener, through the engine's DELETE task-listener event, and a
-        // listener of the element is told below - both would hear it twice from here, because a
-        // match by ELEMENT answers with whatever sits on that element
+        // a TASK of the element and nothing else. Camunda7UserTaskEventListener tells a user
+        // task about its cancellation, through the engine's DELETE task-listener event. A
+        // listener of the element is told below. Both would hear it twice from here, because
+        // a match by ELEMENT answers with whatever sits on that element
         .filter(candidate -> !candidate.isExecutionListener())
         .filter(candidate -> candidate.type() != Camunda7TaskConnectable.Type.USER_TASK);
     if (connectable.isPresent()) {
@@ -119,8 +121,8 @@ public class Camunda7TaskCancellationListener implements ExecutionListener {
         .filter(listener -> listener.elementId().equals(execution.getCurrentActivityId()))
         .forEach(listener -> tasksOfTheOwnVersion
             .resolve(null, listener.taskDefinition())
-            // the registry answers by name first and falls back to the element, which is not
-            // what is asked for here: a listener is meant, and its task definition names it
+            // the registry answers by name first and then falls back to the element. That is
+            // not what is asked for here. A listener is meant, and its task definition names it
             .filter(candidate -> listener.taskDefinition().equals(candidate.taskDefinition()))
             .ifPresent(listenerConnectable -> {
               log.debug(
@@ -138,8 +140,8 @@ public class Camunda7TaskCancellationListener implements ExecutionListener {
   /**
    * Calls one <code>&#64;WorkflowTask</code> method with the cancellation.
    * <p>
-   * The outcome is deliberately ignored: there is nothing to complete, the activity is being
-   * canceled. The core skips a method which does not subscribe to CANCELED.
+   * The outcome is ignored on purpose. There is nothing to complete, because the activity is
+   * being canceled. The core skips a method which does not subscribe to CANCELED.
    *
    * @param connectable The task or listener whose method is called
    * @param execution The execution being canceled

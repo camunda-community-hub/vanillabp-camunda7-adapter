@@ -7,11 +7,10 @@ import org.camunda.bpm.impl.juel.jakarta.el.ELResolver;
 import io.vanillabp.integration.adapter.spi.workflowtask.WorkflowTaskInvoker;
 
 /**
- * The engine's default (JUEL) expression manager extended by VanillaBP's
- * {@link Camunda7TaskELResolver} - used on platforms without a bean-aware
- * expression manager (Quarkus; the Spring Boot module extends Camunda's
- * {@code SpringExpressionManager} the same way to keep Spring beans resolvable
- * in EL).
+ * The engine's default (JUEL) expression manager, extended by VanillaBP's
+ * {@link Camunda7TaskELResolver}. It is used on platforms without a bean-aware
+ * expression manager, which is Quarkus. The Spring Boot module extends Camunda's
+ * {@code SpringExpressionManager} the same way, so Spring beans stay resolvable in EL.
  */
 public class Camunda7TaskExpressionManager extends JuelExpressionManager {
 
@@ -20,8 +19,8 @@ public class Camunda7TaskExpressionManager extends JuelExpressionManager {
   private final WorkflowTaskInvoker workflowTaskInvoker;
 
   /**
-   * Puts this adapter's resolver in front of the engine's own, for a platform which has no
-   * bean-aware expression manager to extend instead.
+   * Puts this adapter's resolver in front of the engine's own. It is for a platform which
+   * has no bean-aware expression manager to extend instead.
    *
    * @param taskRegistry What the resolver built here looks a task up in
    * @param workflowTaskInvoker Where the application's method is called

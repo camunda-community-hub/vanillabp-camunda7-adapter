@@ -12,26 +12,26 @@ import io.vanillabp.integration.adapter.spi.workflowtask.WorkflowTaskInvoker;
 import io.vanillabp.integration.adapter.spi.workflowtask.WorkflowTaskOutcome;
 
 /**
- * Resolves top-level EL names of BPMN expressions against the WIRED TASKS of VanillaBP: a
- * name matching a task (by the current BPMN element or by task definition) yields the
- * handler - <code>camunda:expression</code> tasks run the handler during evaluation,
- * <code>camunda:delegateExpression</code> tasks receive the
- * {@link Camunda7WorkflowTaskBehavior} (so <code>&#64;TaskId</code> tasks can stay open).
- * Every other name falls through to the engine's remaining resolvers, which is where the
- * process variables live.
+ * Resolves the top-level EL names of BPMN expressions against the WIRED TASKS of VanillaBP.
+ * A name which matches a task yields the handler. It matches by the current BPMN element or
+ * by the task definition. A <code>camunda:expression</code> task runs the handler during
+ * evaluation. A <code>camunda:delegateExpression</code> task receives the
+ * {@link Camunda7WorkflowTaskBehavior}, so a <code>&#64;TaskId</code> task can stay open.
+ * Every other name falls through to the engine's other resolvers. The process variables
+ * live there.
  * <p>
  * <b>Attributes of the workflow aggregate are a MIGRATION FALLBACK here</b>, and it will be
- * removed. Reading the aggregate live made a model reading <code>${riskAcceptable}</code>
- * work on Camunda 7 and fail on every remote BPMS - the opposite of what
- * {@code @SyncWithBPMS} is for. The values are pushed as process variables at every sync
- * point now, so the engine resolves them itself (see decision 1 in the repository's
+ * removed. Reading the aggregate live made a model which reads <code>${riskAcceptable}</code>
+ * work on Camunda 7 and fail on every remote BPMS. That is the opposite of what
+ * {@code @SyncWithBPMS} is for. Now the values are pushed as process variables at every sync
+ * point, so the engine resolves them itself (see decision 1 in the repository's
  * DECISIONS.md).
  * <p>
- * The fallback exists because an application upgrading to this version has workflows
- * RUNNING which carry no such variables yet, and because version 1 resolved attributes
- * without a getter as well (the sync model reads getters only). So the order is reversed
- * compared to before: a VARIABLE of that name wins, and only where the engine has none
- * does the resolver still read the aggregate - saying so once per name, with the way out.
+ * The fallback exists for two reasons. An application which upgrades to this version has
+ * workflows RUNNING which carry no such variables yet. And version 1 also resolved
+ * attributes without a getter, while the sync model reads getters only. So the order is the
+ * other way round now. A VARIABLE of that name wins. Only where the engine has none does the
+ * resolver still read the aggregate. It says so once per name, together with the way out.
  * The startup check of the deployment service reports the same names while the application
  * boots.
  */
@@ -41,18 +41,18 @@ public class Camunda7TaskELResolver extends ELResolver {
       .getLogger(Camunda7TaskELResolver.class);
 
   /**
-   * Which live reads were reported already (workflow module, process and name) - the
-   * migration fallback names a configuration gap, and one line per evaluation
-   * would bury it.
+   * Which live reads were reported already (workflow module, process and name). The
+   * migration fallback names a configuration gap, and one line per evaluation would bury
+   * it.
    */
   private final java.util.Set<String> liveReadsReported = java.util.concurrent.ConcurrentHashMap
       .newKeySet();
 
   /**
-   * How many workflow INSTANCES the fallback served since this application started -
-   * which is what has to be known before the fallback can be removed, and what the
-   * report of names cannot answer. A name says a model reads something unshared; an
-   * instance says a workflow still depends on the live read.
+   * Which workflow INSTANCES the fallback served since this application started. Their
+   * number has to be known before the fallback can be removed. The report of names cannot
+   * answer it. A name says that a model reads something unshared. An instance says that a
+   * workflow still depends on the live read.
    * <p>
    * The number falls on its own without anything being done to it: an instance stops
    * needing the fallback as soon as it reaches a sync point, because the adapter writes
@@ -68,15 +68,14 @@ public class Camunda7TaskELResolver extends ELResolver {
 
   /**
    * Up to this many instances are remembered. Beyond it the count is reported as "at
-   * least", because an exact number is worth less than a bounded resolver.
+   * least". An exact number is worth less than a resolver which has a bound.
    */
   private static final int MAX_REMEMBERED_INSTANCES = 10_000;
 
   /**
-   * How often the count of instances still on the fallback is reported at most. The
-   * same interval the platform uses for its eviction-pressure warning, and for the same
-   * reason: a number which changes slowly is worth a line now and then, never one per
-   * evaluation.
+   * How often, at most, the count of instances still on the fallback is reported. The
+   * platform uses the same interval for its eviction-pressure warning, for the same reason.
+   * A number which changes slowly is worth a line now and then, never one per evaluation.
    */
   private static final java.time.Duration USAGE_REPORT_INTERVAL = java.time.Duration.ofHours(1);
 
@@ -90,7 +89,7 @@ public class Camunda7TaskELResolver extends ELResolver {
 
   /**
    * One resolver for the whole engine. It sits in front of everything else the engine
-   * would resolve a name with, which is why it has to hand back what is not its own.
+   * would resolve a name with. That is why it has to hand back what is not its own.
    *
    * @param taskRegistry What an EL name evaluated by the engine is looked up in
    * @param workflowTaskInvoker Where the application's method is called, and what is asked
@@ -106,10 +105,10 @@ public class Camunda7TaskELResolver extends ELResolver {
   }
 
   // both calls into the deprecated half of WorkflowTaskInvoker are the migration
-  // fallback, and this resolver is the only production caller of it: the
-  // 'removal' lint is mandatory and @Deprecated on a caller does not silence it, so
-  // without this the adapter reported the same two warnings in every build. Goes away
-  // together with the fallback.
+  // fallback. This resolver is its only production caller. The 'removal' lint is
+  // mandatory, and @Deprecated on a caller does not silence it. So without this the
+  // adapter reported the same two warnings in every build. It goes away together with
+  // the fallback.
   @SuppressWarnings("removal")
   @Override
   public Object getValue(
@@ -117,7 +116,7 @@ public class Camunda7TaskELResolver extends ELResolver {
       final Object base,
       final Object property) {
 
-    // only top-level names; attribute chains are served by subsequent resolvers
+    // only top-level names. The resolvers after this one serve attribute chains
     if (base != null) {
       return null;
     }
@@ -125,15 +124,15 @@ public class Camunda7TaskELResolver extends ELResolver {
     final var execution = (ExecutionEntity) context
         .getELResolver()
         .getValue(context, null, "execution");
-    // the built-in variable-scope resolver marks 'execution' as resolved - reset
-    // so OUR verdict decides whether subsequent resolvers get their chance
+    // the built-in variable-scope resolver marks 'execution' as resolved. Reset it, so
+    // OUR verdict decides whether the resolvers after this one get their chance
     context.setPropertyResolved(false);
     if (execution == null) {
       return null;
     }
 
-    // Without a tenant (prefixed identifiers) the registry answers which
-    // workflow module a process definition key belongs to, and its plain id
+    // without a tenant (prefixed identifiers) the registry answers which workflow
+    // module a process definition key belongs to, and what its plain id is
     final var scopedBpmnProcessId = execution
         .getProcessDefinition()
         .getKey();
@@ -146,7 +145,7 @@ public class Camunda7TaskELResolver extends ELResolver {
         : null;
     final var propertyName = property.toString();
 
-    // the tasks of the version this workflow runs on: another version may name another
+    // the tasks of the version this workflow runs on. Another version may name another
     // expression at the same element, and its method is not this workflow's business
     final var tasksOfTheOwnVersion = taskRegistry
         .tasksOf(
@@ -156,18 +155,17 @@ public class Camunda7TaskELResolver extends ELResolver {
             execution::getBpmnModelInstance);
     final var connectable = tasksOfTheOwnVersion
         .resolve(currentElementId, propertyName)
-        // user-task connectables are served by task listeners, never
-        // by EL names - a formKey colliding with an aggregate attribute must not
-        // shadow the attribute
+        // task listeners serve user-task connectables, never EL names. A formKey which
+        // has the name of an aggregate attribute must not hide the attribute
         .filter(candidate -> candidate.type() != Camunda7TaskConnectable.Type.USER_TASK)
-        // a modelled listener is resolved here like a task is: the engine evaluates the
+        // a modelled listener is resolved here like a task. The engine evaluates the
         // listener's own expression, so the NAME route is the normal one for it
 
         // a connectable matched by ELEMENT catches EVERY name evaluated while an
-        // execution sits at its activity, including the condition of a conditional event
-        // or a gateway. Only a name which IS a task definition of this process may run a
-        // handler; anything else evaluated at that element is a variable and belongs to
-        // the engine's resolvers
+        // execution sits at its activity. The condition of a conditional event or of a
+        // gateway is among them. Only a name which IS a task definition of this process may
+        // run a handler. Anything else evaluated at that element is a variable, and it
+        // belongs to the engine's resolvers
         .filter(
             candidate -> tasksOfTheOwnVersion.isTaskDefinitionName(propertyName) || !workflowTaskInvoker
                 .workflowAggregateHasProperty(workflowModuleId, bpmnProcessId, propertyName));
@@ -180,23 +178,22 @@ public class Camunda7TaskELResolver extends ELResolver {
         return behavior;
       }
       if (connectable.get().type() == Camunda7TaskConnectable.Type.EXECUTION_LISTENER_DELEGATE_EXPRESSION) {
-        // a delegate expression of a LISTENER has to yield a listener object: the engine is
+        // a delegate expression of a LISTENER has to yield a listener object. The engine is
         // inside a transition, and an activity behavior would try to leave the element
         return new Camunda7ListenerNotification(behavior, connectable.get());
       }
       if (connectable.get().type() == Camunda7TaskConnectable.Type.EXECUTION_LISTENER_EXPRESSION) {
-        // camunda:expression of a listener - the handler runs while the expression
+        // camunda:expression of a listener. The handler runs while the expression
         // evaluates, and the listener is done when it returns
         Camunda7ListenerNotification.invoke(behavior, connectable.get(), execution);
         return null;
       }
-      // camunda:expression - the handler runs while the expression evaluates;
-      // the task completes when the evaluation returns
+      // camunda:expression. The handler runs while the expression evaluates, and the
+      // task completes when the evaluation returns
       final var outcome = behavior.invokeHandler(execution);
       if (outcome.kind() == WorkflowTaskOutcome.Kind.COMPLETION_PENDING) {
-        // the backstop: the deployment check reports this while the
-        // application starts, so reaching this line means the model got to the
-        // engine another way
+        // the backstop. The deployment check reports this while the application starts.
+        // So if this line is reached, the model got to the engine another way
         throw new ProcessEngineException(
             Camunda7TaskConnectable.asynchronousTaskWiredByExpression(
                 propertyName, bpmnProcessId, workflowModuleId));
@@ -204,9 +201,9 @@ public class Camunda7TaskELResolver extends ELResolver {
       return null;
     }
 
-    // no wired task: the values shared by the aggregate are process variables, so
-    // the engine's own resolvers answer the name - unless this workflow still
-    // runs without them, which is what the migration fallback below is for
+    // no wired task. The values the aggregate shares are process variables, so the
+    // engine's own resolvers answer the name. But this workflow may still run without
+    // them, and the migration fallback below is for that case
     if (execution.hasVariable(propertyName)) {
       return null;
     }
@@ -299,8 +296,8 @@ public class Camunda7TaskELResolver extends ELResolver {
   }
 
   /**
-   * The current usage, extracted so the message and {@link #liveReadUsage()} cannot
-   * disagree about what "at least" means.
+   * The current usage. It is a method of its own, so the message and
+   * {@link #liveReadUsage()} cannot disagree about what "at least" means.
    *
    * @return The usage
    */
@@ -339,8 +336,8 @@ public class Camunda7TaskELResolver extends ELResolver {
 
   /**
    * Says ONCE per workflow module, process and name that an expression was answered by
-   * reading the aggregate instead of a process variable - the migration fallback which
-   * will be removed.
+   * reading the aggregate instead of a process variable. That is the migration fallback,
+   * which will be removed.
    *
    * @param workflowModuleId The workflow module ID
    * @param bpmnProcessId The BPMN process ID

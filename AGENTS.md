@@ -2,35 +2,35 @@
 
 The VanillaBP adapter for the embedded Camunda 7 engine, on Spring Boot and on Quarkus.
 
-Read [`README.md`](./README.md) first: it says what the adapter changes in the BPMN it deploys, how
-it runs what it delivers, and how to build. The wiki is the user-facing half; the README is the
-contributor's.
+Read [`README.md`](./README.md) first. It says what the adapter changes in the BPMN it deploys,
+how it runs what it delivers, and how to build. The README is for people who work on the code. The
+[wiki](https://github.com/camunda-community-hub/vanillabp-camunda7-adapter/wiki) is for people who
+use the adapter.
 
-What this adapter implements is described once, for every adapter, in
 [`ADAPTER-AUTHORS.md`](https://github.com/vanillabp/adapter-platform-integration/blob/main/migration-adapter/ADAPTER-AUTHORS.md)
-of the platform repository: the two interfaces, the calls the core expects back, what an answer
-promises and what a wrong one costs. Read it before changing anything on the SPI boundary, and
-where this adapter deviates from it, the deviation belongs in the README with its reason.
+in the platform repository describes what every adapter implements. It names the two interfaces
+and the calls the core expects back. It also says what an answer promises and what a wrong answer
+costs. Read it before you change anything at the SPI boundary. Where this adapter does something
+different, the README says so and gives the reason.
 
 ## What belongs in `UPGRADE.md`
 
 [`UPGRADE.md`](./UPGRADE.md) describes the step from VanillaBP 1 to the 2.0 release and nothing
-else. An entry is owed where a version-1 application on this BPMS behaves differently or has to
-change something. A change between two snapshots of 2.0 earns no entry, however much work it was:
-it would ask the reader to follow how the release was built instead of carrying out their own
-upgrade, and git holds that history anyway.
+else. It needs an entry where a version 1 application on this BPMS behaves differently, or where
+the application has to change something. A change between two snapshots of 2.0 gets no entry, no
+matter how much work it was. Such an entry would make the reader follow how the release was built,
+while they only want to do their own upgrade. And git keeps that history anyway.
 
-What does not go there still has a place. The end state of a new feature belongs in the wiki, which
-is where users read. A reasoning several places in this repository rely on belongs in
-[`DECISIONS.md`](./DECISIONS.md). What is neither belongs nowhere, and the commit message is where
-it is said.
+What does not go there still has a place. The end state of a new feature goes into the wiki,
+because users read the wiki. A reason that several places in this repository rely on goes into
+[`DECISIONS.md`](./DECISIONS.md). Anything else goes into the commit message only.
 
-The file is organised per version line and then per topic, and no heading carries a date. It holds
-what this adapter asks of an upgrading application; what VanillaBP itself asks is in the
+The file is sorted by version line and then by topic. No heading has a date. The file holds what
+this adapter asks of an application during the upgrade. What VanillaBP itself asks is in the
 [platform's file](https://github.com/vanillabp/adapter-platform-integration/blob/main/UPGRADE.md).
-The user-facing half of both is the wiki page
-[Migrating from version 1](https://github.com/vanillabp/adapter-platform-integration/wiki/Migrating-from-version-1),
-which wins where the two disagree.
+For users, the wiki page
+[Migrating from version 1](https://github.com/vanillabp/adapter-platform-integration/wiki/Migrating-from-version-1)
+covers both files. Where the page and a file disagree, the page is right.
 
 ## The decision log is binding
 
@@ -46,12 +46,55 @@ otherwise.
 untrue, stop and put the question to the maintainer before you write the change. If the answer is
 yes, the same commit updates the log: the old entry STAYS, marked as superseded and naming the
 entry which replaced it, and the new decision takes the next free number. Numbers are never reused
-and never renumbered, because a citation in an older release still points at them. Editing an
-entry until its old text is gone is never the way.
+and never renumbered, because a citation in an older release still points at them. Never edit an
+entry until its old text is gone.
 
 Adding an entry has the same rule. A decision earns a number when several places rely on it and
 copying the explanation to each of them would rot; anything smaller is a comment where it belongs,
 and anything larger is documentation.
+
+## How we write
+
+Most people who read this repository read English as a second language, and so does the
+maintainer. Long sentences, rare words and stacked nouns slow them down. Write so that
+nobody has to read a sentence twice.
+
+Short main sentences, one thought each. One subordinate clause is enough. Active voice.
+The common word instead of the rare one: `use` instead of `leverage`, `about` instead of
+`regarding`, `so` instead of `consequently`, `has` instead of `possesses`. A technical term
+stays a technical term, but say what it means the first time it turns up, and write an
+abbreviation out once. If a sentence trips you up when you read it aloud, rewrite it.
+
+This holds for every English text here: the README files, `DECISIONS.md`, this file, the
+Javadoc and comments which explain something, and the texts of commits and pull requests. It
+holds for the [wiki](https://github.com/camunda-community-hub/vanillabp-camunda7-adapter/wiki) as
+well, because the wiki clone has no `AGENTS.md` of its own.
+
+Nothing a program reads is renamed for the sake of language. Class and method names,
+configuration keys, artifact coordinates and the headlines of decision log entries stay as
+they are, because code, tests and other repositories point at them.
+
+Before and after, from this file:
+
+> A change between two snapshots of 2.0 earns no entry, however much work it was: it would ask the
+> reader to follow how the release was built instead of carrying out their own upgrade, and git
+> holds that history anyway.
+
+becomes
+
+> A change between two snapshots of 2.0 gets no entry, no matter how much work it was. Such an
+> entry would make the reader follow how the release was built, while they only want to do their
+> own upgrade. And git keeps that history anyway.
+
+The next pair is from [`UPGRADE.md`](./UPGRADE.md):
+
+> Version 2 refuses a message which does not start the process of the `ProcessService` you call,
+> with an `IllegalArgumentException` before anything is saved.
+
+becomes
+
+> Version 2 refuses a message which does not start the process of the `ProcessService` you call.
+> It throws an `IllegalArgumentException` before anything is saved.
 
 ## Before you open a pull request
 
@@ -99,17 +142,17 @@ After you renumber, run `bin/check-decision-citations.sh`. It says whether every
 decision still points at an entry, also where a citation is wrapped over two lines. The *Checks*
 workflow runs it on every pull request.
 
-`bin/check-orphaned-javadoc.sh` finds a javadoc block standing
-directly in front of a second one, which javadoc drops without a word, so the text appears nowhere.
-Run it when you wrote or moved a comment. Hang a block it reports back on the element it
-describes rather than delete it.
+`bin/check-orphaned-javadoc.sh` finds a javadoc block which stands directly in front of a second
+one. Javadoc drops the first block without a word, so its text appears nowhere. Run the script when
+you wrote or moved a comment. If it reports a block, move the block back to the element it
+describes. Do not delete it.
 
 ## What code may point at
 
 Nothing which a later change can invalidate without anything noticing: no story or prompt number,
 no issue or pull-request number, no chat transcript, no person. Those record a conversation at a
-point in time. A decision entry lives next to the code and is overhauled in the same commit, which
-is what makes it citable.
+point in time. A decision entry lives next to the code and changes in the same commit as the code.
+That is why code may cite it.
 
 Where a name can carry the reason, the name is the better fix. Where it cannot, a comment says why
 in its own words, complete where it stands. Only what several places have to carry becomes an

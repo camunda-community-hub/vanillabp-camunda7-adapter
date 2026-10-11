@@ -15,16 +15,15 @@ import io.vanillabp.camunda7.api.Camunda7MultiInstances;
  * <p>
  * A multi-instance element tells a handler three things: which round it is in, how many
  * rounds there are, and the item of the round. Camunda 7 counts the first two by itself.
- * The item is the variable the model names in <code>camunda:elementVariable</code>, so an
- * element naming none never says what the value of the round is called, and a
- * <code>&#64;MultiInstanceElement</code> for it receives <code>null</code> while the
- * workflow runs. A cardinality-based element is the everyday case of it: it iterates a
- * number of times and over nothing at all.
+ * The item is the variable the model names in <code>camunda:elementVariable</code>. An
+ * element which names none never says what the value of the round is called. A
+ * <code>&#64;MultiInstanceElement</code> for it then receives <code>null</code> while the
+ * workflow runs. The everyday case is an element based on a cardinality: it iterates a
+ * number of times, over nothing at all.
  * <p>
- * Such a model is legitimate on its own, and so is a handler which reads the index and the
- * total only. What nobody means is the two together, which is why the refusal needs both
- * halves: this adapter reads the BPMN, and the core answers which elements a handler wants
- * the item of.
+ * Such a model is legitimate on its own. So is a handler which reads only the index and the
+ * total. Nobody means the two together. So the refusal needs both halves: this adapter
+ * reads the BPMN, and the core answers which elements a handler wants the item of.
  */
 public final class Camunda7MultiInstanceItems {
 
@@ -35,16 +34,16 @@ public final class Camunda7MultiInstanceItems {
    * The IDs of the multi-instance elements ENCLOSING the given BPMN element which name no
    * <code>camunda:elementVariable</code>, outermost first.
    * <p>
-   * The chain of ONE element, which is the only reading of the question that holds: a
-   * handler is handed the item of the rounds its own element runs in, and an element of
-   * another branch never reaches it whatever that element names. Reading the whole process
-   * instead would refuse a model which is right, and it is the reading Camunda 8 has always
-   * had.
+   * Only the chain of ONE element is read. This is the only reading of the question which
+   * holds. A handler gets the item of the rounds which its own element runs in. An element
+   * of another branch never reaches it, whatever that element names. Reading the whole
+   * process instead would refuse a model which is right. Camunda 8 has always read it this
+   * way, too.
    * <p>
-   * A level a CALLER contributes is not in this model, and the core knows that an element
+   * A level which a CALLER adds is not in this model. The core knows that an element which
    * the model does not carry belongs to a caller.
    * <p>
-   * The element itself is part of the chain when it is multi-instance, which is the usual
+   * The element itself is part of the chain when it is multi-instance. This is the usual
    * case of a multi-instance service task.
    *
    * @param element The BPMN element a handler serves, or <code>null</code> where the model
@@ -130,8 +129,8 @@ public final class Camunda7MultiInstanceItems {
   }
 
   /**
-   * The elements of one finding as the message names them, ending in the verb which agrees
-   * with their number - so the sentence around it reads as one sentence either way.
+   * The elements of one finding as the message names them. The text ends in the verb which
+   * agrees with their number. So the sentence around it reads as one sentence either way.
    */
   private static String described(
       final Collection<String> elementIds) {

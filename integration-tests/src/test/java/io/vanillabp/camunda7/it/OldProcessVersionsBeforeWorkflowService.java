@@ -11,15 +11,15 @@ import io.vanillabp.spi.service.WorkflowTask;
 
 /**
  * The application which deploys version 1 of the old-process-versions test. It serves every
- * task of that version, because a start refuses a version it deploys itself when a task of it
- * has no method for that version.
+ * task of that version. A start refuses a version which it deploys itself, when a task of
+ * that version has no method for it.
  * <p>
  * The application after it is {@link OldProcessVersionsWorkflowService}. That one no longer
- * serves the task 'servedForAnUnknownVersion' in version 1, which is what the old-versions check
- * has to report while a workflow still runs on version 1.
+ * serves the task 'servedForAnUnknownVersion' in version 1. The old-versions check has to
+ * report that while a workflow still runs on version 1.
  * <p>
- * A bean only under the profile of its own generation: the generations declare the same
- * process and must never boot together.
+ * It is a bean only under the profile of its own generation. The generations declare the
+ * same process and must never boot together.
  */
 @Service
 @Profile(OldProcessVersionsBeforeWorkflowService.PROFILE)
@@ -66,7 +66,7 @@ public class OldProcessVersionsBeforeWorkflowService {
   }
 
   /**
-   * Never runs in this test: the workflow stays open in the task before it.
+   * Never runs in this test, because the workflow stays open in the task before it.
    *
    * @param aggregate The workflow aggregate
    */

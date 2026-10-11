@@ -29,25 +29,27 @@ import io.vanillabp.integration.test.utils.delivery.TaskDeliveryLogReader;
 import io.vanillabp.spi.process.ProcessService;
 
 /**
- * Integration test of the Camunda 7 adapter against a <b>real embedded engine on H2</b>
- * (shared data source and transaction manager with the JPA aggregate persistence).
+ * Integration test of the Camunda 7 adapter against a <b>real embedded engine on H2</b>. The
+ * engine shares the data source and the transaction manager with the JPA aggregate
+ * persistence.
  * <p>
  * It proves the three properties of the C7 start:
  * <ol>
- *   <li>BPMN resources are deployed with the workflow module ID as the Camunda tenant ID,</li>
- *   <li>starting a workflow creates a process instance whose business key equals the
- *       aggregate ID - through the adapter's own method within the transaction, through
- *       the VanillaBP user API right after the commit, and</li>
- *   <li>rolling back the surrounding transaction removes BOTH the aggregate and the process
- *       instance (the embedded-engine guarantee).</li>
+ *   <li>BPMN resources are deployed with the workflow module ID as the Camunda tenant ID.</li>
+ *   <li>Starting a workflow creates a process instance whose business key equals the
+ *       aggregate ID. The own method of the adapter does it within the transaction. The
+ *       VanillaBP user API does it right after the commit.</li>
+ *   <li>Rolling back the surrounding transaction removes BOTH the aggregate and the process
+ *       instance. The embedded engine guarantees that.</li>
  * </ol>
- * The start is exercised both directly via the adapter's
- * {@link Camunda7ProcessService#startProcessInstance(String, String, Object)} and
- * end-to-end via the VanillaBP user API {@link ProcessService#startWorkflow(Object)}.
+ * The test runs the start directly through
+ * {@link Camunda7ProcessService#startProcessInstance(String, String, Object)} of the adapter.
+ * It also runs it end to end through the VanillaBP user API
+ * {@link ProcessService#startWorkflow(Object)}.
  */
 @SpringBootTest(classes = TestApplication.class, properties = {
-    // a database of its own: the phase-two outbox of a test class Spring keeps
-    // cached would otherwise dispatch the entries of the next one
+    // a database of its own. Otherwise the phase-two outbox of a test class which Spring
+    // keeps cached would dispatch the entries of the next one.
     "spring.datasource.url=jdbc:h2:mem:c7-start-workflow-it;DB_CLOSE_DELAY=-1"
 })
 @ExtendWith(SuppressOutputExtension.class)
@@ -109,7 +111,8 @@ public class Camunda7StartWorkflowIT {
 
       camunda7ProcessService.startProcessInstance(MODULE_ID, BPMN_PROCESS_ID, saved.getId());
 
-      // inside the same transaction the instance exists with the aggregate id as business key
+      // inside the same transaction the instance exists, with the aggregate id as business
+      // key
       final var instance = runtimeService
           .createProcessInstanceQuery()
           .processInstanceBusinessKey(String.valueOf(saved.getId()))
@@ -174,7 +177,7 @@ public class Camunda7StartWorkflowIT {
 
           camunda7ProcessService.startProcessInstance(MODULE_ID, BPMN_PROCESS_ID, saved.getId());
 
-          // the instance is visible inside the transaction before rolling back...
+          // the instance is visible inside the transaction before the rollback...
           assertEquals(
               1,
               runtimeService
@@ -205,10 +208,10 @@ public class Camunda7StartWorkflowIT {
   }
 
   /**
-   * The canonical end-to-end path through the VanillaBP user API: starting a workflow via
-   * {@link ProcessService#startWorkflow(Object)} schedules the instance, which is created
-   * right after the transaction committed, and rolling the transaction back
-   * removes the aggregate and lets no instance be created at all.
+   * The canonical path end to end through the VanillaBP user API. Starting a workflow
+   * through {@link ProcessService#startWorkflow(Object)} schedules the instance. The
+   * instance is created right after the transaction committed. Rolling the transaction back
+   * removes the aggregate, and no instance is created at all.
    */
   @Test
   @DisplayName("processService.startWorkflow creates the instance after the commit (nothing on rollback)")
@@ -231,8 +234,8 @@ public class Camunda7StartWorkflowIT {
 
     assertNotNull(aggregateId);
 
-    // after the commit the outbox creates it, with the aggregate id as business key
-    // asked against the HISTORY: the instance may well have ended by then
+    // after the commit the outbox creates it, with the aggregate id as business key. The
+    // test asks the HISTORY, because the instance may well have ended by then.
     AwaitPhaseTwo.until(
         () -> processEngine
             .getHistoryService()
@@ -244,8 +247,8 @@ public class Camunda7StartWorkflowIT {
             + aggregateId
             + " was never created");
 
-    // the start left the id of its instance behind, so a later operation on this workflow
-    // need not ask every configured BPMS which of them holds it
+    // the start left the id of its instance behind. So a later operation on this workflow
+    // need not ask every configured BPMS which of them holds it.
     final var instanceId = processEngine
         .getHistoryService()
         .createHistoricProcessInstanceQuery()
@@ -294,10 +297,11 @@ public class Camunda7StartWorkflowIT {
   }
 
   /**
-   * Phase two of a start names the instance it created, and a start which finds its workflow
-   * running already names nothing. The engine reports the same start through the listener on
-   * the start event as well, and both write the same row, so the row alone cannot show that
-   * phase two reported anything. What phase two reported is therefore listened to directly.
+   * Phase two of a start names the instance it created. A start which finds its workflow
+   * running already names nothing. The engine also reports the same start through the
+   * listener on the start event, and both write the same row. So the row alone cannot show
+   * that phase two reported anything. That is why the test listens directly to what phase
+   * two reported.
    */
   @Test
   @DisplayName("Phase two of a start reports the process instance it created, and a repeated one reports nothing")
@@ -316,8 +320,8 @@ public class Camunda7StartWorkflowIT {
           .phaseTwoOfAStart(
               camunda7ProcessService, PhaseOperation.START_WORKFLOW, MODULE_ID, BPMN_PROCESS_ID, aggregateId,
               Map.of(), reported);
-      // the job of the first service task waits for the commit, so the workflow still runs
-      // here and the second dispatch finds it
+      // the job of the first service task waits for the commit. So the workflow still runs
+      // here, and the second dispatch finds it.
       PhaseOperations
           .phaseTwoOfAStart(
               camunda7ProcessService, PhaseOperation.START_WORKFLOW, MODULE_ID, BPMN_PROCESS_ID, aggregateId,
@@ -330,7 +334,8 @@ public class Camunda7StartWorkflowIT {
           .getProcessInstanceId();
     });
 
-    // the version comes with the id, in the form a task of the same workflow reports it
+    // the version comes with the id, in the form in which a task of the same workflow
+    // reports it
     assertEquals(
         List.of("%s on version %s".formatted(instanceId, versionOfTheDefinitionOf(instanceId))),
         reported.reported());
@@ -338,7 +343,7 @@ public class Camunda7StartWorkflowIT {
   }
 
   /**
-   * The version of the definition a workflow runs on, as the engine counts it.
+   * The version of the definition which a workflow runs on, as the engine counts it.
    *
    * @param instanceId The process instance id
    * @return The version, written as a task of that workflow reports it

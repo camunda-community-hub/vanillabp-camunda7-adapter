@@ -40,8 +40,8 @@ public class MultiInstancePushTestWorkflowService {
   }
 
   /**
-   * Sets what the conditional start event waits for and pushes the aggregate into
-   * the scope the given task runs in.
+   * Sets what the conditional start event waits for. Then it pushes the aggregate into the
+   * scope which the given task runs in.
    *
    * @param aggregateId The aggregate's id
    * @param taskId The parked execution of that iteration's task
@@ -57,7 +57,7 @@ public class MultiInstancePushTestWorkflowService {
   }
 
   /**
-   * Pushes the aggregate at the workflow's global scope.
+   * Pushes the aggregate at the global scope of the workflow.
    *
    * @param aggregateId The aggregate's id
    */
@@ -69,9 +69,9 @@ public class MultiInstancePushTestWorkflowService {
   }
 
   /**
-   * Saves an aggregate without starting a workflow - the boundary-event process is
-   * started against the engine by the test (the process service starts the primary
-   * process only).
+   * Saves an aggregate without starting a workflow. The test starts the boundary-event
+   * process against the engine, because the process service starts the primary process
+   * only.
    *
    * @return The saved aggregate
    */
@@ -82,8 +82,8 @@ public class MultiInstancePushTestWorkflowService {
   }
 
   /**
-   * The task of the boundary-event process: it has a boundary timer, so the engine
-   * gives the activity a scope of its own - the one a push must NOT write into.
+   * The task of the boundary-event process. It has a boundary timer, so the engine gives
+   * the activity a scope of its own. A push must NOT write into that scope.
    *
    * @param aggregate The workflow aggregate
    * @param taskId The parked execution
@@ -103,7 +103,7 @@ public class MultiInstancePushTestWorkflowService {
       @TaskId final String taskId,
       @MultiInstanceElement("MI_Sub") final String item) {
 
-    // parks this iteration: the test pushes into its scope afterwards
+    // parks this iteration. The test pushes into its scope afterwards.
     final var entry = item
         + "="
         + taskId;
@@ -118,8 +118,8 @@ public class MultiInstancePushTestWorkflowService {
   }
 
   /**
-   * The task behind the conditional start event of the event subprocess - it runs
-   * only in the iteration whose scope received the push.
+   * The task behind the conditional start event of the event subprocess. It runs only in
+   * the iteration whose scope received the push.
    *
    * @param aggregate The workflow aggregate
    * @param item The iteration's element

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" id="Definitions_ViewerParentProcess" targetNamespace="http://bpmn.io/schema/bpmn">
-  <!-- viewer/history API: a workflow using a call activity, so the test
-       can dig into the called process via the secondary history context -->
+  <!-- viewer and history API: a workflow with a call activity. So the test can dig
+       into the called process through the secondary history context -->
   <bpmn:process id="ViewerParentProcess" isExecutable="true">
     <bpmn:startEvent id="TheStartEvent">
       <bpmn:outgoing>Flow_start_to_call</bpmn:outgoing>

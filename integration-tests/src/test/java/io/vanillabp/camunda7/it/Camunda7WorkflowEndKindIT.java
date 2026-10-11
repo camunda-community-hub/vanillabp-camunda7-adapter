@@ -15,19 +15,18 @@ import org.springframework.transaction.support.TransactionTemplate;
 import io.vanillabp.integration.test.utils.SuppressOutputExtension;
 
 /**
- * Which modelled paths this engine reports as a canceled workflow, measured against a
- * real embedded engine. The kind comes from the delete reason the execution carries when
- * the process scope ends, and the question is which paths set one.
+ * Which modelled paths this engine reports as a canceled workflow, measured against a real
+ * embedded engine. The kind comes from the delete reason which the execution carries when
+ * the process scope ends. The question is which paths set one.
  * <p>
- * The two paths here are the ones a modeller would call a cancelation while looking at
- * the model, and neither of them is one. Both end the instance without a delete reason,
- * so the application hears a completion. Camunda 8 answers the same, which is why the
- * SPI promises no mapping of modelled paths any more and every adapter measures its own
- * engine.
+ * A modeller who looks at the model would call the two paths here a cancelation, but
+ * neither of them is one. Both end the instance without a delete reason, so the application
+ * hears a completion. Camunda 8 answers the same. That is why the SPI promises no mapping
+ * of modelled paths any more, and every adapter measures its own engine.
  */
 @SpringBootTest(classes = TestApplication.class, properties = {
-    // own database: contexts are cached and live in parallel, and a foreign job executor
-    // on the same H2 database would compete for the timers this test waits for
+    // own database. Contexts are cached and live in parallel. A foreign job executor on the
+    // same H2 database would compete for the timers which this test waits for.
     "spring.datasource.url=jdbc:h2:mem:c7-end-kind-it;DB_CLOSE_DELAY=-1"
 })
 @ExtendWith(SuppressOutputExtension.class)
@@ -76,9 +75,9 @@ public class Camunda7WorkflowEndKindIT {
         () -> endedAs(() -> terminateRepository.findById(aggregateId).orElseThrow().getEndedAs()) != null,
         "the workflow to run into its terminate end event");
 
-    // measured twice on 2026-09-20 against the embedded engine of this build: the
-    // execution carries NO delete reason here, so the application hears a completion and
-    // the terminate end event is named as the end event reached
+    // measured twice on 2026-09-20 against the embedded engine of this build. The execution
+    // carries NO delete reason here. So the application hears a completion, and the
+    // terminate end event is named as the end event reached.
     assertEquals(
         "COMPLETED/Event_Terminate",
         endedAs(() -> terminateRepository.findById(aggregateId).orElseThrow().getEndedAs()),
@@ -98,10 +97,10 @@ public class Camunda7WorkflowEndKindIT {
             () -> eventSubprocessRepository.findById(aggregateId).orElseThrow().getEndedAs()) != null,
         "the event subprocess to interrupt the waiting workflow");
 
-    // measured twice on 2026-09-20, same build and same engine: the waiting token is
-    // taken away and the instance still ends without a delete reason. The element named
-    // is the one the instance ended at, which is the event subprocess and not an end
-    // event, so a reader of that id may not assume it is one
+    // measured twice on 2026-09-20, same build and same engine. The waiting token is taken
+    // away, and the instance still ends without a delete reason. The element named is the
+    // one the instance ended at. That is the event subprocess and not an end event, so a
+    // reader of that id may not assume it is one.
     assertEquals(
         "COMPLETED/Activity_TakeOver",
         endedAs(() -> eventSubprocessRepository.findById(aggregateId).orElseThrow().getEndedAs()),

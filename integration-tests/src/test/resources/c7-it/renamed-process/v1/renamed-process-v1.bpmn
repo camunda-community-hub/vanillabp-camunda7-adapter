@@ -1,9 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- The model BEFORE the rename. Its two tasks are wired the two ways VanillaBP knows on
-     Camunda 7: one 'camunda:expression', which completes when the handler returns, and one
-     'camunda:delegateExpression', which stays open until the application completes it. The
-     difference lives in the model and nowhere else, which is why the adapter reads the
-     model the engine still holds rather than guessing from what the application serves. -->
+<!-- The model BEFORE the rename. Its two tasks are wired in the two ways which VanillaBP
+     knows on Camunda 7. One is 'camunda:expression', which completes when the handler
+     returns. The other is 'camunda:delegateExpression', which stays open until the
+     application completes it. The difference lives in the model and nowhere else. That is
+     why the adapter reads the model which the engine still holds, instead of guessing from
+     what the application serves. -->
 <bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" id="Definitions_RenamedProcessV1" targetNamespace="http://bpmn.io/schema/bpmn">
   <bpmn:message id="Msg_RenameContinue" name="RenameContinue" />
   <bpmn:process id="RenamedProcessOld" isExecutable="true">

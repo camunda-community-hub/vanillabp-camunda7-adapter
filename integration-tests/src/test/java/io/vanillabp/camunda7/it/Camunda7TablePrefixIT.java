@@ -25,30 +25,30 @@ import io.vanillabp.integration.test.utils.SuppressOutputExtension;
 import io.vanillabp.spi.process.ProcessService;
 
 /**
- * Two <code>camunda7</code> adapter ids on ONE datasource, kept apart by a table
- * prefix - the side-by-side migration setup on a single database.
+ * Two <code>camunda7</code> adapter ids on ONE datasource, kept apart by a table prefix.
+ * This is the setup for a migration side by side on a single database.
  * <p>
- * The prefix is what Camunda calls <code>databaseTablePrefix</code>, and Camunda does
- * not create prefixed tables: the initializer below applies the engine's own
- * statements with the prefix, which is what an application has to do, and the adapter
- * id says so with <code>database-schema-update: false</code>. An id whose tables are
- * missing does not get here at all - the adapter ends the boot with a message naming
- * them, see {@code Camunda7AdapterBootTest}.
+ * The prefix is what Camunda calls <code>databaseTablePrefix</code>. Camunda does not
+ * create prefixed tables. The initializer below applies the own statements of the engine
+ * with the prefix, which is what an application has to do. The adapter id says so with
+ * <code>database-schema-update: false</code>. An id whose tables are missing does not get
+ * here at all. The adapter ends the boot with a message which names them, see
+ * {@code Camunda7AdapterBootTest}.
  * <p>
  * What this proves: both engines deploy the workflow module, each into its own set of
- * tables, and each starts workflows which stay in its own engine.
+ * tables. And each starts workflows which stay in its own engine.
  */
 @SpringBootTest(classes = TestApplication.class, properties = {
-    // own database: test contexts are cached and live in parallel - another context's
-    // engine on the same H2 database would interfere
+    // own database. Test contexts are cached and live in parallel. The engine of another
+    // context on the same H2 database would interfere.
     "spring.datasource.url=jdbc:h2:mem:c7-table-prefix-it;DB_CLOSE_DELAY=-1", "vanillabp.prioritized-adapters=c7,c7p", "vanillabp.adapters.c7p.type=camunda7", "vanillabp.adapters.c7p.name-clash-avoidance=by-adapter", "vanillabp.adapters.c7p.table-prefix=NEW_", "vanillabp.adapters.c7p.database-schema-update=false", "vanillabp.workflow-modules.c7-it.adapters.c7p.resources-location=classpath*:c7-it/processes"
 })
 @ContextConfiguration(initializers = Camunda7TablePrefixIT.PrepareThePrefixedTables.class)
 @ExtendWith(SuppressOutputExtension.class)
 @SuppressOutputExtension.SuppressBackgroundOutput
-// closed when the class is done: this IT has a database (and therefore a context) of its
-// own, Spring would keep every context until the JVM exits, and an engine outliving its
-// test keeps its job executor running against a database the next classes work on
+// closed when the class is done. This IT has a database of its own, and so a context of its
+// own. Spring would keep every context until the JVM exits. An engine which outlives its test
+// keeps its job executor running against a database which the next classes work on.
 @DirtiesContext
 public class Camunda7TablePrefixIT {
 
@@ -61,8 +61,8 @@ public class Camunda7TablePrefixIT {
   private static final String BPMN_PROCESS_ID = "TestProcess";
 
   /**
-   * Creates the prefixed tables before any bean is built - the point in the boot an
-   * application's Liquibase or Flyway would have done it.
+   * Creates the prefixed tables before any bean is built. At this point in the boot, the
+   * Liquibase or Flyway of an application would have done it.
    */
   public static class PrepareThePrefixedTables implements ApplicationContextInitializer<ConfigurableApplicationContext> {
 
@@ -136,7 +136,7 @@ public class Camunda7TablePrefixIT {
           "process definition deployed to engine '%s'".formatted(engine.getAdapterId()));
     }
 
-    // and the two deployments live in two sets of tables - one database, two engines
+    // and the two deployments live in two sets of tables: one database, two engines
     assertTrue(countIn("ACT_RE_PROCDEF") > 0, "the unprefixed engine writes ACT_*");
     assertTrue(countIn(PREFIX
         + "ACT_RE_PROCDEF") > 0, "the prefixed engine writes NEW_ACT_*");
@@ -155,8 +155,8 @@ public class Camunda7TablePrefixIT {
     assertNotNull(aggregateId);
 
     final var businessKey = String.valueOf(aggregateId);
-    // the instance is created by the phase-two outbox right after the commit, and it
-    // may have ended by the time the test looks - the history answers both
+    // the phase-two outbox creates the instance right after the commit. It may have ended
+    // by the time the test looks, and the history answers both cases.
     AwaitPhaseTwo.until(
         () -> unprefixedEngine
             .getHistoryService()
@@ -182,8 +182,8 @@ public class Camunda7TablePrefixIT {
   @SuppressWarnings("unchecked")
   public void thePrefixedEngineRunsItsOwnWorkflows() {
 
-    // pause job processing of the prefixed engine so the started instance does not
-    // complete asynchronously while the runtime state is asserted
+    // pause the job processing of the prefixed engine. So the started instance does not
+    // complete asynchronously while the test asserts the runtime state.
     prefixedEngine.stopWorkflowProcessing(MODULE_ID);
 
     final var aggregate = new TestAggregate();
@@ -229,7 +229,7 @@ public class Camunda7TablePrefixIT {
             .count(),
         "the other engine of the same datasource knows nothing about it");
 
-    // resume job processing (the shared application context is reused by other tests)
+    // resume the job processing, because other tests reuse the shared application context
     prefixedEngine.startWorkflowProcessing(MODULE_ID);
 
   }

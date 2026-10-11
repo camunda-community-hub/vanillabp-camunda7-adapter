@@ -11,11 +11,11 @@ import io.vanillabp.spi.service.WorkflowStartedByBpms;
 import io.vanillabp.spi.service.WorkflowTask;
 
 /**
- * The same application AFTER the rename: the BPMN process carries the new id, the old
- * one is declared as a secondary process - and the ENGINE keeps starting workflows
- * under the old id, by the repeating timer of the model it still holds and by its
- * signal subscription. Every one of them has to reach these methods: the aggregate
- * built by {@code @WorkflowStartedByBpms}, the task, and the end notification.
+ * The same application AFTER the rename. The BPMN process carries the new id, and the old
+ * id is declared as a secondary process. The ENGINE keeps starting workflows under the old
+ * id, by the repeating timer of the model it still holds and by its signal subscription.
+ * Every one of them has to reach these methods: the aggregate built by
+ * {@code @WorkflowStartedByBpms}, the task, and the end notification.
  */
 @Service
 @Profile("decl-after")
@@ -35,9 +35,9 @@ public class DeclaredRuntimeAfterWorkflowService {
   }
 
   /**
-   * Broadcasts the OLD generation's signal: only the model the engine holds under the
-   * old id subscribes to it, so the workflow it starts runs under the declared-only
-   * id.
+   * Broadcasts the signal of the OLD generation. Only the model which the engine holds
+   * under the old id subscribes to it. So the workflow it starts runs under the id which is
+   * only declared.
    */
   public void fireTheOldSignal() {
 
@@ -57,8 +57,8 @@ public class DeclaredRuntimeAfterWorkflowService {
 
     final var aggregate = new DeclaredRuntimeAggregate();
     // a name of the application's own, which the engine holds as the business key. The
-    // generation is part of it, which is how the test tells the workflows this
-    // application started apart from the ones its predecessor started
+    // generation is part of it. That is how the test tells the workflows this application
+    // started from the ones its predecessor started.
     aggregate.setId("declared-runtime-after-"
         + java.util.UUID.randomUUID());
     aggregate.setStartedAs(trigger.kind().name());

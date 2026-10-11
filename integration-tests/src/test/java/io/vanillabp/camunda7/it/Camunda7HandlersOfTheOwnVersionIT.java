@@ -28,22 +28,23 @@ import io.vanillabp.integration.test.utils.SuppressOutputExtension;
  * A workflow reaches the methods its OWN version names, measured against a real engine and
  * across an upgrade of the application.
  * <p>
- * Version 1 of the process names one expression at each of three elements, version 2 names
- * another one at the same elements. Camunda 7 evaluates the expressions of the model a
- * workflow was started with, so a workflow of version 1 asks for the names of version 1 after
- * the upgrade as well. Those names must lead to the methods of version 1. Before this was
- * fixed, the adapter knew only the tasks of the model the application deploys, found the
- * element of version 2 under the same id and ran the method version 2 names there.
+ * Version 1 of the process names one expression at each of three elements. Version 2 names
+ * another one at the same elements. Camunda 7 evaluates the expressions of the model which
+ * a workflow was started with. So after the upgrade, a workflow of version 1 still asks for
+ * the names of version 1. Those names must lead to the methods of version 1. Before this
+ * was fixed, the adapter knew only the tasks of the model which the application deploys. It
+ * found the element of version 2 under the same id and ran the method which version 2 names
+ * there.
  * <p>
- * The three elements are the three ways a model names a method: a task wired by
- * <code>camunda:expression</code>, a listener written as <code>camunda:expression</code> and
- * a task wired by <code>camunda:delegateExpression</code>. Each sits on a branch of its own,
- * so a failure at one of them leaves the others to be measured.
+ * The three elements are the three ways in which a model names a method: a task wired by
+ * <code>camunda:expression</code>, a listener written as <code>camunda:expression</code>,
+ * and a task wired by <code>camunda:delegateExpression</code>. Each sits on a branch of its
+ * own. So when one of them fails, the others can still be measured.
  * <p>
- * Three generations of the application share one in-memory database, kept alive across the
- * boots by <code>DB_CLOSE_DELAY=-1</code>. The first deploys version 1 and starts two
- * workflows, which wait for a message. The second deploys version 2 and kept the methods of
- * version 1. The third removed them.
+ * Three generations of the application share one in-memory database.
+ * <code>DB_CLOSE_DELAY=-1</code> keeps it alive across the boots. The first generation
+ * deploys version 1 and starts two workflows, which wait for a message. The second deploys
+ * version 2 and kept the methods of version 1. The third removed them.
  */
 @ExtendWith(SuppressOutputExtension.class)
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
@@ -200,8 +201,8 @@ public class Camunda7HandlersOfTheOwnVersionIT {
   }
 
   /**
-   * Waits until each of the three elements was either served or ended in an incident, and
-   * answers which generation of methods served which element.
+   * Waits until each of the three elements was either served or ended in an incident. Then
+   * it answers which generation of methods served which element.
    */
   private static Map<String, String> awaitTheThreeElements(
       final ConfigurableApplicationContext application,
@@ -274,8 +275,9 @@ public class Camunda7HandlersOfTheOwnVersionIT {
   }
 
   /**
-   * Waits for something the engine's job executor has to bring about. Generous on purpose:
-   * in a full build this class shares its machine with the other engines of this module.
+   * Waits for something which the job executor of the engine has to bring about. The
+   * deadline is generous on purpose. In a full build this class shares its machine with the
+   * other engines of this module.
    */
   private static void awaitUntil(
       final java.util.function.BooleanSupplier condition,
@@ -292,7 +294,7 @@ public class Camunda7HandlersOfTheOwnVersionIT {
   }
 
   /**
-   * One generation of the application: its workflow service (a Spring profile decides which)
+   * One generation of the application: its workflow service, which a Spring profile picks,
    * and the version of the model it deploys.
    */
   private static ConfigurableApplicationContext boot(
@@ -303,7 +305,7 @@ public class Camunda7HandlersOfTheOwnVersionIT {
     boot.add(DATABASE);
     boot.add("--spring.profiles.active="
         + profile);
-    // the aggregates of the first boot are what the later ones continue on
+    // the later boots continue on the aggregates of the first boot
     boot.add("--spring.jpa.hibernate.ddl-auto=update");
     boot.add("--vanillabp.adapters.c7.allow-listeners=true");
     boot

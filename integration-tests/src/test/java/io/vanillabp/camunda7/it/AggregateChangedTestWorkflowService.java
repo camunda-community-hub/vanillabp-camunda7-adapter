@@ -8,8 +8,8 @@ import io.vanillabp.spi.service.WorkflowService;
 import io.vanillabp.spi.service.WorkflowTask;
 
 /**
- * The workflow service of the aggregateChanged integration test: the
- * workflow waits at a conditional event whose condition reads the aggregate.
+ * The workflow service of the aggregateChanged integration test. The workflow waits at a
+ * conditional event whose condition reads the aggregate.
  */
 @Service
 @WorkflowService(
@@ -37,8 +37,8 @@ public class AggregateChangedTestWorkflowService {
   }
 
   /**
-   * Sets the attribute the conditional event waits for and tells the BPMS - without
-   * the push the engine would never look at its condition.
+   * Sets the attribute which the conditional event waits for, and tells the BPMS. Without
+   * the push, the engine would never look at its condition.
    *
    * @param aggregateId The aggregate's id
    */

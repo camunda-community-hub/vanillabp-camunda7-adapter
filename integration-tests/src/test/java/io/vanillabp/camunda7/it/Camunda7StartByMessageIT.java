@@ -19,18 +19,18 @@ import io.vanillabp.integration.test.utils.SuppressOutputExtension;
 
 /**
  * A start by message takes the newest version of the process, like a start without a
- * message does. The newest version need not be the one the application deployed while it
- * started: here a second version arrives from outside while the application runs.
+ * message does. The newest version need not be the one which the application deployed while
+ * it started. Here a second version arrives from outside while the application runs.
  */
 @SpringBootTest(classes = TestApplication.class, properties = {
-    // a database of its own: the second version deployed here must not reach the
-    // TaskProcess the other test classes start
+    // a database of its own. The second version deployed here must not reach the
+    // TaskProcess which the other test classes start.
     "spring.datasource.url=jdbc:h2:mem:c7-start-by-message-it;DB_CLOSE_DELAY=-1"
 })
 @ExtendWith(SuppressOutputExtension.class)
 @SuppressOutputExtension.SuppressBackgroundOutput
-// closed when the class is done: an engine outliving its test keeps its job executor
-// running against a database nobody uses any more
+// closed when the class is done. An engine which outlives its test keeps its job executor
+// running against a database nobody uses any more.
 @DirtiesContext
 public class Camunda7StartByMessageIT {
 
@@ -106,8 +106,8 @@ public class Camunda7StartByMessageIT {
         definitionStartedBy(aggregate -> workflowService.startByMessage(aggregate, "TaskRequested")),
         "before anybody deploys a second version, the message starts the application's version");
 
-    // another model of the same process with the same message start event, deployed the way
-    // another node of a rolling deployment or an operator would deploy it
+    // another model of the same process with the same message start event. It is deployed
+    // the way another node of a rolling deployment or an operator would deploy it.
     repositoryService
         .createDeployment()
         .name(MODULE_ID)

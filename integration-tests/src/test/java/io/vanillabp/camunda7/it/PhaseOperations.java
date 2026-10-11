@@ -10,13 +10,13 @@ import io.vanillabp.integration.spi.AggregatePersistenceAware;
 import io.vanillabp.integration.spi.PhaseOperation;
 
 /**
- * Runs one phase of one operation against an adapter, the way VanillaBP's core does it:
- * through the handler the adapter contributes for that operation.
+ * Runs one phase of one operation against an adapter, the way the core of VanillaBP does
+ * it: through the handler which the adapter contributes for that operation.
  * <p>
- * A test which wants to see what the engine makes of a phase-two dispatch has no outbox
- * to go through, so it asks the adapter directly - and this is what asking directly
- * looks like now that an adapter answers a map of handlers instead of a method per
- * operation and phase.
+ * A test which wants to see what the engine makes of a phase-two dispatch has no outbox to
+ * go through. So it asks the adapter directly. An adapter now answers a map of handlers,
+ * not a method per operation and phase. This class shows what asking directly looks like
+ * then.
  */
 public final class PhaseOperations {
 
@@ -82,8 +82,8 @@ public final class PhaseOperations {
   }
 
   /**
-   * Phase two of a start, with somebody listening to which workflow the adapter says it
-   * created, the way the core listens while it dispatches a start.
+   * Phase two of a start. Somebody listens to which workflow the adapter says it created,
+   * the way the core listens while it dispatches a start.
    *
    * @param <A> The workflow-aggregate type
    * @param adapter The adapter to ask
@@ -113,8 +113,8 @@ public final class PhaseOperations {
   }
 
   /**
-   * Listens to what phase two of a start reports, id and version together, the way the core
-   * writes both into the row about the start.
+   * Listens to what phase two of a start reports: the id and the version together. The core
+   * writes both into the row about the start in the same way.
    */
   public static final class ReportedStarts implements WorkflowStartReport {
 

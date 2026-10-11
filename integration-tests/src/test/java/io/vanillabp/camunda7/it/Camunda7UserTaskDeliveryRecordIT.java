@@ -23,41 +23,41 @@ import io.vanillabp.integration.test.utils.delivery.TaskDeliveryLogReader;
 import io.vanillabp.spi.process.TaskNotFoundException;
 
 /**
- * What a user-task notification of this engine leaves in the delivery log, and what a
- * caller is told who completes that id with the method for the other kind of task.
+ * What a notification about a user task of this engine leaves in the delivery log. And what
+ * a caller is told who completes that id with the method for the other kind of task.
  * <p>
- * This adapter names no delivery of a user task: one transaction creates every user task
- * the token reaches, and the id of such a task comes into being while it is created, so
- * nothing could tell a repetition from new work. There is therefore nothing to
- * deduplicate here, in either datasource mode. A record is written all the same, because
- * it answers two more questions: which BPMS holds the task, and which kind of id its id
- * is. Those two turn a failed completion from a list of guesses into one sentence
- * naming the method the caller wanted.
+ * This adapter names no delivery of a user task. One transaction creates every user task
+ * which the token reaches. The id of such a task comes into being while it is created, so
+ * nothing could tell a repetition from new work. So there is nothing to deduplicate here,
+ * in either datasource mode. A record is written all the same, because it answers two more
+ * questions: which BPMS holds the task, and which kind of id its id is. With those two
+ * answers, a failed completion becomes one sentence which names the method the caller
+ * wanted, not a list of guesses.
  * <p>
- * The record is read twice over, once out of the table and once out of that sentence. The
- * table says the adapter and the kind, which is what the delivery wrote down; the message
- * says that the platform read it back.
+ * The record is read twice: once out of the table, and once out of that sentence. The table
+ * says the adapter and the kind, which is what the delivery wrote down. The message says
+ * that the platform read it back.
  * <p>
- * A record nobody deduplicates lives as long as
- * <code>vanillabp.delivery.retention</code> allows, and its clock runs from the moment
- * the handler ran: no redelivery arrives to move it on. A user task open longer than that
- * loses its record, and the caller gets the list of guesses again. This class runs with a
- * retention of one second and drives the cleanup itself, so that loss is a test rather
- * than a surprise in production.
+ * A record which nobody deduplicates lives as long as
+ * <code>vanillabp.delivery.retention</code> allows. Its clock runs from the moment the
+ * handler ran, because no redelivery arrives to move it on. A user task which is open
+ * longer than that loses its record, and the caller gets the list of guesses again. This
+ * class runs with a retention of one second and drives the cleanup itself. So that loss is
+ * a test, not a surprise in production.
  */
 @SpringBootTest(classes = TestApplication.class, properties = {
-    // a database of its own: the delivery log is not emptied between test classes, and
-    // the engine of a cached context would poll this one's jobs
+    // a database of its own. The delivery log is not emptied between test classes, and the
+    // engine of a cached context would poll the jobs of this one.
     "spring.datasource.url=jdbc:h2:mem:c7-user-task-delivery-record-it;DB_CLOSE_DELAY=-1",
-    // short enough for the expiry to be a test, and nothing deletes a record before this
-    // class asks for it: the cleanup runs at startup and then hourly
+    // short enough for the expiry to be a test. Nothing deletes a record before this class
+    // asks for it, because the cleanup runs at startup and then every hour.
     "vanillabp.delivery.retention=PT1S"
 })
 @ExtendWith(SuppressOutputExtension.class)
 @SuppressOutputExtension.SuppressBackgroundOutput
-// closed when the class is done: this IT has a database (and therefore a context) of its
-// own, Spring would keep every context until the JVM exits, and an engine outliving its
-// test keeps its job executor running against a database the next classes work on
+// closed when the class is done. This IT has a database of its own, and so a context of its
+// own. Spring would keep every context until the JVM exits. An engine which outlives its test
+// keeps its job executor running against a database which the next classes work on.
 @DirtiesContext
 public class Camunda7UserTaskDeliveryRecordIT {
 
@@ -66,8 +66,8 @@ public class Camunda7UserTaskDeliveryRecordIT {
   private static final String BPMN_PROCESS_ID = "UserTaskProcess";
 
   /**
-   * The adapter id of the engine sharing the application's datasource, which is the one
-   * this class runs on.
+   * The adapter id of the engine which shares the datasource of the application. This class
+   * runs on it.
    */
   private static final String ADAPTER_ID = "c7";
 
@@ -88,9 +88,9 @@ public class Camunda7UserTaskDeliveryRecordIT {
   private javax.sql.DataSource applicationDataSource;
 
   /**
-   * The delivery log of the application under test, driven here rather than waited for:
-   * the cleanup of the platform runs at startup and then once an hour, and this class
-   * cannot wait that long.
+   * The delivery log of the application under test. This class drives it instead of waiting
+   * for it. The cleanup of the platform runs at startup and then once an hour, and this
+   * class cannot wait that long.
    */
   @Autowired
   private JdbcTaskDeliveryLog deliveryLog;
@@ -128,8 +128,8 @@ public class Camunda7UserTaskDeliveryRecordIT {
         "which kind of id the recorded id is - the answer this adapter could not give before");
     assertEquals(BPMN_PROCESS_ID, record.bpmnProcessId(), "the BPMN process the task belongs to");
 
-    // the mistake the sentence was written for: the id names a row of ACT_RU_TASK, and
-    // completeTask asks the engine for an execution. No engine holds one under that id
+    // the mistake which the sentence was written for. The id names a row of ACT_RU_TASK,
+    // and completeTask asks the engine for an execution. No engine holds one under that id.
     final var refused = assertThrows(
         TaskNotFoundException.class,
         () -> transactionTemplate
@@ -162,10 +162,10 @@ public class Camunda7UserTaskDeliveryRecordIT {
         recordedDeliveries.deliveriesOfTask(userTaskId).size(),
         "the record of the open user task");
 
-    // nothing renews this record: renewal happens when a redelivery of the same key
-    // arrives, and this adapter names no delivery of a user task. So the retention
-    // counts from the moment the handler ran, and the user task is still open when the
-    // record is gone
+    // nothing renews this record. Renewal happens when a redelivery of the same key
+    // arrives, and this adapter names no delivery of a user task. So the retention counts
+    // from the moment the handler ran, and the user task is still open when the record is
+    // gone.
     AwaitPhaseTwo
         .until(
             () -> {
@@ -198,7 +198,7 @@ public class Camunda7UserTaskDeliveryRecordIT {
 
   /**
    * Starts the process whose user task is served by a <code>&#64;TaskId</code> method,
-   * directly at the engine: what the start does is not what this class is about, and the
+   * directly at the engine. What the start does is not what this class is about. And the
    * aggregate has to exist before the engine hands the task out.
    *
    * @return The ID of the workflow aggregate of the started workflow
@@ -219,8 +219,9 @@ public class Camunda7UserTaskDeliveryRecordIT {
   }
 
   /**
-   * The user task the notification handler reported, waited for rather than read in the
-   * next line: the record becomes visible with the commit of that handler's transaction.
+   * The user task which the notification handler reported. The test waits for it, instead
+   * of reading it in the next line, because the record becomes visible with the commit of
+   * the transaction of that handler.
    *
    * @param aggregateId The workflow aggregate's ID
    * @return The id of the user task the engine created

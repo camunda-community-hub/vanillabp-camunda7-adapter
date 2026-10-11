@@ -7,13 +7,13 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
 /**
- * The workflow aggregate of the modelled-listener scenario. Each of the two listeners of the
- * end event writes its own attribute, so the test can tell from the aggregate alone that both
- * listeners reached a method of the application and which one did.
+ * The workflow aggregate of the modelled-listener scenario. Each of the two listeners of
+ * the end event writes its own attribute. So the test can tell from the aggregate alone
+ * that both listeners reached a method of the application, and which one did.
  * <p>
- * Written by a listener method rather than read by the model on purpose: on Camunda 7 the
- * shared values of a listener are written in the engine's own transaction, which is the
- * difference to Camunda 8 worth proving against a real engine.
+ * A listener method writes these values on purpose, instead of the model reading them. On
+ * Camunda 7 the shared values of a listener are written in the own transaction of the
+ * engine. That is the difference to Camunda 8 which is worth proving against a real engine.
  */
 @Entity
 @Table(name = "C7_MODELLED_LISTENER_AGGREGATE")
@@ -31,26 +31,26 @@ public class ModelledListenerAggregate {
 
   /**
    * Written by the <code>camunda:delegateExpression</code> listener on its <code>end</code>
-   * event, which is the form where the EL resolver has to hand the engine a listener object.
+   * event. In this form the EL resolver has to hand the engine a listener object.
    */
   private boolean theEndWasDone;
 
   /**
-   * What the task before the end event wrote, so a workflow which never got there is told
+   * What the task before the end event wrote. So a workflow which never got there is told
    * apart from one whose listeners were not served.
    */
   private boolean theWorkWasDone;
 
   /**
-   * Written by the listener of the user task when that listener FIRES, which is the ordinary
-   * notification every served listener gets.
+   * Written by the listener of the user task when that listener FIRES. This is the ordinary
+   * notification which every served listener gets.
    */
   private boolean theWaitBegan;
 
   /**
-   * Written by the same listener method when the boundary timer takes the user task away. The
-   * method is called a second time, with CANCELED, through the listener VanillaBP attaches
-   * itself.
+   * Written by the same listener method when the boundary timer takes the user task away.
+   * The method is called a second time, with CANCELED, through the listener which VanillaBP
+   * attaches itself.
    */
   private boolean theWaitWasCanceled;
 

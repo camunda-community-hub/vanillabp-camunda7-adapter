@@ -10,22 +10,22 @@ import io.vanillabp.spi.service.WorkflowService;
 import io.vanillabp.spi.service.WorkflowTask;
 
 /**
- * The workflow service of the old-process-versions test. Its three methods
- * are the three states an application can be in towards the versions its BPMS holds:
+ * The workflow service of the old-process-versions test. Its three methods are the three
+ * states an application can be in towards the versions its BPMS holds:
  * <ul>
- * <li>{@code keptInBothVersions} serves every version - the task survived into the deployed
- * model;</li>
- * <li>{@code droppedInVersionTwo} serves version 1 only - the task was dropped from the model,
- * and the method stays for the workflows still running on that version. It matches no
- * task of the deployed model, which must not fail the start;</li>
- * <li>{@code servedForAnUnknownVersion} names a version this engine does not hold, so it never runs
- * and the task it would serve is unserved in version 1.</li>
+ * <li>{@code keptInBothVersions} serves every version. The task survived into the deployed
+ * model.</li>
+ * <li>{@code droppedInVersionTwo} serves version 1 only. The task was dropped from the model,
+ * and the method stays for the workflows which still run on that version. It matches no
+ * task of the deployed model, and that must not fail the start.</li>
+ * <li>{@code servedForAnUnknownVersion} names a version which this engine does not hold. So it
+ * never runs, and the task it would serve has no method in version 1.</li>
  * </ul>
  * <p>
  * Version 1 is deployed by the generation before this one,
- * {@link OldProcessVersionsBeforeWorkflowService}, which still serves every task of it. This
- * class cannot deploy version 1 itself: a start refuses the version it deploys when a task of it
- * has no method for that version, and here 'servedForAnUnknownVersion' has none.
+ * {@link OldProcessVersionsBeforeWorkflowService}, which still serves every task of it. This class
+ * cannot deploy version 1 itself. A start refuses the version it deploys when a task of
+ * that version has no method for it. Here 'servedForAnUnknownVersion' has none.
  */
 @Service
 @Profile("!"

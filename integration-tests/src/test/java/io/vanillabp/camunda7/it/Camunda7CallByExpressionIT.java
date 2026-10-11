@@ -19,23 +19,23 @@ import io.vanillabp.integration.test.utils.SuppressOutputExtension;
  * A call activity which names the process to call in an EXPRESSION, against a real
  * embedded Camunda 7 engine.
  * <p>
- * Camunda 7 does not pass its business key - which carries the workflow aggregate's id -
- * to a called process, so the task of a called process finds the aggregate of its caller
- * only because this adapter arranges for the key to travel. Where the process to call is
- * named by an expression, the model being deployed does not say which process that is,
- * and these tests measure what the called process gets then. The same model runs on
- * Camunda 8, so both ways of naming the called process have to end in the same place.
+ * Camunda 7 does not pass its business key to a called process, and that key carries the id
+ * of the workflow aggregate. So the task of a called process finds the aggregate of its
+ * caller only because this adapter makes the key travel. Where an expression names the
+ * process to call, the model being deployed does not say which process that is. These tests
+ * measure what the called process gets then. The same model runs on Camunda 8, so both ways
+ * of naming the called process have to end in the same place.
  */
 @SpringBootTest(classes = TestApplication.class, properties = {
-    // own database: contexts are cached and live in parallel, and a second engine with a
-    // job executor on the same H2 database would compete for this test's jobs
+    // own database. Contexts are cached and live in parallel. A second engine with a job
+    // executor on the same H2 database would compete for the jobs of this test.
     "spring.datasource.url=jdbc:h2:mem:c7-call-by-expression-it;DB_CLOSE_DELAY=-1"
 })
 @ExtendWith(SuppressOutputExtension.class)
 @SuppressOutputExtension.SuppressBackgroundOutput
-// closed when the class is done: this IT has a database (and therefore a context) of its
-// own, and an engine outliving its test keeps its job executor running against a database
-// the next classes work on
+// closed when the class is done. This IT has a database of its own, and so a context of its
+// own. An engine which outlives its test keeps its job executor running against a database
+// which the next classes work on.
 @DirtiesContext
 public class Camunda7CallByExpressionIT {
 
@@ -61,8 +61,9 @@ public class Camunda7CallByExpressionIT {
   }
 
   /**
-   * What the called process wrote into the aggregate the caller was started with, read
-   * fresh from the database because the task runs in the engine's own transaction.
+   * What the called process wrote into the aggregate which the caller was started with. It
+   * is read fresh from the database, because the task runs in the own transaction of the
+   * engine.
    */
   private String whatTheCalledProcessWrote(
       final Long aggregateId) {
@@ -131,8 +132,8 @@ public class Camunda7CallByExpressionIT {
 
   /**
    * Runs one workflow to its end and checks that the application heard of that end once.
-   * The called process ends first, inside the workflow, so by the time the caller's end
-   * arrives an end of the called process would have arrived as well.
+   * The called process ends first, inside the workflow. So by the time the end of the
+   * caller arrives, an end of the called process would have arrived as well.
    */
   private void theWorkflowEndsOnce(
       final boolean callByExpression) throws InterruptedException {

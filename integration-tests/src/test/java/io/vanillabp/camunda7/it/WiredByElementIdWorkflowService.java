@@ -10,12 +10,12 @@ import io.vanillabp.spi.service.WorkflowService;
 import io.vanillabp.spi.service.WorkflowTask;
 
 /**
- * Two methods, both wired by the BPMN ELEMENT id while the model names something else on
- * the element: an expression on the service task, a form key on the user task. The
+ * Two methods, both wired by the BPMN ELEMENT id, while the model names something else on
+ * the element: an expression on the service task, and a form key on the user task. The
  * wiring validation accepts both, so a delivery has to find both.
  * <p>
- * A bean only under the profile of its own test, like every other workflow service which
- * must not reach the contexts of the other tests of this module.
+ * It is a bean only under the profile of its own test, like every other workflow service
+ * which must not reach the contexts of the other tests of this module.
  */
 @Service
 @Profile("wired-by-element-id")

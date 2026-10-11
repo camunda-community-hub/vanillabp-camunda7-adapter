@@ -14,22 +14,22 @@ import io.vanillabp.integration.test.utils.SuppressOutputExtension;
  * What the boot says about a value whose type the configured serialization format cannot
  * carry, read from the log of a real engine.
  * <p>
- * The model of this scenario reads a decimal at both levels: {@code total} is an object
- * variable of its own, {@code order.total} travels inside the map the sync model built.
- * Under SPIN JSON the first loses its scale and the second loses its class, and neither
- * of them looks wrong anywhere until somebody reads a rendered value. The boot is where
- * that can still be acted on.
+ * The model of this scenario reads a decimal at both levels. {@code total} is an object
+ * variable of its own. {@code order.total} travels inside the map which the sync model
+ * built. Under SPIN JSON the first loses its scale, and the second loses its class. Neither
+ * looks wrong anywhere until somebody reads a rendered value. The boot is where somebody
+ * can still act on that.
  * <p>
- * The negative case is the same module with no format configured, which has to stay
- * quiet: Java serialization writes every one of these types and reads it back unchanged,
- * and what such an application does pay is named by the missing-format warning instead.
+ * The negative case is the same module with no format configured, and it has to stay quiet.
+ * Java serialization writes every one of these types and reads it back unchanged. What such
+ * an application does pay is named by the warning about the missing format instead.
  */
 @ExtendWith(SuppressOutputExtension.class)
 @SuppressOutputExtension.SuppressBackgroundOutput
 public class Camunda7LossyFormatCheckIT {
 
   /**
-   * The boot log of an application deploying the model which reads the decimal.
+   * The boot log of an application which deploys the model that reads the decimal.
    *
    * @param output What the test class captured so far
    * @param arguments What this world configures beyond the module
@@ -114,8 +114,8 @@ public class Camunda7LossyFormatCheckIT {
         "--vanillabp.adapters.c7.serialization-format=application/json",
         "--vanillabp.adapters.c7.engine-plugins.spin.plugin-class=org.camunda.spin.plugin.impl.SpinProcessEnginePlugin");
 
-    // a String is a string variable and never meets a serializer, so there is nothing to
-    // measure and nothing to say
+    // a String is a string variable and never meets a serializer. So there is nothing to
+    // measure and nothing to say.
     Assertions
         .assertFalse(
             log.contains("shares 'reference'"),
@@ -130,9 +130,10 @@ public class Camunda7LossyFormatCheckIT {
 
     final var log = bootLog(output, "--spring.datasource.url=jdbc:h2:mem:c7-lossy-format-plain;DB_CLOSE_DELAY=-1");
 
-    // Java serialization carries all of these exactly, so an application which configures
+    // Java serialization carries all of these exactly. So an application which configures
     // no format loses no digit and hears nothing here. What it does pay for is the blob in
-    // Cockpit, which the missing-format warning names when the first value is written
+    // Cockpit. The warning about the missing format names that when the first value is
+    // written.
     Assertions
         .assertFalse(
             log.contains("cannot carry that type without loss"),
@@ -141,7 +142,7 @@ public class Camunda7LossyFormatCheckIT {
   }
 
   /**
-   * The one warning of the boot log naming that attribute.
+   * The one warning of the boot log which names that attribute.
    *
    * @param log The boot log
    * @param sharedName The attribute in quotes, as the message spells it

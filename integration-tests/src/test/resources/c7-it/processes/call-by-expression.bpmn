@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" id="Definitions_CallByExpression" targetNamespace="http://bpmn.io/schema/bpmn">
-  <!-- the same called process reached in the two ways a model can name it: by its id,
-       and by an expression the application fills. Both call activities call a process
-       working on the aggregate of this one, so the task of the called process has to
-       reach the aggregate this workflow was started with, whichever way it was named.
-       The called process lives in a file of its own, the way an application splits
-       them. -->
+  <!-- the same called process, reached in the two ways a model can name it: by its
+       id, and by an expression which the application fills. Both call activities call
+       a process which works on the aggregate of this one. So the task of the called
+       process has to reach the aggregate this workflow was started with, whichever way
+       it was named. The called process lives in a file of its own, the way an
+       application splits them. -->
   <bpmn:process id="CallByExpressionCaller" isExecutable="true">
     <bpmn:startEvent id="CBE_Start">
       <bpmn:outgoing>CBE_f1</bpmn:outgoing>

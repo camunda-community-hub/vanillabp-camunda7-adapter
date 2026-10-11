@@ -8,9 +8,9 @@ import io.vanillabp.spi.service.WorkflowService;
 import io.vanillabp.spi.service.WorkflowTask;
 
 /**
- * The workflow service of the repeated-delivery integration test: one task whose every
- * entry is counted, so a test can tell a handler which ran twice from one whose second
- * delivery was answered from the record VanillaBP wrote.
+ * The workflow service of the repeated-delivery integration test. It has one task, and
+ * every entry into it is counted. So a test can tell a handler which ran twice from one
+ * whose second delivery was answered from the record which VanillaBP wrote.
  */
 @Service
 @WorkflowService(
@@ -32,8 +32,8 @@ public class RepeatedDeliveryTestWorkflowService {
   }
 
   /**
-   * Starts the workflow through the VanillaBP API, which lands in the first prioritized
-   * adapter - the one sharing the application's datasource.
+   * Starts the workflow through the VanillaBP API. The start lands in the adapter with the
+   * first priority, which is the one that shares the datasource of the application.
    */
   public RepeatedDeliveryTestAggregate startOnTheFirstPrioritizedAdapter(
       final RepeatedDeliveryTestAggregate aggregate) {

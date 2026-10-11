@@ -11,10 +11,10 @@ import io.vanillabp.spi.service.WorkflowService;
 import io.vanillabp.spi.service.WorkflowTask;
 
 /**
- * One handler per cell of the parameter-type cases: the same five values of the
- * aggregate, declared once as a type which holds them and once as a type which does not.
- * A handler which is entered records what arrived; a handler whose conversion is refused
- * is never entered, and the test reads the incident instead.
+ * One handler per cell of the parameter-type cases. The same five values of the aggregate
+ * are declared once as a type which holds them, and once as a type which does not. A
+ * handler which is entered records what arrived. A handler whose conversion is refused is
+ * never entered, and the test reads the incident instead.
  */
 @Service
 @WorkflowService(

@@ -10,9 +10,9 @@ import io.vanillabp.spi.service.WorkflowStartedByBpms;
 import io.vanillabp.spi.service.WorkflowTask;
 
 /**
- * The application BEFORE the rename: it deploys the process the engine starts on its
- * own. Its only job in the test is to leave that deployment - and the engine's
- * repeating timer - behind.
+ * The application BEFORE the rename. It deploys the process which the engine starts on its
+ * own. Its only job in the test is to leave that deployment behind, and with it the
+ * repeating timer of the engine.
  */
 @Service
 @Profile("decl-before")
@@ -33,8 +33,8 @@ public class DeclaredRuntimeBeforeWorkflowService {
 
     final var aggregate = new DeclaredRuntimeAggregate();
     // a name of the application's own, which the engine holds as the business key. The
-    // generation is part of it, which is how the test tells the workflows this
-    // application started apart from the ones its predecessor started
+    // generation is part of it. That is how the test tells the workflows this application
+    // started from the ones its predecessor started.
     aggregate.setId("declared-runtime-before-"
         + java.util.UUID.randomUUID());
     aggregate.setStartedAs(trigger.kind().name());

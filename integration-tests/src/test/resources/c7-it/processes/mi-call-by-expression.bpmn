@@ -1,11 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" id="Definitions_MiCallByExpression" targetNamespace="http://bpmn.io/schema/bpmn">
-  <!-- the caller of the test about the iteration a process called by an EXPRESSION runs
-       in. Two multi-instance subprocesses in a row, both calling the same process on the
-       same workflow aggregate, and each of them names it the other way: the first one
-       through '${processToCall}', which no deployment can resolve, the second one by its
-       id. So one model holds the two namings and the test reads both answers out of one
-       string. Sequential on purpose, so that string is an exact one. -->
+  <!-- the caller of the test about the iteration which a process called by an
+       EXPRESSION runs in. Two multi-instance subprocesses follow each other. Both call
+       the same process on the same workflow aggregate, and each names it in the other
+       way. The first one uses '${processToCall}', which no deployment can resolve. The
+       second one uses the id. So one model holds the two namings, and the test reads
+       both answers out of one string. Sequential on purpose, so that the string is
+       exact. -->
   <bpmn:process id="MiCallExprCaller" isExecutable="true">
     <bpmn:startEvent id="MCE_Start">
       <bpmn:outgoing>MCE_f1</bpmn:outgoing>

@@ -20,41 +20,41 @@ import io.vanillabp.integration.test.utils.SuppressOutputExtension;
 import io.vanillabp.spi.process.ProcessService;
 
 /**
- * Two configured {@code camunda7} adapter ids side by side (the engine-side-by-side
- * migration scenario): {@code c7} shares the application's
- * datasource, {@code c7b} runs on an application-provided NAMED datasource bean
- * ({@code vanillabp.adapters.c7b.data-source-name} - setting up datasources is the
- * application's concern, VanillaBP never builds its own pool).
+ * Two configured {@code camunda7} adapter ids side by side, the scenario of a migration
+ * with two engines next to each other. {@code c7} shares the datasource of the application.
+ * {@code c7b} runs on a NAMED datasource bean which the application provides
+ * ({@code vanillabp.adapters.c7b.data-source-name}). Setting up datasources is the concern of the
+ * application, and VanillaBP never builds its own pool.
  * <ul>
- *   <li>two engines exist, named after the adapter ids, and the workflow module's
- *       BPMN is deployed to BOTH (each engine has its own schema);</li>
- *   <li>starting a workflow via the VanillaBP API lands in the FIRST prioritized
- *       adapter's engine only;</li>
- *   <li>the separate-datasource id starts workflows via the two-phase pattern:
- *       phase one does nothing against the engine, phase two creates the instance
- *       idempotently (at-least-once dispatch).</li>
+ *   <li>Two engines exist, named after the adapter ids. The BPMN of the workflow module is
+ *       deployed to BOTH, and each engine has its own schema.</li>
+ *   <li>A workflow started through the VanillaBP API lands only in the engine of the
+ *       FIRST prioritized adapter.</li>
+ *   <li>The id with the separate datasource starts workflows in two phases. Phase one
+ *       does nothing against the engine. Phase two creates the instance, and doing it
+ *       twice has the same effect as doing it once (the dispatch is at-least-once).</li>
  * </ul>
  */
 @SpringBootTest(classes = {
     TestApplication.class, Camunda7TwoEnginesIT.NamedDataSourceConfiguration.class
 }, properties = {
-    // own database: test contexts are cached and live in parallel - another
-    // context's engine on the same H2 database would interfere
+    // own database. Test contexts are cached and live in parallel. The engine of another
+    // context on the same H2 database would interfere.
     "spring.datasource.url=jdbc:h2:mem:c7-two-engines-it;DB_CLOSE_DELAY=-1", "vanillabp.prioritized-adapters=c7,c7b", "vanillabp.adapters.c7b.type=camunda7", "vanillabp.adapters.c7b.name-clash-avoidance=by-adapter", "vanillabp.adapters.c7b.data-source-name=c7bDataSource", "vanillabp.workflow-modules.c7-it.adapters.c7b.resources-location=classpath*:c7-it/processes"
 })
 @ExtendWith(SuppressOutputExtension.class)
 @SuppressOutputExtension.SuppressBackgroundOutput
-// closed when the class is done: this IT has a database (and therefore a context) of its
-// own, Spring would keep every context until the JVM exits, and an engine outliving its
-// test keeps its job executor running against a database the next classes work on
+// closed when the class is done. This IT has a database of its own, and so a context of its
+// own. Spring would keep every context until the JVM exits. An engine which outlives its test
+// keeps its job executor running against a database which the next classes work on.
 @DirtiesContext
 public class Camunda7TwoEnginesIT {
 
   /**
-   * The application-provided datasource bean the {@code c7b} engine runs on.
-   * {@code defaultCandidate = false} keeps it out of by-type injection and lets
-   * Spring Boot's default-datasource auto-configuration stay active (the standard
-   * pattern for additional application datasources).
+   * The datasource bean which the application provides, and which the {@code c7b} engine
+   * runs on. {@code defaultCandidate = false} keeps it out of injection by type. It also
+   * lets the default-datasource auto-configuration of Spring Boot stay active. This is the
+   * standard pattern for additional datasources of an application.
    */
   @org.springframework.boot.test.context.TestConfiguration
   public static class NamedDataSourceConfiguration {
@@ -104,8 +104,8 @@ public class Camunda7TwoEnginesIT {
     assertFalse(sharedDataSourceEngine.usesSeparateDataSource());
     assertTrue(separateDataSourceEngine.usesSeparateDataSource());
 
-    // the deployment pipeline deployed the module's BPMN to EVERY prioritized
-    // adapter - each engine holds it in its own schema
+    // the deployment pipeline deployed the BPMN of the module to EVERY prioritized adapter.
+    // Each engine holds it in its own schema.
     for (final var engine : new Camunda7EngineHolder[]{
         sharedDataSourceEngine, separateDataSourceEngine
     }) {
@@ -134,8 +134,8 @@ public class Camunda7TwoEnginesIT {
     assertNotNull(aggregateId);
 
     final var businessKey = String.valueOf(aggregateId);
-    // the instance is created by the phase-two outbox right after the commit, and it
-    // may have ended by the time the test looks - the history answers both
+    // the phase-two outbox creates the instance right after the commit. It may have ended
+    // by the time the test looks, and the history answers both cases.
     AwaitPhaseTwo.until(
         () -> sharedDataSourceEngine
             .getHistoryService()
@@ -161,8 +161,8 @@ public class Camunda7TwoEnginesIT {
   @SuppressWarnings("unchecked")
   public void separateDataSourceIdStartsTwoPhase() {
 
-    // pause job processing of the c7b engine so the started instance does not
-    // complete asynchronously while the idempotency of phase two is asserted
+    // pause the job processing of the c7b engine. So the started instance does not complete
+    // asynchronously while the test asserts that phase two is idempotent.
     separateDataSourceEngine.stopWorkflowProcessing(MODULE_ID);
 
     final var aggregate = new TestAggregate();
@@ -170,8 +170,8 @@ public class Camunda7TwoEnginesIT {
     final var saved = aggregateRepository.save(aggregate);
     final var businessKey = String.valueOf(saved.getId());
 
-    // phase one must not create the instance (the engine's own transaction would
-    // commit it even if the caller's transaction rolled back afterwards)
+    // phase one must not create the instance. The own transaction of the engine would
+    // commit it, even if the transaction of the caller rolled back afterwards.
     PhaseOperations
         .phaseOne(
             separateDataSourceProcessService,
@@ -191,7 +191,8 @@ public class Camunda7TwoEnginesIT {
             .count(),
         "phase one must not touch the engine");
 
-    // phase two (after commit, dispatched via the outbox) creates the instance...
+    // phase two runs after the commit, dispatched through the outbox. It creates the
+    // instance...
     PhaseOperations
         .phaseTwo(
             separateDataSourceProcessService,
@@ -210,7 +211,7 @@ public class Camunda7TwoEnginesIT {
             .tenantIdIn(MODULE_ID)
             .count());
 
-    // ...and a redelivered phase two (at-least-once) is skipped
+    // ...and a phase two delivered again (at-least-once) is skipped
     PhaseOperations
         .phaseTwo(
             separateDataSourceProcessService,
@@ -230,7 +231,7 @@ public class Camunda7TwoEnginesIT {
             .count(),
         "a redelivered phase-two start must be skipped (idempotency)");
 
-    // resume job processing (the shared application context is reused by other tests)
+    // resume the job processing, because other tests reuse the shared application context
     separateDataSourceEngine.startWorkflowProcessing(MODULE_ID);
 
   }

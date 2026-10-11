@@ -21,27 +21,27 @@ import io.vanillabp.integration.test.utils.SuppressOutputExtension;
 
 /**
  * Renaming a BPMN process, against a real engine and across two generations of one
- * application: the first deploys the process under its old id and starts a workflow which
- * then waits for a message, the second deploys the same model under the NEW id and
- * declares the old one as a secondary process. The workflow started before the rename has
- * to run to its end through the methods of that second application.
+ * application. The first generation deploys the process under its old id and starts a
+ * workflow, which then waits for a message. The second deploys the same model under the NEW
+ * id and declares the old one as a secondary process. The workflow started before the
+ * rename has to run to its end through the methods of that second application.
  * <p>
- * Camunda 7 evaluates the expressions of the model a workflow was STARTED with, so this
- * is a test only an engine can answer. The second application deploys nothing under the
- * old id, and what its EL resolver needs are the connectables of a model which exists
- * only in the engine's repository - including the way each task is wired there: the last
- * task of this process is a <code>camunda:delegateExpression</code> and has to STAY OPEN
- * until the application completes it, while the first one completes when its handler
- * returns. Nothing outside a model can be asked which of the two a task is, which is why
- * the models the engine holds are what the adapter reads.
+ * Camunda 7 evaluates the expressions of the model which a workflow was STARTED with. So
+ * only an engine can answer this test. The second application deploys nothing under the old
+ * id. Its EL resolver needs the connectables of a model which exists only in the repository
+ * of the engine. That includes the way each task is wired there. The last task of this
+ * process is a <code>camunda:delegateExpression</code> and has to STAY OPEN until the
+ * application completes it. The first one completes when its handler returns. Nothing
+ * outside a model can be asked which of the two a task is. That is why the adapter reads
+ * the models which the engine holds.
  * <p>
  * The workflow module keeps the name-clash-avoidance mode of every other test of this
- * module (<code>by-adapter</code>, a tenant per module), because that mode is what an
- * application upgrading from version 1 arrives with.
+ * module (<code>by-adapter</code>, a tenant per module). An application which upgrades from
+ * version 1 arrives with that mode.
  * <p>
- * Both boots share ONE in-memory database, kept alive across them by
- * <code>DB_CLOSE_DELAY=-1</code>: the engine's deployment and the workflow aggregate
- * written by the first application are what the second one continues on.
+ * Both boots share ONE in-memory database. <code>DB_CLOSE_DELAY=-1</code> keeps it alive
+ * across them. The second application continues on the deployment in the engine and on the
+ * workflow aggregate which the first application wrote.
  */
 @ExtendWith(SuppressOutputExtension.class)
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
@@ -50,7 +50,7 @@ public class Camunda7RenamedProcessIT {
   private static final String DATABASE = "--spring.datasource.url=jdbc:h2:mem:c7-renamed-process;DB_CLOSE_DELAY=-1";
 
   /**
-   * The workflow started by the first application, read by the second one from the same
+   * The workflow started by the first application. The second one reads it from the same
    * database.
    */
   static Long aggregateId;
@@ -97,8 +97,8 @@ public class Camunda7RenamedProcessIT {
       final var repository = application.getBean(RenamedProcessRepository.class);
       final var transaction = application.getBean(TransactionTemplate.class);
 
-      // the message reaches a subscription the FIRST application created, under the id
-      // this application does not deploy any more
+      // the message reaches a subscription which the FIRST application created, under the
+      // id which this application does not deploy any more
       transaction.executeWithoutResult(status -> workflowService.continueWorkflow(aggregateId));
 
       awaitUntil(
@@ -109,16 +109,16 @@ public class Camunda7RenamedProcessIT {
           repository.findById(aggregateId).orElseThrow().getFinishedBy(),
           "the methods of the renamed application served the workflow of the old id");
 
-      // the task is still open, which the engine only does for a task the OLD model
-      // wired by 'camunda:delegateExpression' - an expression task would have completed
-      // when the handler returned
+      // the task is still open. The engine does that only for a task which the OLD model
+      // wired by 'camunda:delegateExpression'. An expression task would have completed when
+      // the handler returned.
       transaction.executeWithoutResult(status -> workflowService.completeOpenTask(aggregateId));
       awaitUntil(
           () -> noWorkflowIsRunning(application),
           "the workflow of the old process id did not end after its open task was completed");
 
-      // and the start said so, which is what a developer reads before any of this
-      // happens rather than afterwards
+      // and the start said so. A developer reads that before any of this happens, not
+      // afterwards.
       final var reported = output.getAll().substring(beforeTheBoot);
       assertTrue(
           reported.contains("declared BPMN process 'RenamedProcessOld'"),
@@ -135,8 +135,8 @@ public class Camunda7RenamedProcessIT {
   }
 
   /**
-   * Whether the engine still holds a workflow of the old process id - what says that the
-   * one of this test ran to its end.
+   * Whether the engine still holds a workflow of the old process id. This says that the
+   * workflow of this test ran to its end.
    */
   private static boolean noWorkflowIsRunning(
       final ConfigurableApplicationContext application) {
@@ -151,10 +151,10 @@ public class Camunda7RenamedProcessIT {
   }
 
   /**
-   * Waits for something the engine's job executor has to bring about. Generous on
-   * purpose: in a full build this class shares its machine with the other engines of this
-   * module, and a deadline close to what a quiet machine needs fails while nothing is
-   * wrong.
+   * Waits for something which the job executor of the engine has to bring about. The
+   * deadline is generous on purpose. In a full build this class shares its machine with the
+   * other engines of this module. A deadline close to what a quiet machine needs fails
+   * while nothing is wrong.
    */
   private static void awaitUntil(
       final java.util.function.BooleanSupplier condition,
@@ -171,8 +171,8 @@ public class Camunda7RenamedProcessIT {
   }
 
   /**
-   * One generation of the application: the workflow service of that generation (a Spring
-   * profile decides which one) and the BPMN it deploys.
+   * One generation of the application: the workflow service of that generation, which a
+   * Spring profile picks, and the BPMN it deploys.
    */
   private static ConfigurableApplicationContext boot(
       final String profile,
@@ -182,8 +182,8 @@ public class Camunda7RenamedProcessIT {
     boot.add(DATABASE);
     boot.add("--spring.profiles.active="
         + profile);
-    // the aggregate of the first boot is what the second one continues on, so the schema
-    // is kept rather than recreated
+    // the second boot continues on the aggregate of the first boot. So the schema is kept,
+    // not recreated.
     boot.add("--spring.jpa.hibernate.ddl-auto=update");
     boot
         .add("--vanillabp.workflow-modules.c7-it.adapters.c7.resources-location=classpath*:c7-it/renamed-process/%s"

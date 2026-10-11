@@ -12,20 +12,21 @@ import io.vanillabp.integration.test.utils.CapturedOutput;
 import io.vanillabp.integration.test.utils.SuppressOutputExtension;
 
 /**
- * Whether a listener somebody modelled really reaches a <code>@WorkflowTask</code> method of a
- * real engine, and what the boot says about a model carrying one.
+ * Whether a listener which somebody modelled really reaches a <code>@WorkflowTask</code>
+ * method of a real engine. And what the boot says about a model which carries one.
  * <p>
- * This needs an engine and nothing else would do. For a
- * <code>camunda:delegateExpression</code> listener the engine expects the expression to yield a
- * listener object, and the object the adapter serves a TASK with is an activity behavior, which
- * the engine would refuse here. Nothing but a running engine proves that the right object
- * arrives, and version 1 got that right with a type version 2 no longer has.
+ * This needs an engine, and nothing else would do. For a
+ * <code>camunda:delegateExpression</code> listener the engine expects the expression to
+ * give a listener object. But the object which the adapter serves a TASK with is an
+ * activity behavior, and the engine would refuse it here. Only a running engine proves that
+ * the right object arrives. Version 1 got that right with a type which version 2 no longer
+ * has.
  * <p>
  * The cancellation is the same kind of question. The model has a user task which nobody
- * completes and an interrupting boundary timer which takes it away, so the listener of that task
- * fires once and is then called a second time with CANCELED. Only an engine shows that the
- * listener VanillaBP attaches to the element really runs on a cancellation, because the engine
- * decides what a canceled execution reports about itself.
+ * completes, and an interrupting boundary timer which takes it away. So the listener of
+ * that task fires once, and is then called a second time with CANCELED. Only an engine
+ * shows that the listener which VanillaBP attaches to the element really runs on a
+ * cancellation, because the engine decides what a canceled execution reports about itself.
  */
 @ExtendWith(SuppressOutputExtension.class)
 @SuppressOutputExtension.SuppressBackgroundOutput
@@ -130,8 +131,8 @@ public class Camunda7ModelledListenerIT {
   }
 
   /**
-   * Every message of a failure and of its causes, because a boot failure reaches a test wrapped
-   * in whatever Spring wrapped it in.
+   * Every message of a failure and of its causes. A boot failure reaches a test wrapped in
+   * whatever Spring wrapped it in.
    *
    * @param failure What the boot threw
    * @return The messages, joined

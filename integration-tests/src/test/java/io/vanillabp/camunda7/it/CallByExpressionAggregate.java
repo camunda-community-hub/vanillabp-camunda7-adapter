@@ -10,9 +10,9 @@ import lombok.Getter;
 import lombok.Setter;
 
 /**
- * The aggregate of the caller and of the called process of the call-by-expression test.
- * One class for both, which is what makes them one business case: a called process
- * working on the aggregate of its caller.
+ * The aggregate of the caller and of the called process of the call-by-expression test. One
+ * class serves both, and that makes them one business case: a called process which works on
+ * the aggregate of its caller.
  */
 @Entity
 @Table(name = "C7_CALL_BY_EXPRESSION_AGGREGATE")
@@ -37,15 +37,15 @@ public class CallByExpressionAggregate {
   private boolean callByExpression;
 
   /**
-   * What the expression of the call activity reads: the id of the process to call.
+   * What the expression of the call activity reads, which is the id of the process to call.
    */
   @io.vanillabp.spi.service.SyncWithBPMS
   private String processToCall;
 
   /**
-   * Written by the task of the CALLED process. The test reads it from the row the
-   * caller created, so a value here says that the called process reached the
-   * aggregate of its caller.
+   * Written by the task of the CALLED process. The test reads it from the row which the
+   * caller created. So a value here says that the called process reached the aggregate of
+   * its caller.
    */
   private String whatTheCalledProcessWrote;
 

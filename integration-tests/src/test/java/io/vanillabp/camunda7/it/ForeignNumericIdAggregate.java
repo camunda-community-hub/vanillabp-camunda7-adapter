@@ -9,9 +9,9 @@ import lombok.Setter;
 
 /**
  * The JPA workflow aggregate of the process of the foreign-start integration test whose id
- * is a NUMBER the persistence layer assigns. A business key somebody chose is a text, so
- * it can never be the id of this aggregate, and that is the case the adapter refuses
- * instead of renaming the workflow.
+ * is a NUMBER. The persistence layer assigns it. A business key somebody chose is a text,
+ * so it can never be the id of this aggregate. The adapter refuses this case instead of
+ * renaming the workflow.
  */
 @Entity
 @Table(name = "C7_FOREIGN_NUMERIC_ID_AGGREGATE")

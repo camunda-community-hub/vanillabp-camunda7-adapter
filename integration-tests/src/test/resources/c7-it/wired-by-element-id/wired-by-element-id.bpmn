@@ -1,8 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- Both wirings of this model name something the serving method does NOT name. The
-     service task is wired by an expression nobody declares a method for, the user task
-     carries a form key, and both methods are wired by the element id instead. The
-     application has to run this model, because the wiring validation accepts it. -->
+<!-- Both wirings of this model name something which the serving method does NOT
+     name. The service task is wired by an expression which nobody declares a method
+     for. The user task carries a form key. Both methods are wired by the element id
+     instead. The application has to run this model, because the wiring validation
+     accepts it. -->
 <bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" id="Definitions_WiredByElementId" targetNamespace="http://bpmn.io/schema/bpmn">
   <bpmn:process id="WiredByElementIdProcess" isExecutable="true">
     <bpmn:startEvent id="IW_Start">

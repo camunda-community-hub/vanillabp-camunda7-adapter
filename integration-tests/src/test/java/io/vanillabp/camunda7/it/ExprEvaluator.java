@@ -4,16 +4,16 @@ import org.camunda.bpm.engine.ProcessEngine;
 import org.camunda.bpm.engine.impl.ProcessEngineImpl;
 
 /**
- * Evaluates an expression exactly the way a sequence flow condition is evaluated: through
- * the engine's own {@code ExpressionManager}, which on Spring Boot is
- * {@code Camunda7SpringExpressionManager} and therefore carries VanillaBP's EL resolver,
- * against a real execution of a running workflow.
+ * Evaluates an expression exactly the way a sequence flow condition is evaluated. It uses
+ * the own {@code ExpressionManager} of the engine, against a real execution of a running
+ * workflow. On Spring Boot that manager is {@code Camunda7SpringExpressionManager}, so it
+ * carries the EL resolver of VanillaBP.
  * <p>
- * Why the value of a form is read this way instead of putting every form on a gateway: a
- * gateway adds what Camunda 7 does with the RESULT (the default flow, an incident), and
- * that is the same for every form of one outcome class, so it is asserted once per outcome
- * class in {@code expr-conditions.bpmn}. What differs per form is the value and the
- * exception, and this reads both without a model per case.
+ * Why is the value of a form read this way, instead of putting every form on a gateway? A
+ * gateway adds what Camunda 7 does with the RESULT: the default flow, or an incident. That
+ * is the same for every form of one outcome class. So {@code expr-conditions.bpmn} asserts
+ * it once per outcome class. What differs per form is the value and the exception. This
+ * class reads both without a model per case.
  */
 final class ExprEvaluator {
 
@@ -69,8 +69,8 @@ final class ExprEvaluator {
   }
 
   /**
-   * The whole cause chain, because the message a modeller would see is the outermost one
-   * and the reason is the innermost.
+   * The whole cause chain. A modeller would see the outermost message, but the reason is
+   * the innermost one.
    */
   static String chainOf(
       final Throwable failure) {

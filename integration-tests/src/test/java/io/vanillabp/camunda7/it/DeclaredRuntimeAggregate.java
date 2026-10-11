@@ -8,7 +8,7 @@ import lombok.Setter;
 
 /**
  * The JPA workflow aggregate of the declared-id runtime integration test. Its ID is a
- * String and carries no <code>@GeneratedValue</code>: the
+ * String and carries no <code>@GeneratedValue</code>. The
  * <code>@WorkflowStartedByBpms</code> method names the workflow, and it puts its own
  * generation into that name. That is how the test tells the workflows of the two
  * generations apart.
@@ -23,13 +23,14 @@ public class DeclaredRuntimeAggregate {
   private String id;
 
   /**
-   * Set by the <code>@WorkflowStartedByBpms</code> method: the trigger's kind.
+   * Set by the <code>@WorkflowStartedByBpms</code> method. It holds the kind of the
+   * trigger.
    */
   private String startedAs;
 
   /**
-   * Set by the <code>@WorkflowStartedByBpms</code> method: the PLAIN signal name for
-   * a signal start, <code>null</code> otherwise.
+   * Set by the <code>@WorkflowStartedByBpms</code> method. It holds the PLAIN signal name
+   * for a signal start, and <code>null</code> otherwise.
    */
   private String signalName;
 

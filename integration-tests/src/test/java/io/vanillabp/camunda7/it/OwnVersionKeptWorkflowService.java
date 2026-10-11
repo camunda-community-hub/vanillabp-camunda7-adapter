@@ -10,14 +10,15 @@ import io.vanillabp.spi.service.WorkflowTask;
 
 /**
  * The application AFTER the upgrade, which kept the methods of version 1 next to the ones
- * version 2 names. A workflow started on version 1 has to reach the methods it names, and
- * one started on version 2 the methods version 2 names.
+ * which version 2 names. A workflow started on version 1 has to reach the methods which
+ * version 1 names. A workflow started on version 2 has to reach the methods which version 2
+ * names.
  * <p>
  * The methods of version 1 say which version they serve. Without that the start refuses
  * them, because they match no task of the model this boot deploys.
  * <p>
- * A bean only under the profile of its own generation: the generations declare the same
- * process and must never boot together.
+ * It is a bean only under the profile of its own generation. The generations declare the
+ * same process and must never boot together.
  */
 @Service
 @Profile("own-version-kept")

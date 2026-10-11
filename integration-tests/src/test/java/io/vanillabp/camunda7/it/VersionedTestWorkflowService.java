@@ -8,10 +8,10 @@ import io.vanillabp.spi.service.WorkflowService;
 import io.vanillabp.spi.service.WorkflowTask;
 
 /**
- * The workflow service of the process-version integration test: one BPMN
- * task served by two methods, told apart by the version of the deployed process
- * definition - the first version by its number, the second one by the
- * <code>camunda:versionTag</code> its model carries.
+ * The workflow service of the process-version integration test. Two methods serve one BPMN
+ * task. The version of the deployed process definition tells them apart. The first version
+ * is named by its number, the second one by the <code>camunda:versionTag</code> its model
+ * carries.
  */
 @Service
 @WorkflowService(

@@ -31,9 +31,9 @@ public class MiUserTaskAggregate {
   private Long id;
 
   /**
-   * What every notification about a user task reported about its iteration, in the order
-   * the notifications arrived, comma-separated. A list attribute would need a table of its
-   * own for what one string does here.
+   * What every notification about a user task reported about its iteration. The entries
+   * stand in the order the notifications arrived, separated by commas. A list attribute
+   * would need a table of its own for what one string does here.
    */
   private String reported;
 

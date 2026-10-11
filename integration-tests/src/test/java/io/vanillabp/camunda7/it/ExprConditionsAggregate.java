@@ -8,12 +8,13 @@ import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.Table;
 
 /**
- * The aggregate of the BPMN process <code>ExprConditions</code>, which puts one expression
- * per outcome class on an exclusive gateway, each on a parallel branch of its own.
+ * The aggregate of the BPMN process <code>ExprConditions</code>. The process puts one
+ * expression per outcome class on an exclusive gateway. Each gateway sits on a parallel
+ * branch of its own.
  * <p>
- * One aggregate class per process: a ProcessService starts the process its workflow
- * service names, so every process measured here brings one. Everything they carry
- * is in {@link ExprData}.
+ * There is one aggregate class per process. A ProcessService starts the process which its
+ * workflow service names, so every process measured here brings its own class. Everything
+ * they carry is in {@link ExprData}.
  */
 @Entity
 @Table(name = "C7_EXPR_CONDITIONS_AGGREGATE")

@@ -5,7 +5,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
  * What the handlers of the parameter-type cases received. A cell whose conversion is
- * refused leaves no entry here, and the incident the engine raised is what the test reads
+ * refused leaves no entry here. The test reads the incident which the engine raised
  * instead.
  */
 public final class ParamTypesProbe {

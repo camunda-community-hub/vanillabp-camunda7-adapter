@@ -17,41 +17,42 @@ import org.springframework.test.annotation.DirtiesContext;
 import io.vanillabp.integration.test.utils.SuppressOutputExtension;
 
 /**
- * The iteration a task runs in, measured against a real embedded Camunda 7 engine for both
- * kinds of task a model holds: a service-like one and a user task. They share a file because they
- * ask one question of two kinds of task, and whoever compares the answers should not have to open
- * two files for them.
+ * The iteration which a task runs in, measured against a real embedded Camunda 7 engine for
+ * both kinds of task a model holds: a service-like one and a user task. They share a file,
+ * because they ask one question of two kinds of task. Whoever compares the answers should
+ * not have to open two files for them.
  * <p>
- * The service-like half runs the two ways a model names the process it calls.
+ * The service-like half runs the two ways in which a model names the process it calls.
  * <p>
- * The chain of a task reaches over the call activity which started its process, and whether
- * it may is a question about the workflow aggregate: a called process which continues the
- * business case of its caller belongs in that caller's iteration, one with an aggregate of
- * its own does not. The deployment answers that question and writes the answer onto the call
- * activity, which it can do for a call activity naming the called process by its id and not
- * for one naming it in an expression. This test runs one model holding both and reads the
- * two answers out of one string.
+ * The chain of a task reaches over the call activity which started its process. Whether it
+ * may do so is a question about the workflow aggregate. A called process which continues
+ * the business case of its caller belongs in the iteration of that caller. One with an
+ * aggregate of its own does not. The deployment answers that question and writes the answer
+ * onto the call activity. It can do that for a call activity which names the called process
+ * by its id, but not for one which names it in an expression. This test runs one model
+ * which holds both, and it reads the two answers out of one string.
  * <p>
  * The same model on Camunda 8 is
- * {@code Camunda8MultiInstanceIT#theIterationCrossesACallActivityNamedByAnExpression}, and
- * it reports the levels of the caller there. A model may not depend on which adapter runs
- * it, which is why this is measured and not described.
+ * {@code Camunda8MultiInstanceIT#theIterationCrossesACallActivityNamedByAnExpression}, and it
+ * reports the levels of the caller there. A model may not depend on which adapter runs it.
+ * That is why this is measured and not described.
  * <p>
  * The user-task half asks the same of a user task inside a multi-instance subprocess. This
- * adapter notifies about a user task from a task listener, which is handed a task rather than
- * an execution, so the levels were missing there while every other kind of task reported
- * them. Camunda 8 reported them all along, which made one model answer two ways again.
+ * adapter notifies about a user task from a task listener. That listener is handed a task,
+ * not an execution. So the levels were missing there, while every other kind of task
+ * reported them. Camunda 8 reported them all along, so one model answered in two ways
+ * again.
  */
 @SpringBootTest(classes = TestApplication.class, properties = {
-    // own database: contexts are cached and live in parallel, and a second engine with a
-    // job executor on the same H2 database would compete for this test's jobs
+    // own database. Contexts are cached and live in parallel. A second engine with a job
+    // executor on the same H2 database would compete for the jobs of this test.
     "spring.datasource.url=jdbc:h2:mem:c7-mi-call-by-expression-it;DB_CLOSE_DELAY=-1"
 })
 @ExtendWith(SuppressOutputExtension.class)
 @SuppressOutputExtension.SuppressBackgroundOutput
-// closed when the class is done: this IT has a database (and therefore a context) of its
-// own, and an engine outliving its test keeps its job executor running against a database
-// the next classes work on
+// closed when the class is done. This IT has a database of its own, and so a context of its
+// own. An engine which outlives its test keeps its job executor running against a database
+// which the next classes work on.
 @DirtiesContext
 public class Camunda7MultiInstanceByExpressionIT {
 
@@ -68,8 +69,8 @@ public class Camunda7MultiInstanceByExpressionIT {
   private MiUserTaskRepository userTaskRepository;
 
   /**
-   * What the tasks of the called process wrote, read fresh from the database because they
-   * run in the engine's own transaction.
+   * What the tasks of the called process wrote. It is read fresh from the database, because
+   * they run in the own transaction of the engine.
    */
   private String whatTheCalledProcessReported(
       final Long aggregateId) {
@@ -83,8 +84,8 @@ public class Camunda7MultiInstanceByExpressionIT {
 
   /**
    * Waits until the condition holds, and gives up quietly when it does not. The assertion
-   * of the test reads the string either way, so a run which reports too little says what it
-   * reported instead of saying that it waited.
+   * of the test reads the string either way. So a run which reports too little says what it
+   * reported, instead of saying that it waited.
    */
   private void awaitAtMostThirtySeconds(
       final Supplier<Boolean> condition) throws InterruptedException {
@@ -122,8 +123,8 @@ public class Camunda7MultiInstanceByExpressionIT {
 
   /**
    * What the notifications about the user tasks wrote, sorted. Both rounds of both groups
-   * create their task in one transaction, so the order the engine notifies in is the
-   * engine's business and not what this test measures.
+   * create their task in one transaction. So the order in which the engine notifies is the
+   * business of the engine, and this test does not measure it.
    */
   private List<String> whatTheUserTasksReported(
       final Long aggregateId) {

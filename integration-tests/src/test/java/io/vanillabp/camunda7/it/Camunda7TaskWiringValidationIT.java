@@ -11,10 +11,10 @@ import org.springframework.boot.builder.SpringApplicationBuilder;
 import io.vanillabp.integration.test.utils.SuppressOutputExtension;
 
 /**
- * Guiding wiring validation on a real engine boot: a BPMN task whose expression
- * matches no {@code @WorkflowTask} method aborts the boot naming the task and the fix,
- * and so does a task which has to stay open but is wired in a way that
- * completes it on return.
+ * The guiding wiring validation on a real engine boot. A BPMN task whose expression matches
+ * no {@code @WorkflowTask} method aborts the boot. The message names the task and the fix.
+ * The same happens for a task which has to stay open, but is wired in a way which completes
+ * it on return.
  */
 @ExtendWith(SuppressOutputExtension.class)
 @SuppressOutputExtension.SuppressBackgroundOutput
@@ -55,8 +55,8 @@ public class Camunda7TaskWiringValidationIT {
         RuntimeException.class,
         () -> new SpringApplicationBuilder(TestApplication.class)
             .run(
-                // AsyncProcess, whose handler declares @TaskId, wired by an
-                // expression which completes the task when it returns
+                // AsyncProcess, whose handler declares @TaskId. An expression wires it, and
+                // the expression completes the task when it returns.
                 "--vanillabp.workflow-modules.c7-it.adapters.c7.resources-location=classpath*:c7-it/async-by-expression",
                 "--spring.datasource.url=jdbc:h2:mem:c7-async-wiring-validation;DB_CLOSE_DELAY=-1")
             .close());
@@ -80,8 +80,8 @@ public class Camunda7TaskWiringValidationIT {
   @DisplayName("The same defect aborts the boot where the method is wired by the element id")
   public void asynchronousTaskWiredByExpressionAbortsBootForAMethodWiredByTheElementId() {
 
-    // a method names its task by the task definition or by the element id, and the
-    // wiring validation accepts both - so both reach this check
+    // a method names its task by the task definition or by the element id. The wiring
+    // validation accepts both, so both reach this check.
     final var failure = assertThrows(
         RuntimeException.class,
         () -> new SpringApplicationBuilder(TestApplication.class)
@@ -107,8 +107,8 @@ public class Camunda7TaskWiringValidationIT {
   @DisplayName("A @WorkflowTask method matching no task of the module aborts the boot")
   public void orphanWorkflowTaskMethodAbortsBoot() {
 
-    // the other direction of the wiring check, which this adapter never called: the
-    // core runs it itself since story 158, once every adapter of the module deployed
+    // the other direction of the wiring check. This adapter never called it. The core runs
+    // it itself, once every adapter of the module has deployed.
     final var failure = assertThrows(
         RuntimeException.class,
         () -> new SpringApplicationBuilder(TestApplication.class)

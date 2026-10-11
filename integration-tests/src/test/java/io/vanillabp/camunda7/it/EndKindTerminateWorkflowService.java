@@ -11,8 +11,7 @@ import io.vanillabp.spi.service.WorkflowTask;
 
 /**
  * A workflow whose only path leads into a terminate end event. It exists to record what
- * this engine calls that end, since a modeller reading the model would call it a
- * cancelation.
+ * this engine calls that end. A modeller who reads the model would call it a cancelation.
  */
 @Service
 @WorkflowService(
@@ -39,9 +38,9 @@ public class EndKindTerminateWorkflowService {
   public void runBeforeTerminating(
       final EndKindTerminateAggregate aggregate) {
 
-    // the task is asynchronous, so the workflow reaches its terminate end event in a
-    // transaction of the engine rather than in the one which started it - which is where
-    // an application meets this end in production
+    // the task is asynchronous. So the workflow reaches its terminate end event in a
+    // transaction of the engine, not in the one which started it. That is where an
+    // application meets this end in production.
 
   }
 

@@ -10,13 +10,13 @@ import io.vanillabp.spi.service.WorkflowService;
 import io.vanillabp.spi.service.WorkflowTask;
 
 /**
- * Owns <code>ModelledListenerProcess</code>, whose end event carries the two listener forms a
- * <code>@WorkflowTask</code> method can serve: a <code>camunda:expression</code> and a
- * <code>camunda:delegateExpression</code>.
+ * Owns <code>ModelledListenerProcess</code>. Its end event carries the two listener forms
+ * which a <code>@WorkflowTask</code> method can serve: a <code>camunda:expression</code>
+ * and a <code>camunda:delegateExpression</code>.
  * <p>
- * A bean only under the profile of its own test, like every other scenario of this module: all
- * tests here boot the same application, and this model does not even deploy without
- * <code>allow-listeners</code>.
+ * It is a bean only under the profile of its own test, like every other scenario of this
+ * module. All tests here boot the same application. And this model does not even deploy
+ * without <code>allow-listeners</code>.
  */
 @Service
 @Profile("modelled-listeners")
@@ -50,10 +50,10 @@ public class ModelledListenerWorkflowService {
   }
 
   /**
-   * The listener of the user task, which is served for both moments a listener knows. It fires
-   * when the task is created, and it is called again when the boundary timer takes the task
-   * away, because VanillaBP attaches the engine's end listener to that element for exactly
-   * this.
+   * The listener of the user task. It is served for both moments a listener knows. It fires
+   * when the task is created. It is called again when the boundary timer takes the task
+   * away, because VanillaBP attaches the end listener of the engine to that element for
+   * exactly this.
    */
   @WorkflowTask(taskDefinition = "theWaitBegins")
   public void theWaitBegins(
@@ -69,7 +69,7 @@ public class ModelledListenerWorkflowService {
   }
 
   /**
-   * The <code>camunda:expression</code> form: the engine evaluates the expression and the
+   * The <code>camunda:expression</code> form. The engine evaluates the expression, and the
    * handler runs while it is evaluated.
    */
   @WorkflowTask(taskDefinition = "theEndIsReached")
@@ -81,8 +81,8 @@ public class ModelledListenerWorkflowService {
   }
 
   /**
-   * The <code>camunda:delegateExpression</code> form: the engine expects the expression to
-   * yield a listener object, which is what the adapter's EL resolver hands it.
+   * The <code>camunda:delegateExpression</code> form. The engine expects the expression to
+   * give a listener object, and the EL resolver of the adapter hands it one.
    */
   @WorkflowTask(taskDefinition = "theEndIsDone")
   public void theEndIsDone(

@@ -13,18 +13,18 @@ import io.vanillabp.camunda7.api.Camunda7EngineFacts;
 import io.vanillabp.integration.test.utils.SuppressOutputExtension;
 
 /**
- * What this adapter hands an extension on Spring Boot, measured after the deployment
- * pipeline really ran against a real embedded engine: the way back from the engine's
- * identifiers to the workflow module and the plain BPMN process id, and the deployed
- * version behind a definition id out of the adapter's own cache.
+ * What this adapter hands an extension on Spring Boot. It is measured after the deployment
+ * pipeline really ran against a real embedded engine. The facts are the way back from the
+ * identifiers of the engine to the workflow module and the plain BPMN process id. And they
+ * are the deployed version behind a definition id, out of the own cache of the adapter.
  * <p>
  * The Quarkus counterpart is {@code Camunda7EngineFactsOnQuarkusTest}. Both platforms run
- * it, because an answer only the neutral core is right about says nothing about a platform
- * ever building the object which carries it.
+ * it. An answer which only the neutral core gets right says nothing about whether a
+ * platform ever builds the object which carries it.
  */
 @SpringBootTest(classes = TestApplication.class, properties = {
-    // a database of its own: an engine of a context Spring keeps cached would otherwise
-    // work on the database the next class uses
+    // a database of its own. Otherwise an engine of a context which Spring keeps cached
+    // would work on the database of the next class.
     "spring.datasource.url=jdbc:h2:mem:c7-engine-facts-it;DB_CLOSE_DELAY=-1"
 })
 @ExtendWith(SuppressOutputExtension.class)
@@ -80,8 +80,8 @@ public class Camunda7EngineFactsIT {
   @DisplayName("The deployed version, including its tag, comes out of the adapter's cache")
   public void theDeployedVersionComesOutOfTheCache() {
 
-    // what the application deployed while booting: the adapter recorded it, so no query
-    // runs for it at all
+    // what the application deployed while booting. The adapter recorded it, so no query
+    // runs for it at all.
     final var deployedWhileBooting = engineFacts.definitionOf(latestDefinitionIdOf("VersionedProcess"));
 
     Assertions.assertNotNull(deployedWhileBooting, "the adapter deployed this definition, so it knows it");
@@ -90,7 +90,7 @@ public class Camunda7EngineFactsIT {
     Assertions.assertEquals("1", deployedWhileBooting.displayVersion());
 
     // a version deployed by somebody else, which is what a rolling deployment from another
-    // node looks like: the adapter asks the engine once and then answers from memory
+    // node looks like. The adapter asks the engine once and then answers from memory.
     repositoryService
         .createDeployment()
         .name("c7-it")
@@ -101,8 +101,8 @@ public class Camunda7EngineFactsIT {
 
     Assertions.assertEquals("2", tagged.version());
     Assertions.assertEquals("release-2", tagged.versionTag());
-    // how an operator reads a version is written by the platform, so a cockpit, a log line
-    // and a support tool spell one deployment alike
+    // the platform writes how an operator reads a version. So a cockpit, a log line and a
+    // support tool spell one deployment alike.
     Assertions.assertEquals("release-2:2", tagged.displayVersion());
 
     Assertions

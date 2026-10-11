@@ -7,10 +7,10 @@ import io.vanillabp.spi.service.BpmnProcess;
 import io.vanillabp.spi.service.WorkflowService;
 
 /**
- * Starts <code>ExprConditions</code>, which puts one expression per outcome class on an
- * exclusive gateway, each on a parallel branch of its own. The process has no
- * workflow task of its own: everything it does is decide, wait or iterate, so nothing
- * has to be wired and a failing expression is the only thing that can go wrong.
+ * Starts <code>ExprConditions</code>. The process puts one expression per outcome class on
+ * an exclusive gateway. Each gateway sits on a parallel branch of its own. The process has
+ * no workflow task of its own. All it does is decide, wait or iterate. So nothing has to be
+ * wired, and a failing expression is the only thing that can go wrong.
  */
 @Service
 @WorkflowService(

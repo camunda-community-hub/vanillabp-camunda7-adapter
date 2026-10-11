@@ -16,7 +16,7 @@
       <bpmn:messageEventDefinition id="OV_MsgDef" messageRef="Msg_OwnVersionContinue" />
     </bpmn:intermediateCatchEvent>
     <bpmn:sequenceFlow id="OV_f2" sourceRef="OV_Wait" targetRef="OV_Fork" />
-    <!-- three branches, so each element is measured on its own: every branch starts
+    <!-- three branches, so each element is measured on its own. Every branch starts
          with a job of its own, and a failure in one leaves the others alone -->
     <bpmn:parallelGateway id="OV_Fork">
       <bpmn:incoming>OV_f2</bpmn:incoming>

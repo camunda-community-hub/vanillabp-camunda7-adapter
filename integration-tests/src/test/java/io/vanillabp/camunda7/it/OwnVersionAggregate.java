@@ -11,8 +11,8 @@ import lombok.Setter;
 
 /**
  * The aggregate of the test about which version's methods a workflow reaches. Each field
- * says which generation of the methods served one element, "old" for the methods version 1
- * names and "new" for the ones version 2 names.
+ * says which generation of the methods served one element. "old" stands for the methods
+ * which version 1 names, "new" for the ones which version 2 names.
  */
 @Entity
 @Table(name = "C7_OWN_VERSION_TEST")
@@ -21,7 +21,7 @@ import lombok.Setter;
 public class OwnVersionAggregate {
 
   /**
-   * An id range of its own: the Camunda business key is the aggregate's id, so the id spaces
+   * An id range of its own. The Camunda business key is the aggregate's id, so the id spaces
    * of the test aggregates must not overlap.
    */
   @Id

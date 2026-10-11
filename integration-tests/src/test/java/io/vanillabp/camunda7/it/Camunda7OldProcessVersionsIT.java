@@ -21,31 +21,31 @@ import io.vanillabp.integration.test.utils.CapturedOutput;
 import io.vanillabp.integration.test.utils.SuppressOutputExtension;
 
 /**
- * The old-versions startup check against a REAL engine: the application deploys version
- * 1 of a process, leaves a workflow running on it, and boots again with a model which
- * dropped one of its tasks. What the application still serves of that older version is
- * what the engine can answer and this test proves.
+ * The old-versions startup check against a REAL engine. The application deploys version 1
+ * of a process and leaves a workflow running on it. Then it boots again with a model which
+ * dropped one of its tasks. The engine can answer what the application still serves of that
+ * older version, and this test proves it.
  * <p>
  * The first boot is an earlier generation of the application
- * ({@link OldProcessVersionsBeforeWorkflowService}), which serves every task of version 1. The
- * boots after it run {@link OldProcessVersionsWorkflowService}, which no longer serves one of
- * them in version 1. The first boot cannot be that later generation: a start refuses the version
- * it deploys itself while a task of it has no method for that version.
+ * ({@link OldProcessVersionsBeforeWorkflowService}), which serves every task of version 1.
+ * The boots after it run {@link OldProcessVersionsWorkflowService}, which no longer serves
+ * one of them in version 1. The first boot cannot be that later generation. A start refuses
+ * the version it deploys itself, while a task of that version has no method for it.
  * <p>
- * The last two cases suspend version 1 and ask the same question again: a suspended
- * definition is not a deleted one, so it keeps its place in the check, and the only way
- * past it is the emergency exit which says on every start that it was taken.
+ * The last two cases suspend version 1 and ask the same question again. A suspended
+ * definition is not a deleted one, so it keeps its place in the check. The only way past it
+ * is the emergency exit, which says on every start that it was taken.
  * <p>
- * Every case is a full boot, because the question is what a START reports, and the
- * findings are read from the captured output rather than from a log appender: Spring
- * Boot resets the logging context while it starts, which takes an appender attached
- * beforehand with it. The engine keeps its deployments in the database of this class,
- * so the boots build on each other and therefore run in order.
+ * Every case is a full boot, because the question is what a START reports. The findings are
+ * read from the captured output, not from a log appender. Spring Boot resets the logging
+ * context while it starts, and that removes an appender attached before. The engine keeps
+ * its deployments in the database of this class. So the boots build on each other, and they
+ * run in order.
  * <p>
- * Every sentence a case here asks NOT to be in the output is asserted POSITIVELY by
- * another case of this class. A negative assertion on a text goes quiet the moment the
- * text is reworded, and nothing says so; the positive one beside it fails, and whoever
- * reworded the message is sent to both.
+ * Every sentence which a case here asks NOT to be in the output is asserted POSITIVELY by
+ * another case of this class. A negative assertion on a text goes quiet the moment the text
+ * is reworded, and nothing says so. The positive one beside it fails, and whoever reworded
+ * the message is sent to both.
  */
 @ExtendWith(SuppressOutputExtension.class)
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
@@ -58,9 +58,9 @@ public class Camunda7OldProcessVersionsIT {
   @DisplayName("Version 1 is deployed and a workflow is left running on it")
   public void deployVersionOneAndLeaveAWorkflowRunning() throws Exception {
 
-    // the generation which deploys version 1 serves every task of it - a start refuses the
-    // version it deploys while a task of it has no method for that version. The boots after
-    // this one are the next generation, which no longer serves one of those tasks
+    // the generation which deploys version 1 serves every task of it. A start refuses the
+    // version it deploys while a task of that version has no method for it. The boots after
+    // this one are the next generation, which no longer serves one of those tasks.
     final var application = new SpringApplicationBuilder(TestApplication.class)
         .run(DATABASE, resources("v1"), "--spring.profiles.active="
             + OldProcessVersionsBeforeWorkflowService.PROFILE);
@@ -71,8 +71,8 @@ public class Camunda7OldProcessVersionsIT {
           .getBean(org.springframework.transaction.support.TransactionTemplate.class)
           .execute(status -> workflowService.startWorkflow());
 
-      // the workflow walks to the task which stays open, and waits there for the
-      // rest of this test class
+      // the workflow walks to the task which stays open, and waits there for the rest of
+      // this test class
       final var deadline = System.currentTimeMillis() + 30_000;
       while (repository.findById(aggregate.getId()).orElseThrow().getOpenTaskId() == null) {
         if (System.currentTimeMillis() > deadline) {
@@ -93,9 +93,9 @@ public class Camunda7OldProcessVersionsIT {
       final CapturedOutput output) {
 
     final var reported = whatIsReportedWhileBooting(output, "v2");
-    // this case carries the positive side of every sentence the cases below ask NOT to be
-    // there. A negative assertion on a text stops checking the moment the text is
-    // reworded, and it says nothing about it; the positive next to it goes red instead
+    // this case carries the positive side of every sentence which the cases below ask NOT
+    // to be there. A negative assertion on a text stops checking the moment the text is
+    // reworded, and it says nothing about it. The positive one next to it goes red instead.
     assertTrue(
         reported.contains("definition(s) 'servedForAnUnknownVersion'"),
         "the unserved task of version 1 is named");
@@ -112,7 +112,8 @@ public class Camunda7OldProcessVersionsIT {
     assertTrue(
         !reported.contains("definition(s) 'droppedInVersionTwo'"),
         "the task served by the version-1 method is not reported");
-    // the method naming a version this engine never had never runs, and says so
+    // the method which names a version this engine never had never runs, and the start says
+    // so
     assertTrue(reported.contains("servedForAnUnknownVersion' (version '0')"), "the dead method is named");
     assertTrue(reported.contains("the method never runs"), "and what that means is said");
 
@@ -208,8 +209,8 @@ public class Camunda7OldProcessVersionsIT {
       assertTrue(
           !reported.contains(STILL_RUN_ON_THIS_VERSION),
           "and its workflow is not counted either");
-      // what the switch costs on the code side: version 1 is not among the versions the
-      // check believes the engine holds, so the method kept for it looks dead
+      // what the switch costs on the code side. Version 1 is not among the versions which
+      // the check believes the engine holds. So the method kept for it looks dead.
       assertTrue(reported.contains("droppedInVersionTwo' (version '1')"), "the method for it looks dead now");
     } finally {
       System.clearProperty(SuspendedProcessDefinitions.IGNORE_PROPERTY);
@@ -218,8 +219,8 @@ public class Camunda7OldProcessVersionsIT {
   }
 
   /**
-   * Suspends the older version at the engine, in a boot of its own - the cases after it
-   * are about what the NEXT start makes of it.
+   * Suspends the older version at the engine, in a boot of its own. The cases after it are
+   * about what the NEXT start makes of it.
    */
   private static void suspendVersionOne() {
 
@@ -243,8 +244,8 @@ public class Camunda7OldProcessVersionsIT {
   }
 
   /**
-   * What ONE boot wrote - the captured output accumulates over the whole class, so
-   * every case looks at its own tail of it.
+   * What ONE boot wrote. The captured output grows over the whole class, so every case
+   * looks at its own tail of it.
    */
   private static String whatIsReportedWhileBooting(
       final CapturedOutput output,

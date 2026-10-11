@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- The model BEFORE the rename: the engine starts this process on its own, by a
+<!-- The model BEFORE the rename. The engine starts this process on its own, by a
      repeating timer and by a signal. After the rename nothing is deployed under this id
-     any more, while the engine keeps firing the timer of ITS latest version and keeps
-     the signal subscription - so both starts keep happening for a process the renamed
-     application only declares. -->
+     any more. But the engine keeps firing the timer of ITS latest version, and it keeps
+     the signal subscription. So both starts keep happening for a process which the
+     renamed application only declares. -->
 <bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" id="Definitions_DeclaredRuntimeV1" targetNamespace="http://bpmn.io/schema/bpmn">
   <bpmn:signal id="Sig_DeclRuntime" name="DeclRuntimeSignal" />
   <bpmn:process id="DeclaredRuntimeOld" isExecutable="true">

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitions_ViewerSubProcess" targetNamespace="http://bpmn.io/schema/bpmn">
-  <!-- the called process of ViewerParentProcess: waits in a timer catch event so the
-       workflow stays running while the viewer API is queried -->
+  <!-- the called process of ViewerParentProcess. It waits in a timer catch event, so
+       the workflow keeps running while the test asks the viewer API -->
   <bpmn:process id="ViewerSubProcess" isExecutable="true">
     <bpmn:startEvent id="TheSubStartEvent">
       <bpmn:outgoing>Flow_sub_start_to_wait</bpmn:outgoing>

@@ -37,9 +37,10 @@ public class MiUserTaskWorkflowService {
   }
 
   /**
-   * The method notified about the user task. It reads the levels the two ways an application
-   * reads them: the named parameters of one element, and a resolver for the whole chain. The
-   * two say the same thing on purpose, because a user task used to answer neither.
+   * The method which is notified about the user task. It reads the levels in the two ways
+   * an application reads them: the named parameters of one element, and a resolver for the
+   * whole chain. The two say the same thing on purpose, because a user task used to answer
+   * neither.
    *
    * @param aggregate The workflow aggregate
    * @param group The element of the subprocess this task runs in

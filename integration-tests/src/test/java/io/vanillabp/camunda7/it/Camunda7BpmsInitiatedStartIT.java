@@ -17,25 +17,25 @@ import org.springframework.test.annotation.DirtiesContext;
 import io.vanillabp.integration.test.utils.SuppressOutputExtension;
 
 /**
- * End-to-end test of a workflow the engine starts on its own, against a real embedded
- * Camunda 7 engine. A timer start event fires, the application's
- * <code>&#64;WorkflowStartedByBpms</code> method builds the workflow aggregate, and the
- * adapter stores its ID as the instance's business key. The task following the start event
- * then finds the aggregate under exactly that key.
+ * End-to-end test of a workflow which the engine starts on its own, against a real embedded
+ * Camunda 7 engine. A timer start event fires. The <code>&#64;WorkflowStartedByBpms</code>
+ * method of the application builds the workflow aggregate. The adapter stores its ID as the
+ * business key of the instance. The task after the start event then finds the aggregate
+ * under exactly that key.
  * <p>
  * The application has to serve such a start: a process the engine starts by itself does not
  * boot without that method.
  */
 @SpringBootTest(classes = TestApplication.class, properties = {
-    // own database: contexts are cached and live in parallel - a foreign engine
-    // (and job executor) on the same H2 database would compete for this test's jobs
+    // own database. Contexts are cached and live in parallel. A foreign engine and its job
+    // executor on the same H2 database would compete for the jobs of this test.
     "spring.datasource.url=jdbc:h2:mem:c7-timer-start-it;DB_CLOSE_DELAY=-1"
 })
 @ExtendWith(SuppressOutputExtension.class)
 @SuppressOutputExtension.SuppressBackgroundOutput
-// closed when the class is done: this IT has a database (and therefore a context) of its
-// own, Spring would keep every context until the JVM exits, and an engine outliving its
-// test keeps its job executor running against a database the next classes work on
+// closed when the class is done. This IT has a database of its own, and so a context of its
+// own. Spring would keep every context until the JVM exits. An engine which outlives its test
+// keeps its job executor running against a database which the next classes work on.
 @DirtiesContext
 public class Camunda7BpmsInitiatedStartIT {
 
@@ -64,16 +64,16 @@ public class Camunda7BpmsInitiatedStartIT {
   @DisplayName("a timer start event creates the workflow aggregate and the following task finds it")
   public void timerStartCreatesTheAggregate() throws Exception {
 
-    // the timer fires one second after the deployment, and the job executor is
-    // running because the workflow module started its processing
+    // the timer fires one second after the deployment. The job executor runs, because the
+    // workflow module started its processing.
     awaitUntil(() -> !repository.findAll().isEmpty(), "the timer to fire and the aggregate to be created");
 
     final var aggregates = repository.findAll();
     assertEquals(1, aggregates.size(), "one workflow, one aggregate");
     final var aggregate = aggregates.getFirst();
 
-    // the application named the workflow, and the engine holds that name as the
-    // business key from here on
+    // the application named the workflow, and from here on the engine holds that name as
+    // the business key
     assertNotNull(aggregate.getId());
     assertTrue(
         aggregate.getId().startsWith("timer-start-"),
@@ -81,8 +81,8 @@ public class Camunda7BpmsInitiatedStartIT {
             + aggregate.getId());
     assertEquals("TIMER", aggregate.getStartedBy(), "the trigger says which start event fired");
 
-    // the task after the start event ran against exactly that aggregate, which
-    // proves the business key was set from it
+    // the task after the start event ran against exactly that aggregate. This proves that
+    // the business key was set from it.
     awaitUntil(
         () -> "recordStart".equals(
             repository
@@ -100,8 +100,8 @@ public class Camunda7BpmsInitiatedStartIT {
             .count() == 0,
         "the workflow started by the timer to run to its end");
 
-    // The end is reported to the application, in the transaction which
-    // ended the workflow - so it is visible as soon as the instance is gone
+    // The end is reported to the application in the transaction which ended the workflow.
+    // So it is visible as soon as the instance is gone.
     awaitUntil(
         () -> repository
             .findById(aggregate.getId())

@@ -8,13 +8,13 @@ import java.util.List;
 import io.vanillabp.spi.service.NoSyncWithBPMS;
 
 /**
- * The nested value these tests navigate. It is a plain object built on demand from
- * the flat columns of {@link ExprData}, so the object graph the version-1 EL resolver
- * would have navigated exists without JPA having to model it.
+ * The nested value which these tests navigate. It is a plain object, built on demand from
+ * the flat columns of {@link ExprData}. So the object graph which the version-1 EL resolver
+ * would have navigated exists, without JPA having to model it.
  * <p>
- * One attribute carries {@code @NoSyncWithBPMS}, which makes this class opt-out: the sync
- * model shares everything else and leaves out exactly that one - the missing key an
- * expression meets without any error.
+ * One attribute carries {@code @NoSyncWithBPMS}, which makes this class opt-out. The sync
+ * model shares everything else and leaves out exactly that one. It is the missing key which
+ * an expression meets without any error.
  */
 public class ExprOrder {
 
@@ -76,8 +76,8 @@ public class ExprOrder {
   }
 
   /**
-   * How many items the order has - a method the version-1 grammar could call on the live
-   * object and which no map has.
+   * How many items the order has. The version-1 grammar could call this method on the live
+   * object, and no map has it.
    */
   public int getItemCount() {
 
@@ -86,8 +86,8 @@ public class ExprOrder {
   }
 
   /**
-   * The attribute the sync model does NOT share: an expression reading
-   * <code>order.internalCode</code> looks up a key the map has not got.
+   * The attribute which the sync model does NOT share. An expression which reads
+   * <code>order.internalCode</code> looks up a key the map does not have.
    */
   @NoSyncWithBPMS
   public String getInternalCode() {

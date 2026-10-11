@@ -15,50 +15,50 @@ import org.slf4j.LoggerFactory;
  * Turns the values a workflow aggregate shares with the BPMS into Camunda 7 process
  * variables.
  * <p>
- * The core hands over a normalized shape already: scalars, {@link Map}s of nested types
- * and {@link Collection}s of them, where everything the engine cannot compare has been
- * turned into its string form by the sync model. What is left is which variable the
- * engine gets:
+ * The core already hands over a normalized shape: scalars, {@link Map}s of nested types
+ * and {@link Collection}s of them. The sync model has turned everything the engine cannot
+ * compare into its string form. What is left is the question which variable the engine
+ * gets:
  * <ul>
  * <li><b>a value the engine has a variable type for is written as it is</b>: a short, an
  * integer, a long, a double, a boolean, a string, a date and bytes. A BPMN condition
- * compares it (<code>${amount &gt; 1000}</code>) and Cockpit shows a value instead of a
- * document. A <code>Character</code> is written as a string, which costs nothing: EL
+ * compares it (<code>${amount &gt; 1000}</code>), and Cockpit shows a value instead of a
+ * document. A <code>Character</code> is written as a string, which costs nothing. EL
  * compares a character to <code>'A'</code> and to <code>"A"</code> alike, and a string
- * variable is a readable one;</li>
+ * variable is readable;</li>
  * <li><b>everything else keeps its class in an object variable</b> of the configured
  * serialization format (see {@link Camunda7SerializationFormats}). That is a nested
- * structure, and it is a number this engine has no type for: a <code>BigDecimal</code>, a
- * <code>BigInteger</code> or a <code>Float</code>. Those keep their class because the
- * application's own value is what a model used to read: <code>120.50</code> widened to a
- * double renders as <code>120.5</code>, a <code>BigInteger</code> above 2^53 loses its
- * last digits, and neither says a word about it. Nothing is lost by keeping them either,
- * since EL coerces both sides of a comparison to <code>BigDecimal</code> as soon as one
- * of them is one, so <code>${total &gt; 100}</code> compares numbers whatever the class
- * is. The format also keeps dot-notated expressions working: the engine deserializes the
- * variable and EL navigates it, so <code>${order.customer.name}</code> reads what it
- * says. Which format is the application's choice - <code>application/json</code> (the
- * SPIN JSON dataformat), <code>application/xstream</code>
- * (<a href="https://github.com/RasPelikan/camunda-xstream">camunda-xstream</a>) or
- * whatever dataformat it registers - and the adapter only passes it on.</li>
+ * structure, or a number this engine has no type for: a <code>BigDecimal</code>, a
+ * <code>BigInteger</code> or a <code>Float</code>. These numbers keep their class because a
+ * model should read the application's own value. <code>120.50</code> widened to a double
+ * renders as <code>120.5</code>. A <code>BigInteger</code> above 2^53 loses its last
+ * digits. Neither says a word about it. And keeping the class loses nothing. EL turns both
+ * sides of a comparison into <code>BigDecimal</code> as soon as one of them is one. So
+ * <code>${total &gt; 100}</code> compares numbers, whatever the class is. The format also
+ * keeps dot-notated expressions working. The engine deserializes the variable and EL
+ * navigates it, so <code>${order.customer.name}</code> reads what it says. The application
+ * chooses the format: <code>application/json</code> (the SPIN JSON dataformat),
+ * <code>application/xstream</code>
+ * (<a href="https://github.com/RasPelikan/camunda-xstream">camunda-xstream</a>) or any
+ * dataformat it registers. The adapter only passes it on.</li>
  * </ul>
- * Without a configured format the engine falls back to Java serialization: readable to
- * nobody in Cockpit, and the engine's database then holds the application's class
- * versions. That is worth exactly one warning, which this class logs the first time it
- * writes such a value.
+ * Without a configured format, the engine falls back to Java serialization. Nobody can read
+ * that in Cockpit, and the engine's database then holds the application's class versions.
+ * That is worth exactly one warning. This class logs it the first time it writes such a
+ * value.
  * <p>
- * What is written is decision 1 in the repository's DECISIONS.md, in which format is
- * decision 9 in the repository's DECISIONS.md, and that a number the engine has no type for
- * keeps its class rather than being widened is decision 16 in the repository's
- * DECISIONS.md.
+ * Decision 1 in the repository's DECISIONS.md says what is written. Decision 9 in the
+ * repository's DECISIONS.md says in which format. Decision 16 in the repository's
+ * DECISIONS.md says that a number the engine has no type for keeps its class and is not
+ * widened.
  */
 public final class Camunda7Variables {
 
   private static final Logger log = LoggerFactory.getLogger(Camunda7Variables.class);
 
   /**
-   * The missing-format warning is logged once per JVM: it names a configuration gap, and
-   * one line per variable would bury it.
+   * The missing-format warning is logged once per JVM. It names a configuration gap, and one
+   * line per variable would bury it.
    */
   private static final AtomicBoolean MISSING_FORMAT_REPORTED = new AtomicBoolean();
 
@@ -81,7 +81,7 @@ public final class Camunda7Variables {
     if (sharedValues == null) {
       return variables;
     }
-    // a plain put, NOT Map.of: a shared attribute may well be null and the engine
+    // a plain put, NOT Map.of. A shared attribute may well be null, and the engine
     // stores a null variable just fine
     sharedValues.forEach((
         name,
@@ -114,9 +114,9 @@ public final class Camunda7Variables {
    * Camunda 7 stores a short, an integer, a long, a double, a boolean, a string, a date
    * and bytes as themselves. A structure has never fitted any of those. A
    * <code>BigDecimal</code>, a <code>BigInteger</code> and a <code>Float</code> do not
-   * fit either, and widening them to a double is what this adapter used to do: it made
-   * the value the model reads a different one than the value the application holds, which
-   * is a price nobody was told about and which bought nothing.
+   * fit either. This adapter used to widen them to a double. Then the model read a different
+   * value than the one the application holds. Nobody was told about that price, and it bought
+   * nothing.
    *
    * @param value One shared value, which may be <code>null</code>
    * @return Whether it can only travel as an object variable
@@ -142,8 +142,8 @@ public final class Camunda7Variables {
 
     if ((serializationFormat == null) || serializationFormat.isBlank()) {
       reportMissingFormat(name);
-      // no format configured: the engine's own default decides (which an application
-      // may well have set on the engine itself)
+      // no format configured, so the engine's own default decides. An application may well
+      // have set that default on the engine itself
       return Variables
           .objectValue(value)
           .create();
@@ -159,10 +159,10 @@ public final class Camunda7Variables {
    * Says once that a value the engine has no variable type for is stored in whatever the
    * engine defaults to.
    * <p>
-   * A structure has always met this warning. A number the engine has no type for meets it
-   * as well now, so an application sharing nothing but plain attributes can read it for
-   * the first time - which is right, because Java serialization really is what stores such
-   * a value.
+   * A structure has always caused this warning. Now a number the engine has no type for
+   * causes it as well. So an application which shares nothing but plain attributes may see
+   * it for the first time. That is right, because Java serialization really stores such a
+   * value.
    */
   private static void reportMissingFormat(
       final String name) {

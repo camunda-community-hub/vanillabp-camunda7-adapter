@@ -1,9 +1,10 @@
 package io.vanillabp.camunda7.sync;
 
 /**
- * Which serialization format Camunda 7 stores a shared value it has no variable type for
- * in - a nested value, and a number the engine cannot store as itself - resolved per
- * workflow with a fallback to the workflow module and to the adapter:
+ * The serialization format in which Camunda 7 stores a shared value it has no variable type
+ * for. Such a value is a nested value, or a number the engine cannot store as itself. The
+ * format is resolved per workflow, with a fallback to the workflow module and to the
+ * adapter:
  *
  * <pre>
  * vanillabp.workflow-modules.&lt;module&gt;.workflows.&lt;workflow&gt;.adapters.&lt;id&gt;.serialization-format
@@ -15,30 +16,28 @@ package io.vanillabp.camunda7.sync;
  * <code>application/json</code> for the SPIN JSON dataformat or
  * <code>application/xstream</code> for
  * <a href="https://github.com/RasPelikan/camunda-xstream">camunda-xstream</a>. The engine needs the
- * matching dataformat on its classpath - which is the application's dependency, and the
- * adapter-level value is additionally applied to the engine's
- * <code>defaultSerializationFormat</code>, so an application configures the format once
- * and nowhere else.
+ * matching dataformat on its classpath. That is a dependency of the application. The
+ * adapter-level value is also applied to the engine's <code>defaultSerializationFormat</code>.
+ * So an application configures the format once and nowhere else.
  * <p>
  * Why it matters: a nested value stored in a readable format keeps DOT-NOTATED
- * expressions working (<code>${order.customer.name}</code>), because the engine
- * deserializes the variable before EL navigates it. Without any format the engine falls
- * back to Java serialization, which shows a blob in Cockpit and ties the engine's database
- * to the application's class versions - so the adapter says so, once, when it writes such
- * a value.
+ * expressions working (<code>${order.customer.name}</code>). The engine deserializes the
+ * variable before EL navigates it. Without any format, the engine falls back to Java
+ * serialization. Cockpit then shows a blob, and the engine's database depends on the
+ * application's class versions. So the adapter says so, once, when it writes such a value.
  * <p>
- * A format is not free of loss either. It decides what a value reads as, and JSON has one
- * number type, so a decimal of <code>120.50</code> comes back as <code>120.5</code>. The
- * deployment measures that through the engine's own serializer and warns about every
- * attribute the models read whose value would not come back as it went in (see
+ * A format can lose something too. It decides what a value reads as. JSON has one number
+ * type, so a decimal of <code>120.50</code> comes back as <code>120.5</code>. The deployment
+ * measures that through the engine's own serializer. It warns about every attribute the
+ * models read whose value would not come back as it went in (see
  * {@link Camunda7SerializationRoundTrip}).
  * <p>
- * Implemented by the platform integrations, since each of them binds its own
- * configuration; the resolution across the three levels is
- * {@link #firstConfigured(String...)}.
+ * The platform integrations implement this, because each of them binds its own
+ * configuration. {@link #firstConfigured(String...)} does the resolution across the three
+ * levels.
  * <p>
- * Why such a value is written in the engine's own format instead of as a JSON string is decision
- * 9 in the repository's DECISIONS.md.
+ * Decision 9 in the repository's DECISIONS.md says why such a value is written in the
+ * engine's own format and not as a JSON string.
  */
 public interface Camunda7SerializationFormats {
 
@@ -54,8 +53,8 @@ public interface Camunda7SerializationFormats {
       String bpmnProcessId);
 
   /**
-   * The first value which is configured, most specific first - the resolution every
-   * platform implementation needs and none should re-invent.
+   * The first value which is configured, most specific first. Every platform implementation
+   * needs this resolution, and none should write it again.
    *
    * @param candidates The candidates, most specific first
    * @return The first non-blank value or <code>null</code>

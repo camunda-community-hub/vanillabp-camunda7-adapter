@@ -6,23 +6,23 @@ import org.camunda.bpm.engine.impl.pvm.process.ScopeImpl;
 import org.camunda.bpm.engine.impl.util.xml.Element;
 
 /**
- * Aligns the embedded engine's transaction boundaries with remote BPMS (Version-1
- * behavior): service-like tasks get <code>asyncBefore</code> AND
- * <code>asyncAfter</code> - every task runs in its own job transaction, so the
- * transaction ends when the task completes. Running several service tasks within
- * one transaction is an anti-pattern (its scope would be engine-specific and
- * surprising, and a late failure would roll back completed tasks). Wait-state
- * tasks (user/receive tasks) only get <code>asyncAfter</code>. Applied at parse
- * time - the deployed BPMN XML stays untouched, the parsed process definition
- * carries the flags.
+ * Makes the transaction boundaries of the embedded engine work like those of a remote BPMS, as
+ * in Version 1. Service-like tasks get <code>asyncBefore</code> AND <code>asyncAfter</code>.
+ * So every task runs in its own job transaction, and the transaction ends when the task
+ * completes. Running several service tasks in one transaction is an anti-pattern. Its scope
+ * would depend on the engine and surprise people. And a late failure would roll back tasks
+ * which had already completed. Wait-state tasks (user and receive tasks) only get
+ * <code>asyncAfter</code>. This happens at parse time. The deployed BPMN XML stays as it is,
+ * only the parsed process definition carries the flags.
  * <p>
- * Why this adapter edits the model it deploys at all, and what bounds each edit, is decision 5 in
- * the repository's DECISIONS.md.
+ * Decision 5 in the repository's DECISIONS.md says why this adapter changes the model it deploys
+ * at all, and what limits each change.
  * <p>
- * The engine runs this for every model it parses, whoever deployed it. Only a process a
- * <code>&#64;WorkflowService</code> class of this application claims gets anything: a process
- * this application deploys without claiming it, and a process somebody else deployed into the
- * same engine, stay as modelled, flags included. See decision 43 of {@code DECISIONS.md}.
+ * The engine runs this for every model it parses, whoever deployed it. Only a process which a
+ * <code>&#64;WorkflowService</code> class of this application claims gets anything. Two kinds of
+ * process stay as modelled, flags included: a process this application deploys without claiming
+ * it, and a process somebody else deployed into the same engine. See decision 43 of
+ * {@code DECISIONS.md}.
  */
 public class Camunda7AsyncBpmnParseListener extends AbstractBpmnParseListener {
 
@@ -30,37 +30,37 @@ public class Camunda7AsyncBpmnParseListener extends AbstractBpmnParseListener {
       .getLogger(Camunda7AsyncBpmnParseListener.class);
 
   /**
-   * Delivers CANCELED lifecycle events to subscribing handlers - attached as an END
-   * execution listener to service-like activities (see
+   * Delivers CANCELED lifecycle events to the handlers which subscribe to them. It is attached
+   * as an END execution listener to service-like activities (see
    * {@link Camunda7TaskCancellationListener}).
    */
   private final Camunda7TaskCancellationListener cancellationListener;
 
   /**
-   * Notifies optional <code>&#64;WorkflowTask</code> handlers about user-task
-   * lifecycle events - attached to user tasks for the engine's global
-   * CREATE and DELETE task-listener events.
+   * Tells optional <code>&#64;WorkflowTask</code> handlers about the lifecycle events of user
+   * tasks. It is attached to user tasks for the engine's CREATE and DELETE task-listener
+   * events.
    */
   private final Camunda7UserTaskEventListener userTaskEventListener;
 
   /**
-   * Decides what a start of a workflow means and lets the application build the workflow
-   * aggregate where nobody started it through VanillaBP - attached to every start event the
-   * process itself holds. May be <code>null</code>: an engine built without it simply does
-   * not serve such processes.
+   * Decides what a start of a workflow means. Where nobody started the workflow through
+   * VanillaBP, it lets the application build the workflow aggregate. It is attached to every
+   * start event of the process itself. May be <code>null</code>. An engine built without it
+   * does not serve such processes.
    */
   private final java.util.function.Function<io.vanillabp.spi.service.BpmsStartTrigger.Kind, org.camunda.bpm.engine.delegate.ExecutionListener> bpmsInitiatedStartListenerFactory;
 
   /**
-   * Tells the application that a workflow ended - attached to the PROCESS
-   * scope, but only where a <code>&#64;WorkflowEnded</code> method exists. May be
-   * <code>null</code>: an engine built without it never notifies.
+   * Tells the application that a workflow ended. It is attached to the PROCESS scope, but only
+   * where a <code>&#64;WorkflowEnded</code> method exists. May be <code>null</code>. An engine
+   * built without it never tells.
    */
   private io.vanillabp.camunda7.wiring.Camunda7WorkflowEndedListener workflowEndedListener;
 
   /**
-   * Decides whether a process definition needs the end listener - the pair of
-   * (tenant, process definition key) is what the engine reports at parse time.
+   * Decides whether a process definition needs the end listener. It takes the tenant and the
+   * process definition key, because that pair is what the engine reports at parse time.
    */
   private java.util.function.BiPredicate<String, String> workflowEndedHandlerExists;
 
@@ -80,8 +80,8 @@ public class Camunda7AsyncBpmnParseListener extends AbstractBpmnParseListener {
   }
 
   /**
-   * Whether the application claims the process the element belongs to. Without a registry,
-   * which only an engine built for a test lacks, every process counts as claimed.
+   * Whether the application claims the process the element belongs to. Only an engine built for
+   * a test has no registry. Then every process counts as claimed.
    *
    * @param scope The scope the engine is parsing
    * @return Whether this listener may change anything of the process
@@ -126,13 +126,12 @@ public class Camunda7AsyncBpmnParseListener extends AbstractBpmnParseListener {
         "Camunda7: end listener attached to process definition '{}' (tenant '{}')",
         processDefinition.getKey(),
         processDefinition.getTenantId());
-    // 'addListener' and not the deprecated 'addExecutionListener', which does nothing but
-    // delegate here, and not 'addBuiltInListener' either: a built-in listener is the
-    // ENGINE's own and is the only kind which still runs when a caller skips custom
-    // listeners (AbstractEventAtomicOperation asks getBuiltInListeners then). Moving the
-    // notification there would make it fire on a forced deletion as well, which is a
-    // behaviour change, and the cancellation and start listeners below register the same
-    // way
+    // 'addListener', not the deprecated 'addExecutionListener', which only delegates here.
+    // And not 'addBuiltInListener' either. A built-in listener belongs to the ENGINE. It is
+    // the only kind which still runs when a caller skips custom listeners
+    // (AbstractEventAtomicOperation then asks getBuiltInListeners). If the notification moved
+    // there, it would fire on a forced deletion as well. That would change the behaviour. The
+    // cancellation and start listeners below register the same way
     processDefinition
         .addListener(
             org.camunda.bpm.engine.delegate.ExecutionListener.EVENTNAME_END,
@@ -144,13 +143,13 @@ public class Camunda7AsyncBpmnParseListener extends AbstractBpmnParseListener {
    * Attaches the cancellation listener to every element of the process which carries a listener
    * somebody modelled and this application serves.
    * <p>
-   * Read here rather than in one of the {@code parseXxx} methods because a listener may sit on
-   * any element a modeller can select, and asking the parsed process once is a shorter answer
-   * than a method per element type. The engine has parsed the whole scope by the time this runs,
-   * so the activities are there to be found.
+   * This is read here and not in one of the {@code parseXxx} methods. A listener may sit on any
+   * element a modeller can select. Asking the parsed process once is shorter than a method per
+   * element type. When this runs, the engine has parsed the whole scope, so the activities are
+   * there to be found.
    * <p>
    * An element which already carries the listener is left alone. Every service-like activity
-   * does, because the transaction boundaries put it there, and a second copy would report one
+   * carries it, because the transaction boundaries put it there. A second copy would report one
    * cancellation twice.
    *
    * @param processDefinition The parsed process
@@ -166,7 +165,7 @@ public class Camunda7AsyncBpmnParseListener extends AbstractBpmnParseListener {
         .resolveWorkflowModuleId(processDefinition.getTenantId(), processDefinition.getKey());
     if (workflowModuleId == null) {
       // a process of another application on the same engine, or one this adapter has not wired
-      // yet: nothing of it is VanillaBP's business
+      // yet. None of it is VanillaBP's business
       return;
     }
     cancellationListener
@@ -175,8 +174,8 @@ public class Camunda7AsyncBpmnParseListener extends AbstractBpmnParseListener {
         .forEach(listener -> {
           final var activity = processDefinition.findActivity(listener.elementId());
           if (activity == null) {
-            // a listener on something which is no activity of the engine, a sequence flow being
-            // the case a modeller reaches: such an element is never canceled
+            // a listener on something which is no activity of the engine. A modeller gets there
+            // with a sequence flow. Such an element is never canceled
             log.debug(
                 "Camunda7: the element '{}' of process definition '{}' carries a served listener "
                     + "but is no activity, so it is never canceled and nothing is attached",
@@ -214,9 +213,9 @@ public class Camunda7AsyncBpmnParseListener extends AbstractBpmnParseListener {
   }
 
   /**
-   * The constructor the platform integrations use. The factory is asked per start event
-   * the engine fires on its own, because the listener has to know which kind of trigger it
-   * sits on and that is decided while the model is parsed.
+   * The constructor the platform integrations use. The factory is asked once per start event
+   * the engine fires on its own. The listener has to know which kind of trigger it sits on, and
+   * that is decided while the model is parsed.
    *
    * @param cancellationListener What is attached to an activity whose cancelation a method
    *          wants to hear about
@@ -245,13 +244,13 @@ public class Camunda7AsyncBpmnParseListener extends AbstractBpmnParseListener {
       return;
     }
     // a start event of an event subprocess fires inside a workflow which is already
-    // running and already has its aggregate, so nothing has to be built for it
+    // running and already has its aggregate. So nothing has to be built for it
     if (!Camunda7StartEvents.startsTheWorkflow(scope)) {
       return;
     }
-    // EVERY start event of the process carries the listener, the plain one included: what
-    // a start means is read from the state of the workflow and not from the kind of its
-    // start event, see decision 28 in the repository's DECISIONS.md
+    // EVERY start event of the process carries the listener, the plain one included. What a
+    // start means is read from the state of the workflow, not from the kind of its start
+    // event. See decision 28 in the repository's DECISIONS.md
     final var kind = Camunda7StartEvents.kindOf(startEventElement);
     activity
         .addListener(
@@ -337,9 +336,9 @@ public class Camunda7AsyncBpmnParseListener extends AbstractBpmnParseListener {
       return;
     }
     asyncAfterOnly(activity);
-    // user-task lifecycle notifications: the engine's global CREATE
-    // and DELETE task-listener events reach optional @WorkflowTask handlers -
-    // BUILT-IN listeners run before any modeller-defined ones (V1 semantics)
+    // lifecycle notifications of user tasks. The engine's CREATE and DELETE task-listener
+    // events reach optional @WorkflowTask handlers. BUILT-IN listeners run before the ones a
+    // modeller defined, as in V1
     final var taskDefinition = ((org.camunda.bpm.engine.impl.bpmn.behavior.UserTaskActivityBehavior) activity
         .getActivityBehavior()).getTaskDefinition();
     taskDefinition.addBuiltInTaskListener(

@@ -15,56 +15,59 @@ import io.vanillabp.integration.adapter.spi.workflowstart.BpmsInitiatedStartInvo
 import io.vanillabp.spi.service.BpmsStartTrigger;
 
 /**
- * Attached to EVERY start event the process itself holds (see
- * {@link Camunda7AsyncBpmnParseListener}), this listener reports the start of a workflow to
- * the core and writes the name that workflow gets into the instance's BUSINESS KEY, which
- * is how everything else in this adapter finds a workflow again.
+ * This listener sits on EVERY start event of the process itself (see
+ * {@link Camunda7AsyncBpmnParseListener}). It reports the start of a workflow to the core. And
+ * it writes the name of that workflow into the instance's BUSINESS KEY. Everything else in this
+ * adapter finds a workflow again by that key.
  * <p>
- * It runs inside the engine's own transaction (the timer job's, respectively the
- * command's), so aggregate and process instance commit together.
+ * It runs inside the engine's own transaction (the timer job's or the command's). So aggregate
+ * and process instance commit together.
  * <p>
- * What a start means is not read from the kind of its start event. On Camunda 7 anybody
- * with access to the engine can start any of these processes, with a business key or
- * without one, so the kind of the event says nothing about who started the workflow. The
- * state of the workflow does, and the core reads it: an instance carrying a key whose
- * workflow aggregate exists is the application's own start (or the second delivery of this
- * very listener), an instance carrying no key was started past VanillaBP and its aggregate
- * is built by the application, and an instance carrying a key nothing carries is refused,
- * because VanillaBP names a workflow and nobody else. All of that is decision 28 in the
- * repository's DECISIONS.md, which supersedes decision 24 there.
+ * What a start means is not read from the kind of its start event. On Camunda 7 anybody with
+ * access to the engine can start any of these processes, with a business key or without one.
+ * So the kind of the event says nothing about who started the workflow. The state of the
+ * workflow does, and the core reads it:
+ * <ul>
+ * <li>An instance with a key whose workflow aggregate exists is the application's own start.
+ * Or it is the second delivery of this listener.</li>
+ * <li>An instance with no key was started past VanillaBP. The application builds its
+ * aggregate.</li>
+ * <li>An instance with a key which no aggregate has is refused. Only VanillaBP names a
+ * workflow.</li>
+ * </ul>
+ * All of that is decision 28 in the repository's DECISIONS.md. It replaces decision 24 there.
  * <p>
- * A called process is the one start which brings no key and is nobody's foreign start. This
- * engine hands a called process no business key, so
- * {@link Camunda7CallActivities} writes the propagation into the model of a call activity
- * whose called process works on the aggregate of its caller. A call activity which names
- * the process to call in an EXPRESSION leaves nothing to write it onto, because nobody
- * knows while the model is deployed which process will be called. Such an instance arrives
- * here without a key, and this listener answers the question the model could not. It finds
- * the call activity which started the instance in the execution tree and asks the core
- * whether the two processes work on one workflow aggregate. Where they do, the instance is
- * given the caller's name. The same model then behaves on this engine the way it behaves on
+ * A called process is the one start which brings no key and still is nobody's foreign start.
+ * This engine gives a called process no business key. So {@link Camunda7CallActivities} writes
+ * the hand-over of the key into the model of a call activity whose called process works on the
+ * aggregate of its caller. But a call activity may name the process to call in an EXPRESSION.
+ * Then nobody knows at deployment which process will be called, and there is nothing to write
+ * it onto. Such an instance arrives here without a key, and this listener answers the question
+ * the model could not. It finds the call activity which started the instance in the execution
+ * tree. Then it asks the core whether the two processes work on one workflow aggregate. Where
+ * they do, the instance gets the caller's name. So the same model behaves on this engine as on
  * a BPMS which copies the caller's values by itself.
  * <p>
- * A process the application declares only as a secondary process is no workflow of its own,
- * and the core says so through
- * {@link BpmsInitiatedStartInvoker#startsAWorkflowOfItsOwn(String, String)}. For such a
- * process this listener only hands the caller's name on and reports nothing. It stays on the
- * start event because a call activity naming its process in an expression leaves the name to
+ * A process the application declares only as a secondary process is no workflow of its own.
+ * The core says so through
+ * {@link BpmsInitiatedStartInvoker#startsAWorkflowOfItsOwn(String, String)}. For such a process
+ * this listener only hands the caller's name on and reports nothing. It stays on the start
+ * event, because a call activity which names its process in an expression leaves the name to
  * this listener.
  * <p>
- * One thing stays invisible, with open eyes: a key somebody chose which happens to be the
- * id of an existing workflow aggregate attaches that instance to it without a word. Nothing
- * on Camunda 7 can catch that, because catching it needs two values naming the instance and
- * Camunda 7 keeps one.
+ * One thing stays invisible, and we know it. Somebody may choose a key which happens to be the
+ * id of an existing workflow aggregate. Then that instance is attached to the aggregate without
+ * a word. Nothing on Camunda 7 can catch that. Catching it needs two values which name the
+ * instance, and Camunda 7 keeps one.
  * <p>
- * Why a listener is added to the deployed model at all is decision 5 in the repository's
- * DECISIONS.md.
+ * Decision 5 in the repository's DECISIONS.md says why a listener is added to the deployed
+ * model at all.
  * <p>
- * What this listener costs the deployed model is nothing. It is attached to the element the
- * engine PARSED, so the bytes in the engine stay the ones the modeller wrote and no job is
- * created for it. An adapter which writes its listener into the model before deploying it
- * pays per start event and can count the difference; there is nothing here to count, which
- * the repository's README says where the start is described.
+ * This listener costs the deployed model nothing. It is attached to the element the engine
+ * PARSED. So the bytes in the engine stay the ones the modeller wrote, and no job is created
+ * for it. An adapter which writes its listener into the model before deploying it pays per
+ * start event and can count the difference. Here there is nothing to count. The repository's
+ * README says so where it describes the start.
  */
 public class Camunda7BpmsInitiatedStartListener implements ExecutionListener {
 
@@ -76,16 +79,16 @@ public class Camunda7BpmsInitiatedStartListener implements ExecutionListener {
   private final Camunda7TaskRegistry taskRegistry;
 
   /**
-   * Whether a workflow service of this application serves the given (workflow module, BPMN
-   * process). The engine holds the definitions of whatever was deployed against its
-   * database, this application's unclaimed processes included, and a start of one of those
-   * is none of VanillaBP's business - the core has no workflow service to answer for it.
+   * Whether a workflow service of this application serves the given workflow module and BPMN
+   * process. The engine holds the definitions of whatever was deployed against its database,
+   * this application's unclaimed processes included. A start of one of those is none of
+   * VanillaBP's business. The core has no workflow service to answer for it.
    */
   private final java.util.function.BiPredicate<String, String> servedByThisApplication;
 
   /**
-   * Which kind of start event this listener sits on, decided at parse time. It is reported
-   * to the application and decides nothing here.
+   * Which kind of start event this listener sits on, decided at parse time. It is reported to
+   * the application and decides nothing here.
    */
   private final BpmsStartTrigger.Kind kind;
 
@@ -166,16 +169,16 @@ public class Camunda7BpmsInitiatedStartListener implements ExecutionListener {
       return;
     }
 
-    // the name of the calling workflow, where this instance continues its business case.
-    // The model of a call activity naming its called process in an expression cannot say it
+    // the name of the calling workflow, where this instance continues its business case. A
+    // call activity which names its called process in an expression cannot say it in the model
     final var inheritedBusinessKey = ownBusinessKey == null
         ? theNameOfTheCallingWorkflow(execution)
         : null;
 
     if (!bpmsInitiatedStartInvoker.startsAWorkflowOfItsOwn(workflowModuleId, bpmnProcessId)) {
       // a called process is a step of the workflow which called it, so its start is not
-      // reported. What is left to do is the name, which the called instance needs for its
-      // tasks, see decision 44 in the repository's DECISIONS.md
+      // reported. Only the name is left to do. The called instance needs it for its tasks. See
+      // decision 44 in the repository's DECISIONS.md
       if (inheritedBusinessKey != null) {
         ((PvmExecutionImpl) execution).setProcessBusinessKey(inheritedBusinessKey);
       }
@@ -206,7 +209,7 @@ public class Camunda7BpmsInitiatedStartListener implements ExecutionListener {
 
     if (inheritedBusinessKey != null) {
       // the called process continues the business case of its caller, so it goes by the
-      // same name - written here because the deployed model had nothing to carry it
+      // same name. It is written here because the deployed model had nothing to carry it
       ((PvmExecutionImpl) execution).setProcessBusinessKey(inheritedBusinessKey);
       log
           .debug(
@@ -221,8 +224,8 @@ public class Camunda7BpmsInitiatedStartListener implements ExecutionListener {
     }
 
     if (businessKey != null) {
-      // the instance already carries the name of a workflow aggregate which exists - the
-      // core refuses every other case, so there is nothing to write and nothing to say
+      // the instance already carries the name of a workflow aggregate which exists. The
+      // core refuses every other case. So there is nothing to write and nothing to say
       log
           .debug(
               "Camunda7: the start of '{}' of workflow module '{}' at start event '{}' names workflow "
@@ -234,15 +237,15 @@ public class Camunda7BpmsInitiatedStartListener implements ExecutionListener {
       return;
     }
 
-    // nobody named this workflow, so the application just did, and the name becomes this
-    // adapter's handle on it (the business key) - set within the same transaction which
+    // nobody named this workflow, so the application just did. The name becomes this
+    // adapter's handle on it (the business key). It is set in the same transaction which
     // created the instance
     ((PvmExecutionImpl) execution).setProcessBusinessKey(result.workflowAggregateId());
 
-    // worth a line of its own: nobody asked VanillaBP for this workflow, and the
-    // application learns about it from here on. INFO rather than WARN because the
-    // workflow is in order once it has its aggregate, and once per workflow rather
-    // than once per delivery
+    // worth a line of its own. Nobody asked VanillaBP for this workflow, and the
+    // application learns about it only from here on. INFO and not WARN, because the
+    // workflow is in order once it has its aggregate. And it comes once per workflow,
+    // not once per delivery
     log
         .info(
             "Camunda7: '{}' of workflow module '{}' was started past VanillaBP (instance '{}', start "
@@ -259,10 +262,10 @@ public class Camunda7BpmsInitiatedStartListener implements ExecutionListener {
    * The name of the workflow whose call activity started this instance, where the called
    * process works on the workflow aggregate of that workflow.
    * <p>
-   * The question is the one {@link Camunda7CallActivities} asks while a model is prepared,
-   * and it is asked through the same method here, so the two mechanisms which inherit from
-   * a caller read one answer. It is asked again because a call activity naming the process
-   * to call in an expression names it while the workflow runs and not while the model is
+   * {@link Camunda7CallActivities} asks the same question while a model is prepared. Here it
+   * is asked through the same method. So the two ways of inheriting from a caller read one
+   * answer. It is asked again because a call activity may name the process to call in an
+   * expression. Such a call activity names it while the workflow runs, not while the model is
    * deployed.
    *
    * @param execution The execution a start event of the called process stands in
@@ -279,7 +282,7 @@ public class Camunda7BpmsInitiatedStartListener implements ExecutionListener {
     }
     final var callersName = callingExecution.getProcessBusinessKey();
     if ((callersName == null) || callersName.isBlank()) {
-      // the caller goes by no name either, so there is nothing to inherit and this start
+      // the caller goes by no name either. So there is nothing to inherit, and this start
       // is reported as the start it is
       return null;
     }
@@ -291,9 +294,8 @@ public class Camunda7BpmsInitiatedStartListener implements ExecutionListener {
 
   /**
    * The execution of the call activity which started this instance, or <code>null</code>
-   * where no call activity did. The engine keeps it on the process instance rather than on
-   * the execution a start event stands in, so the scopes of this process are walked up
-   * first.
+   * where no call activity did. The engine keeps it on the process instance, not on the
+   * execution a start event stands in. So this walks up the scopes of this process first.
    */
   private static DelegateExecution theExecutionWhichCalledThisOne(
       final DelegateExecution execution) {
@@ -312,7 +314,7 @@ public class Camunda7BpmsInitiatedStartListener implements ExecutionListener {
       final String processVersion,
       final String businessKey) {
 
-    // what the model set before the start event completed: expressions, input
+    // what the model set before the start event completed. That is expressions, input
     // mappings, and for a signal the payload the broadcast carried
     final Map<String, Object> variables = new HashMap<>(execution.getVariables());
     final var startEventId = execution.getCurrentActivityId();
@@ -341,10 +343,10 @@ public class Camunda7BpmsInitiatedStartListener implements ExecutionListener {
 
       @Override
       public String getBusinessKey() {
-        // the name this instance goes by, which on Camunda 7 is a workflow aggregate's id
-        // and nothing else: the one it arrived with, or the one its caller goes by where
-        // the called process continues that business case. The core reads it and decides
-        // from it what this start is
+        // the name this instance goes by. On Camunda 7 that is a workflow aggregate's id
+        // and nothing else. It is the one the instance arrived with. Or it is the one its
+        // caller goes by, where the called process continues that business case. The core
+        // reads it and decides from it what this start is
         return businessKey;
       }
 
@@ -365,10 +367,10 @@ public class Camunda7BpmsInitiatedStartListener implements ExecutionListener {
 
       @Override
       public boolean runInCurrentTransaction() {
-        // an embedded engine sharing the application's transaction: the aggregate
+        // an embedded engine shares the application's transaction. Then the aggregate
         // has to be written in the transaction which creates the instance. An engine on
         // a datasource of its own runs that transaction on a resource the application's
-        // persistence cannot join, so VanillaBP opens its own and the two commit one
+        // persistence cannot join. So VanillaBP opens its own, and the two commit one
         // after the other
         return !taskRegistry.engineRunsOnItsOwnDataSource();
       }

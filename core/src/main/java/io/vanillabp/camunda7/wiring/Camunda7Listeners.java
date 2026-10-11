@@ -17,31 +17,32 @@ import org.camunda.bpm.model.xml.instance.ModelElementInstance;
  *
  * <h2>What a modelled listener is</h2>
  *
- * A {@code camunda:executionListener} of the BPMN, written with a
- * {@code camunda:expression} or a {@code camunda:delegateExpression} - the two forms whose
- * expression text names a task definition, which is what a {@code @WorkflowTask} method is
- * matched by on this adapter. Those two are served when the application asks for it.
+ * A {@code camunda:executionListener} of the BPMN, written with a {@code camunda:expression}
+ * or a {@code camunda:delegateExpression}. In these two forms the expression text names a task
+ * definition. On this adapter, a {@code @WorkflowTask} method is matched by that task
+ * definition. Those two are served when the application asks for it.
  * <p>
- * A {@code camunda:class} and a {@code camunda:script} listener are NOT among them and
- * {@code allow-listeners} is not the way out for either: there is no expression naming a task
- * definition, so no method can be matched, and the engine runs such a listener itself. So
+ * A {@code camunda:class} and a {@code camunda:script} listener are NOT among them. And
+ * {@code allow-listeners} is not the way out for either. There is no expression which names a
+ * task definition, so no method can be matched. The engine runs such a listener itself. So
  * nothing stalls and nothing is silent - which is why they cost a line of the startup report
  * rather than the boot.
  * <p>
- * A {@code camunda:taskListener} is not read at all. VanillaBP notifies the
- * {@code @WorkflowTask} method of a user task itself, on creation and on cancellation,
- * through listeners it attaches to the parsed element; a second route into the same moment
+ * A {@code camunda:taskListener} is not read at all. VanillaBP itself tells the
+ * {@code @WorkflowTask} method of a user task about creation and cancellation. It does that
+ * through listeners it attaches to the parsed element. A second route into the same moment
  * would be two mechanisms for one thing.
  *
  * <h2>How the adapter's own listeners are kept out</h2>
  *
- * Every listener VanillaBP attaches - the cancellation listener, the user-task listeners, the
- * listener of a start event the engine fires on its own and the one reporting a workflow's end
- * - is attached to the element the engine PARSED, never written into the BPMN. An extension
- * reaches the engine the same way, through {@link io.vanillabp.camunda7.engine.Camunda7EngineCustomizer}
- * (see decision 14 in the repository's DECISIONS.md). The collection below reads the BPMN, so
- * it sees what a modeller wrote and nothing else: the separation is by construction rather
- * than by a prefix somebody has to keep up to date.
+ * VanillaBP attaches these listeners: the cancellation listener, the user-task listeners, the
+ * listener of a start event the engine fires on its own, and the one which reports a
+ * workflow's end. Each of them is attached to the element the engine PARSED. None is written
+ * into the BPMN. An extension reaches the engine the same way, through
+ * {@link io.vanillabp.camunda7.engine.Camunda7EngineCustomizer} (see decision 14 in the
+ * repository's DECISIONS.md). The collection below reads the BPMN. So it sees what a modeller
+ * wrote and nothing else. The two kinds are kept apart by how this works, not by a prefix
+ * somebody has to keep up to date.
  */
 public final class Camunda7Listeners {
 
@@ -57,7 +58,7 @@ public final class Camunda7Listeners {
    * The <code>camunda:event</code> of an execution listener which the engine fires when the
    * element ends, as the model spells it.
    * <p>
-   * This engine fires an END execution listener when the element is CANCELED as well, which is
+   * This engine fires an END execution listener when the element is CANCELED as well. That is
    * how {@link Camunda7TaskCancellationListener} hears a cancellation at all. So a modeller who
    * wrote one already hears the cancellation, and VanillaBP adds none beside it.
    */
@@ -68,13 +69,13 @@ public final class Camunda7Listeners {
    */
   public enum Implementation {
     /**
-     * {@code camunda:expression}: the engine evaluates the expression, the handler runs
+     * {@code camunda:expression}: the engine evaluates the expression. The handler runs
      * while it is evaluated.
      */
     EXPRESSION("camunda:expression"),
     /**
      * {@code camunda:delegateExpression}: the engine resolves the expression to a listener
-     * object, which is the one this adapter hands it.
+     * object. This adapter hands it that object.
      */
     DELEGATE_EXPRESSION("camunda:delegateExpression"),
     /**
@@ -109,8 +110,8 @@ public final class Camunda7Listeners {
 
     /**
      * Whether the application can serve this listener at all. Only the two expression
-     * forms reach the EL resolver; a listener naming a class is the engine's business and
-     * VanillaBP leaves it alone.
+     * forms reach the EL resolver. A listener which names a class is the engine's business,
+     * and VanillaBP leaves it alone.
      *
      * @return Whether a <code>@WorkflowTask</code> method can serve this form
      */
@@ -205,16 +206,16 @@ public final class Camunda7Listeners {
   }
 
   /**
-   * The line which opens and closes the startup report. Plain ASCII, so a log viewer without
-   * a font for box drawing shows a line rather than a row of question marks, and nothing else
-   * this adapter logs is framed: a second framed message would cost this one its effect.
+   * The line which opens and closes the startup report. It is plain ASCII. So a log viewer
+   * without a font for box drawing shows a line and not a row of question marks. Nothing else
+   * this adapter logs is framed. A second framed message would take away this one's effect.
    */
   public static final String FRAME_LINE = "=".repeat(100);
 
   /**
    * What an application gives up while its modelled listeners are served, in the words of the
-   * startup report. Kept here because the same sentences belong into the refusal a boot
-   * WITHOUT the property writes, and a reader must meet them in both places unchanged.
+   * startup report. It is kept here because the same sentences belong into the refusal which a
+   * boot WITHOUT the property writes. A reader must meet them unchanged in both places.
    * <p>
    * Word for word what the Camunda 8 adapter says, because the sentences are about VanillaBP
    * rather than about an engine, and a developer moving a module between the two must not have
@@ -243,8 +244,8 @@ public final class Camunda7Listeners {
 
   /**
    * Whether a listener somebody modelled hears the cancellation of its element through itself.
-   * Such a listener needs nothing from VanillaBP: the engine fires an END execution listener when
-   * the element is canceled as well, so the method would hear the same moment twice.
+   * Such a listener needs nothing from VanillaBP. The engine fires an END execution listener
+   * when the element is canceled as well. So the method would hear the same moment twice.
    *
    * @param listener The listener
    * @return Whether the modeller put it on the moment which covers a cancellation
@@ -257,8 +258,8 @@ public final class Camunda7Listeners {
   }
 
   /**
-   * The sentence about the one ambiguity this design leaves, said wherever listeners are
-   * named: an element may carry two listeners, and the element id names the element.
+   * The sentence about the one ambiguity this design leaves. It is said wherever listeners are
+   * named. An element may carry two listeners, and the element id names the element.
    */
   public static final String WHICH_METHOD_SERVES_WHICH = """
       A method serves a listener by naming its TASK DEFINITION and in no other way. \
@@ -267,9 +268,9 @@ public final class Camunda7Listeners {
       names is not served here: whatever else resolves it keeps resolving it.""";
 
   /**
-   * Reports keys the application set at TASK level, where this one does not resolve, and lets
-   * the boot go on: the value changes no answer, and ending a boot over a key which simply
-   * does nothing would be worse than saying so.
+   * Reports keys the application set at TASK level, where this one does not resolve. The boot
+   * goes on. The value changes no answer. Ending a boot over a key which simply does nothing
+   * would be worse than saying so.
    *
    * @param adapterId The adapter ID
    * @param keysAtTaskLevel The keys found, fully spelled out; nothing is reported for an empty
@@ -304,7 +305,7 @@ public final class Camunda7Listeners {
    * Every execution listener of one process, in document order - the servable ones and the
    * others alike, because a report has to name both.
    * <p>
-   * Read off the BPMN rather than off a list of element types, so a listener reaches this
+   * It is read off the BPMN and not off a list of element types. So a listener is found
    * wherever a modeller put one. A listener of VanillaBP or of one of its extensions is not
    * among them, see the class comment.
    *
@@ -358,9 +359,9 @@ public final class Camunda7Listeners {
   }
 
   /**
-   * The listeners of one element which share a task definition, which is the one case a served
-   * listener cannot be wired in: one method would serve two events and nothing could tell it
-   * which one it is being called for.
+   * The listeners of one element which share a task definition. That is the one case where a
+   * served listener cannot be wired. One method would serve two events, and nothing could tell
+   * it which one it is called for.
    *
    * @param listeners The servable listeners of one process
    * @return Per element and task definition the listeners sharing it, only where there is more
@@ -387,8 +388,8 @@ public final class Camunda7Listeners {
   }
 
   /**
-   * The id of the BPMN element a listener sits on - a listener lives inside
-   * {@code bpmn:extensionElements}, which carries no id of its own.
+   * The id of the BPMN element a listener sits on. A listener lives inside
+   * {@code bpmn:extensionElements}, which has no id of its own.
    *
    * @param listener The listener
    * @return The element id, or <code>null</code> where nothing above it carries one

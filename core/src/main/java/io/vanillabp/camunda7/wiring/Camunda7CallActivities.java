@@ -16,48 +16,48 @@ import io.vanillabp.integration.adapter.spi.workflowtask.WorkflowTaskWiring;
 import lombok.extern.slf4j.Slf4j;
 
 /**
- * What a call activity needs on Camunda 7 to continue the SAME business case: the
- * business key, and a note saying that this is what it does.
+ * What a call activity needs on Camunda 7 to continue the SAME business case. That is the
+ * business key, and a note which says that this is what it does.
  * <p>
- * VanillaBP keeps the workflow aggregate's ID in Camunda's business key. Camunda 7
- * does not pass the business key to a called process unless the model says so, so the
- * called process ran without one and the first task of it failed while resolving the
- * aggregate - with the persistence's own message, mentioning neither the call
- * activity nor the business key nor VanillaBP. Camunda 8 has no such gap
- * ({@code propagateAllParentVariables} carries the ID variable into the child), so
- * one engine behaved differently from the other for a model which looked fine.
+ * VanillaBP keeps the workflow aggregate's ID in Camunda's business key. Camunda 7 does not
+ * pass the business key to a called process unless the model says so. So the called process
+ * ran without one, and its first task failed while it resolved the aggregate. The message was
+ * the persistence's own. It named neither the call activity nor the business key nor
+ * VanillaBP. Camunda 8 has no such gap: {@code propagateAllParentVariables} carries the ID
+ * variable into the child. So the two engines behaved differently for a model which looked
+ * fine.
  * <p>
- * The propagation is therefore injected while the BPMN is prepared for deployment -
- * the same pass which attaches listeners and rewrites called elements for
- * name-clash avoidance. It is injected only where it is right:
+ * So the hand-over of the key is added while the BPMN is prepared for deployment. This is the
+ * same pass which attaches listeners and rewrites called elements for name-clash avoidance.
+ * It is added only where it is right:
  * <ul>
- * <li>the called process is addressed statically (an expression addresses a process
- * VanillaBP does not know),</li>
- * <li>the called process works on the SAME workflow aggregate as the calling one
- * (a process with an aggregate of its own must NOT be handed the caller's identity -
- * it gets its own, e.g. through a {@code @WorkflowStartedByBpms} method),</li>
- * <li>the model does not pass a business key already - what the application
- * modelled wins.</li>
+ * <li>the called process is named statically (an expression names a process VanillaBP does
+ * not know),</li>
+ * <li>the called process works on the SAME workflow aggregate as the calling one. A process
+ * with an aggregate of its own must NOT get the caller's identity. It gets its own, for
+ * example through a {@code @WorkflowStartedByBpms} method.</li>
+ * <li>the model does not pass a business key already. What the application modelled
+ * wins.</li>
  * </ul>
  * <p>
- * The same question needs a second answer while a workflow runs, so a call activity whose
+ * The same question needs a second answer while a workflow runs. So a call activity whose
  * called process continues the caller's workflow aggregate also gets a
- * <code>camunda:property</code> saying so. The multi-instance walk
- * ({@code Camunda7MultiInstances}) reads it when it leaves a called process: the iteration
- * of a caller belongs to a called process which continues the caller's business case, and
- * to no other. The answer travels with the model that was deployed, so an older version of
- * a process the engine still runs keeps the answer it was deployed with, which is what the
- * workflows still standing in it need.
+ * <code>camunda:property</code> which says so. The multi-instance walk
+ * ({@code Camunda7MultiInstances}) reads it when it leaves a called process. The iteration of a
+ * caller belongs to a called process which continues the caller's business case, and to no
+ * other. The answer travels with the deployed model. So an older version of a process the
+ * engine still runs keeps the answer it was deployed with. That is what the workflows which
+ * still stand in it need.
  * <p>
- * A call activity naming the process to call in an expression has nothing to carry such a
- * note, and {@link #continuesTheCallersWorkflowAggregate(DelegateExecution,
- * DelegateExecution, Camunda7TaskRegistry)} asks the core for it while the workflow runs
- * instead. That is the only case where it is asked twice: where the model spells the called
+ * A call activity which names the process to call in an expression has nothing to carry such a
+ * note. Instead, {@link #continuesTheCallersWorkflowAggregate(DelegateExecution,
+ * DelegateExecution, Camunda7TaskRegistry)} asks the core for it while the workflow runs.
+ * That is the only case where it is asked twice: where the model spells the called
  * process out, the answer of the deployment stands and nobody asks again.
  * <p>
- * Why the business key is injected here rather than left to the application, and why it is not
- * injected blindly, is decision 5 in the repository's DECISIONS.md. What the note on a call
- * activity is for is decision 22.
+ * Decision 5 in the repository's DECISIONS.md says why the business key is added here and not
+ * left to the application, and why it is not added blindly. Decision 22 says what the note on
+ * a call activity is for.
  */
 @Slf4j
 public final class Camunda7CallActivities {
@@ -69,11 +69,13 @@ public final class Camunda7CallActivities {
 
   /**
    * The <code>camunda:property</code> this class writes onto a call activity whose called
-   * process works on the workflow aggregate of the calling one. It is written where the
-   * answer is known, so a call activity without it is one of three things: the called
-   * process has an aggregate of its own, the process to call is named by an expression and
-   * was unknown while the model was deployed, or the model was not prepared by this adapter
-   * at all.
+   * process works on the workflow aggregate of the calling one. It is written where the answer
+   * is known. So a call activity without it is one of three things:
+   * <ul>
+   * <li>the called process has an aggregate of its own,</li>
+   * <li>an expression names the process to call, so it was unknown at deployment,</li>
+   * <li>or this adapter did not prepare the model at all.</li>
+   * </ul>
    */
   public static final String SAME_WORKFLOW_AGGREGATE_PROPERTY = "vanillabp:sameWorkflowAggregate";
 
@@ -82,9 +84,9 @@ public final class Camunda7CallActivities {
   }
 
   /**
-   * Prepares the call activities of the given model: the business-key propagation and the
-   * note about the workflow aggregate (see the class comment). Called BEFORE name-clash
-   * avoidance rewrites the called elements, so the process IDs are the ones the
+   * Prepares the call activities of the given model. That is the hand-over of the business key
+   * and the note about the workflow aggregate (see the class comment). It is called BEFORE
+   * name-clash avoidance rewrites the called elements. So the process IDs are the ones the
    * application knows.
    *
    * @param model The BPMN model of one file
@@ -133,19 +135,19 @@ public final class Camunda7CallActivities {
    * The call activities of one BPMN process which send the engine looking for the called
    * process in ANOTHER tenant, with the tenant each of them names.
    * <p>
-   * A tenant is how this adapter keeps workflow modules apart under
-   * {@code name-clash-avoidance: by-adapter}, so a call activity naming a tenant of its own
-   * calls a process of another workflow module. Everything VanillaBP scopes is scoped per
-   * module, a BPMN error code among it: the called process raises the code under ITS
-   * module's prefix and the boundary event of this call activity waits for this module's, so
-   * the error finds no catcher and the called workflow fails with an incident instead.
-   * Whoever wrote that attribute hears it while the application starts.
+   * Under {@code name-clash-avoidance: by-adapter} this adapter keeps workflow modules apart
+   * by tenant. So a call activity which names a tenant of its own calls a process of another
+   * workflow module. Everything VanillaBP scopes is scoped per module, BPMN error codes too.
+   * The called process raises the code under ITS module's prefix. The boundary event of this
+   * call activity waits for this module's prefix. So the error finds no catcher, and the
+   * called workflow fails with an incident instead. Whoever wrote that attribute hears about
+   * it while the application starts.
    * <p>
-   * Only {@code camunda:calledElementTenantId} can leave the module. Without it this engine
-   * resolves the called process in the tenant of the CALLING instance, which is this module,
-   * and a static {@code calledElement} carries this module's prefix under
-   * {@code use-prefix} anyway. An id given as an expression is the application's own string
-   * and can name anything, and no deployment can resolve it, so nothing is said about one.
+   * Only {@code camunda:calledElementTenantId} can leave the module. Without it, this engine
+   * looks for the called process in the tenant of the CALLING instance, which is this module.
+   * And under {@code use-prefix} a static {@code calledElement} carries this module's prefix
+   * anyway. An id given as an expression is the application's own string and can name
+   * anything. No deployment can resolve it, so nothing is said about one.
    *
    * @param model The BPMN model
    * @param bpmnProcessId The process' ID as the model knows it at this point
@@ -176,8 +178,8 @@ public final class Camunda7CallActivities {
   }
 
   /**
-   * The ID of the process a call activity belongs to (it may sit in a subprocess, so
-   * the parents are walked).
+   * The ID of the process a call activity belongs to. It may sit in a subprocess, so this
+   * walks up the parents.
    */
   private static String processIdOf(
       final CallActivity callActivity) {
@@ -194,8 +196,8 @@ public final class Camunda7CallActivities {
   }
 
   /**
-   * Whether the model passes a business key to the called process already - an
-   * application which modelled it keeps its own expression.
+   * Whether the model passes a business key to the called process already. An application
+   * which modelled it keeps its own expression.
    */
   private static boolean passesBusinessKeyAlready(
       final CallActivity callActivity) {
@@ -217,7 +219,7 @@ public final class Camunda7CallActivities {
 
   /**
    * Whether the called process of the given call activity continues the calling process'
-   * workflow aggregate, read from the note this class wrote while the model was deployed.
+   * workflow aggregate. It is read from the note this class wrote at deployment.
    *
    * @param element The element an execution stands on, of any kind and possibly
    *          <code>null</code>
@@ -235,13 +237,13 @@ public final class Camunda7CallActivities {
   }
 
   /**
-   * Whether the model names the process a call activity calls, which is the condition for
-   * every answer written while the model is deployed.
+   * Whether the model names the process a call activity calls. Every answer written at
+   * deployment needs that.
    * <p>
-   * An expression names the process while the workflow runs, so the deployment reads a
-   * string nobody can resolve yet and says nothing about such a call activity. The same
-   * holds for a call activity which names no called process at all, which is a model the
-   * engine refuses on its own.
+   * An expression names the process while the workflow runs. So the deployment reads a string
+   * nobody can resolve yet, and says nothing about such a call activity. The same holds for a
+   * call activity which names no called process at all. The engine refuses such a model on
+   * its own.
    *
    * @param element The element an execution stands on, of any kind and possibly
    *          <code>null</code>
@@ -263,16 +265,17 @@ public final class Camunda7CallActivities {
    * Whether the called process of a running instance continues the workflow aggregate of
    * the process which called it, asked while the workflow runs.
    * <p>
-   * This is the question {@link #prepareCallActivities} asks the core while a model is
-   * prepared, asked a second time and about the same pair of processes. It is for the one
+   * {@link #prepareCallActivities} asks the core the same question while a model is prepared.
+   * Here it is asked a second time, about the same pair of processes. It is for the one
    * call activity the deployment could say nothing about: the process behind an expression
    * is chosen per instance, so there was nothing to write the answer onto. The core answers
    * from the declarations of the workflow services, which it read while the application
-   * started, so asking again costs two lookups and no new source of the answer.
+   * started. So asking again costs two lookups, and the answer comes from the same source.
    * <p>
-   * A caller of another workflow module is no caller to continue a business case of: a
-   * workflow aggregate is shared within one module. A process which this application did not
-   * deploy is none either, and so is a pair nobody handed an answer over for (tests).
+   * A caller of another workflow module is no caller whose business case is continued. A
+   * workflow aggregate is shared within one module only. A process which this application did
+   * not deploy is no such caller either. Nor is a pair which nobody handed an answer over for
+   * (tests).
    *
    * @param calledExecution An execution of the called instance
    * @param callingExecution The execution of the call activity which started it
@@ -293,8 +296,8 @@ public final class Camunda7CallActivities {
       return false;
     }
     if (!called.get().workflowModuleId().equals(calling.get().workflowModuleId())) {
-      // the core answers about a pair of processes of ONE module, and a call across modules
-      // is a call between two business cases whatever either side declares
+      // the core answers about a pair of processes of ONE module. A call across modules is a
+      // call between two business cases, whatever either side declares
       return false;
     }
     return taskRegistry
@@ -306,10 +309,10 @@ public final class Camunda7CallActivities {
   }
 
   /**
-   * The workflow module and the plain BPMN process id behind a running execution, which is
-   * what the core knows a process under. Empty where this application deployed no such
-   * process: an embedded engine may hold the definitions of another application, and a
-   * definition of a release this one no longer carries stays in the engine as well.
+   * The workflow module and the plain BPMN process id behind a running execution. The core
+   * knows a process under these two. Empty where this application deployed no such process. An
+   * embedded engine may hold the definitions of another application. And a definition of a
+   * release this one no longer carries stays in the engine as well.
    */
   private static java.util.Optional<Camunda7TaskRegistry.WorkflowProcess> workflowProcessOf(
       final DelegateExecution execution,

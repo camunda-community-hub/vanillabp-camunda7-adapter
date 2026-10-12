@@ -20,30 +20,31 @@ import org.springframework.transaction.support.TransactionTemplate;
 import io.vanillabp.integration.test.utils.SuppressOutputExtension;
 
 /**
- * The engine hooks an extension needs on Camunda 7, end to end against a real embedded
- * engine: a parse listener contributed by a {@code Camunda7EngineCustomizer} sees the
- * user tasks of the deployed models, the built-in task listener it attaches runs when a
- * user task is created, and the engine's history events reach the handler it contributed.
+ * The engine hooks which an extension needs on Camunda 7, end to end against a real
+ * embedded engine. A parse listener contributed by a {@code Camunda7EngineCustomizer} sees
+ * the user tasks of the deployed models. The built-in task listener it attaches runs when a
+ * user task is created. And the history events of the engine reach the handler it
+ * contributed.
  * <p>
  * Two of the assertions are the ones worth pinning. A parse listener contributed "after"
- * sees the user task with VanillaBP's own built-in CREATE listener already on it - which
- * is the ordering the Business Cockpit depends on, and which is a property of Camunda's
- * pre/post parse-listener lists rather than of anything this adapter does. And history
- * keeps working: the handler is installed as a COMPOSITE next to the engine's own, so the
- * historic process instance is written as before.
+ * sees the user task with the own built-in CREATE listener of VanillaBP already on it. The
+ * Business Cockpit depends on this order. It comes from the pre and post parse-listener
+ * lists of Camunda, not from anything this adapter does. And history keeps working: the
+ * handler is installed as a COMPOSITE next to the own one of the engine, so the historic
+ * process instance is written as before.
  */
 @SpringBootTest(classes = {
     TestApplication.class, Camunda7EngineCustomizerIT.CustomizerConfiguration.class
 }, properties = {
-    // own database: test contexts are cached and live in parallel - another
-    // context's engine on the same H2 database would execute this test's jobs
+    // own database. Test contexts are cached and live in parallel. The engine of another
+    // context on the same H2 database would execute the jobs of this test.
     "spring.datasource.url=jdbc:h2:mem:c7-engine-customizer-it;DB_CLOSE_DELAY=-1"
 })
 @ExtendWith(SuppressOutputExtension.class)
 @SuppressOutputExtension.SuppressBackgroundOutput
-// closed when the class is done: this IT has a database (and therefore a context) of its
-// own, Spring would keep every context until the JVM exits, and an engine outliving its
-// test keeps its job executor running against a database the next classes work on
+// closed when the class is done. This IT has a database of its own, and so a context of its
+// own. Spring would keep every context until the JVM exits. An engine which outlives its test
+// keeps its job executor running against a database which the next classes work on.
 @DirtiesContext
 public class Camunda7EngineCustomizerIT {
 
@@ -122,7 +123,7 @@ public class Camunda7EngineCustomizerIT {
     assertTrue(
         customizer.getParsedUserTasks().contains("%s/UT_Task".formatted(ADAPTER_ID)),
         "the user task of UserTaskProcess: %s".formatted(customizer.getParsedUserTasks()));
-    // the ordering the Business Cockpit depends on: VanillaBP wired the task first
+    // the order which the Business Cockpit depends on: VanillaBP wired the task first
     assertEquals(
         customizer.getParsedUserTasks(),
         customizer.getUserTasksAlreadyWiredByVanillaBp(),

@@ -24,10 +24,10 @@ import jakarta.inject.Inject;
 import jakarta.transaction.UserTransaction;
 
 /**
- * The viewer/history API on Quarkus: the embedded engine's repository
- * and history services answer definitions, BPMN XML and the instance timeline -
- * platform parity to the Spring Boot integration test of the same feature (the
- * logic itself lives in the adapter's core).
+ * The viewer and history API on Quarkus. The embedded engine's repository and history
+ * services answer definitions, BPMN XML and the timeline of an instance. This matches the
+ * Spring Boot integration test of the same feature. The logic itself lives in the
+ * adapter's core.
  */
 @ExtendWith(SuppressOutputExtension.class)
 @SuppressOutputExtension.SuppressBackgroundOutput
@@ -43,8 +43,8 @@ public class Camunda7ViewerApiTest {
           .addAsResource("application.yaml")
           .addAsResource("c7-test/processes/test-process.bpmn")
           .addAsResource("workflow-module-descriptor/workflow-module", "META-INF/workflow-module"))
-      // own database: the module's shared H2 URL would leak instances between test
-      // classes
+      // a database of its own. The module's shared H2 URL would leak instances between
+      // test classes
       .overrideRuntimeConfigKey("quarkus.datasource.jdbc.url", "jdbc:h2:mem:c7-viewer-test;DB_CLOSE_DELAY=-1");
 
   @Inject
@@ -93,8 +93,8 @@ public class Camunda7ViewerApiTest {
 
     final var aggregate = startWorkflow();
 
-    // the instance is created by the phase-two outbox right AFTER the
-    // commit, so the viewing API knows the workflow a moment later than the call
+    // the phase-two outbox creates the instance right AFTER the commit. So the
+    // viewing API knows the workflow a moment after the call
     final var definitions = awaitProcessDefinitions(aggregate);
 
     Assertions.assertEquals(1, definitions.size(), () -> "expected the workflow's definition but got: "
@@ -117,8 +117,8 @@ public class Camunda7ViewerApiTest {
               + deployedXml);
     }
 
-    // the single service task runs in the job executor - poll until the workflow
-    // ended, then the history reports both the execution and the end
+    // the single service task runs in the job executor. Poll until the workflow
+    // ended. Then the history reports both the execution and the end
     final var deadline = System.currentTimeMillis() + 20000;
     var history = processService.getWorkflowHistory(aggregate, null);
     while ((history.endTime() == null) && (System.currentTimeMillis() < deadline)) {
@@ -144,7 +144,7 @@ public class Camunda7ViewerApiTest {
   @DisplayName("Unknown workflows and unknown process definitions raise the SPI's guiding exceptions")
   public void unknownSubjectsRaiseGuidingErrors() {
 
-    // an ID no workflow ever used - deliberately NOT persisted: the viewing API
+    // an ID no workflow ever used. It is NOT persisted, on purpose: the viewing API
     // only reads the aggregate's ID
     final var neverStarted = new TestAggregate();
     neverStarted.setId(987654321L);

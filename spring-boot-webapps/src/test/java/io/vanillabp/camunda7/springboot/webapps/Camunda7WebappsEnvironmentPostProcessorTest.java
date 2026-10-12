@@ -12,8 +12,8 @@ import org.springframework.mock.env.MockEnvironment;
 import io.vanillabp.integration.test.utils.SuppressOutputExtension;
 
 /**
- * Camunda's engine auto-configuration must not run next to VanillaBP's engines. This is
- * where that is decided, before any bean is created.
+ * Camunda's engine auto-configuration must not run next to VanillaBP's engines. The post
+ * processor decides that, before any bean is created.
  */
 @ExtendWith(SuppressOutputExtension.class)
 public class Camunda7WebappsEnvironmentPostProcessorTest {

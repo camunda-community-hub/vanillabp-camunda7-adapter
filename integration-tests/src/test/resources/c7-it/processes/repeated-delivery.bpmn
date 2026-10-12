@@ -8,10 +8,10 @@
       <bpmn:outgoing>RD_ToTask</bpmn:outgoing>
     </bpmn:startEvent>
     <bpmn:sequenceFlow id="RD_ToTask" sourceRef="RD_Start" targetRef="RD_Task" />
-    <!-- the end listener throws once, after the handler and its transaction are done:
-         the engine rolls the job back and hands the very same job out again, which is
-         the redelivery this scenario is about. The adapter's parse listener makes the
-         task async-before, so that job exists in the first place. -->
+    <!-- the end listener throws once, after the handler and its transaction are done.
+         The engine rolls the job back and hands the very same job out again. That is
+         the redelivery this scenario is about. The parse listener of the adapter makes
+         the task async-before, so the job exists in the first place. -->
     <bpmn:serviceTask id="RD_Task" camunda:expression="${repeatedDeliveryTask}">
       <bpmn:extensionElements>
         <camunda:executionListener event="end" delegateExpression="${failTheJobOnce}" />

@@ -9,8 +9,8 @@ import io.vanillabp.spi.service.WorkflowTask;
 
 /**
  * The workflow service of the process whose workflow aggregate has a numeric id. The
- * persistence layer assigns that id while saving, so a business key somebody chose can
- * never be one of them.
+ * persistence layer assigns that id while saving. So a business key which somebody chose
+ * can never be one of these ids.
  */
 @Service
 @WorkflowService(

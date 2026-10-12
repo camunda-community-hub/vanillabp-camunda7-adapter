@@ -21,37 +21,38 @@ import io.vanillabp.integration.test.utils.CapturedOutput;
 import io.vanillabp.integration.test.utils.SuppressOutputExtension;
 
 /**
- * End-to-end test of the name-clash-avoidance mode {@code use-prefix} on a real
- * embedded Camunda 7 engine: the workflow module is NOT deployed into a
- * tenant, instead every identifier the engine resolves across process definitions
- * carries the workflow module id as prefix. What has to keep working:
+ * End-to-end test of the name-clash-avoidance mode {@code use-prefix} on a real embedded
+ * Camunda 7 engine. The workflow module is NOT deployed into a tenant. Instead, every
+ * identifier which the engine resolves across process definitions carries the workflow
+ * module id as prefix. What has to keep working:
  * <ul>
- * <li>deployment without a tenant, under the prefixed process definition keys;</li>
- * <li>starting a workflow through the {@code ProcessService} with the PLAIN process id
- * - the business code never sees a prefix;</li>
- * <li>a gateway condition on an aggregate attribute: VanillaBP's EL resolver has to
- * find the aggregate although the engine reports only the prefixed definition key and
- * no tenant (the workflow module is resolved from the registered key);</li>
- * <li>task delivery: the prefixed key has to be translated back to find the
- * {@code @WorkflowTask} handler;</li>
- * <li>message correlation with the PLAIN message name against the prefixed
- * subscription;</li>
- * <li>the cancellation of a task: the handler subscribing to {@code CANCELED} has to hear
- * it here as well, and it is the one delivery whose absence looks like nothing happening;</li>
- * <li>what the start REPORTS: this mode uses no tenant, so a message naming one would send
- * whoever reads it looking for a scope the engine does not have.</li>
+ * <li>Deployment without a tenant, under the prefixed process definition keys.</li>
+ * <li>Starting a workflow through the {@code ProcessService} with the PLAIN process id. The
+ * business code never sees a prefix.</li>
+ * <li>A gateway condition on an aggregate attribute. The EL resolver of VanillaBP has to
+ * find the aggregate, although the engine reports only the prefixed definition key and no
+ * tenant. The workflow module is resolved from the registered key.</li>
+ * <li>Task delivery. The prefixed key has to be translated back to find the
+ * {@code @WorkflowTask} handler.</li>
+ * <li>Message correlation with the PLAIN message name against the prefixed
+ * subscription.</li>
+ * <li>The cancellation of a task. The handler which subscribes to {@code CANCELED} has to
+ * hear it here as well. It is the one delivery whose absence looks like nothing
+ * happening.</li>
+ * <li>What the start REPORTS. This mode uses no tenant. A message which named one would send
+ * the reader looking for a scope which the engine does not have.</li>
  * </ul>
  */
 @SpringBootTest(classes = TestApplication.class, properties = {
-    // own database: contexts are cached and live in parallel - a foreign engine
-    // (and job executor) on the same H2 database would compete for this test's jobs
+    // own database. Contexts are cached and live in parallel. A foreign engine and its job
+    // executor on the same H2 database would compete for the jobs of this test.
     "spring.datasource.url=jdbc:h2:mem:c7-prefix-it;DB_CLOSE_DELAY=-1", "vanillabp.adapters.c7.name-clash-avoidance=use-prefix"
 })
 @ExtendWith(SuppressOutputExtension.class)
 @SuppressOutputExtension.SuppressBackgroundOutput
-// closed when the class is done: this IT has a database (and therefore a context) of its
-// own, Spring would keep every context until the JVM exits, and an engine outliving its
-// test keeps its job executor running against a database the next classes work on
+// closed when the class is done. This IT has a database of its own, and so a context of its
+// own. Spring would keep every context until the JVM exits. An engine which outlives its test
+// keeps its job executor running against a database which the next classes work on.
 @DirtiesContext
 public class Camunda7NameClashAvoidanceIT {
 
@@ -127,13 +128,13 @@ public class Camunda7NameClashAvoidanceIT {
     final var aggregateId = transactionTemplate.execute(status -> {
       final var aggregate = new SyncTestAggregate();
       aggregate.setCustomerName("ACME");
-      // NOT shared with the BPMS, yet the gateway '${approved}' has to evaluate it
+      // NOT shared with the BPMS, but the gateway '${approved}' has to evaluate it
       aggregate.setApproved(true);
-      // the business code passes no prefix anywhere - it does not know about one
+      // the business code passes no prefix anywhere, because it does not know about one
       return syncWorkflowService.startSyncProcess(aggregate).getId();
     });
 
-    // the instance is created by the phase-two outbox right after the commit
+    // the phase-two outbox creates the instance right after the commit
     final var instance = AwaitPhaseTwo.untilAvailable(
         () -> runtimeService
             .createProcessInstanceQuery()
@@ -149,9 +150,9 @@ public class Camunda7NameClashAvoidanceIT {
             .getKey(),
         "the ProcessService has to address the prefixed definition");
 
-    // reaching the asynchronous task proves BOTH: the gateway condition was evaluated
-    // against the live aggregate (EL resolver) and the delivered task was routed back
-    // to the @WorkflowTask handler although the engine reported the prefixed key
+    // reaching the asynchronous task proves BOTH. The gateway condition was evaluated
+    // against the live aggregate (EL resolver). And the delivered task was routed back to
+    // the @WorkflowTask handler, although the engine reported the prefixed key.
     awaitUntil(
         () -> syncRepository
             .findById(aggregateId)
@@ -278,10 +279,9 @@ public class Camunda7NameClashAvoidanceIT {
         .executeWithoutResult(
             status -> runtimeService.deleteProcessInstance(instanceId, "prefixed cancellation test"));
 
-    // the engine reports the prefixed key, the handler is registered under it, and the
-    // plain id is only what the application sees. A lookup with the plain id finds
-    // nothing here and the handler is never called, which no exception and no log line
-    // would show
+    // the engine reports the prefixed key, and the handler is registered under it. The
+    // plain id is only what the application sees. A lookup with the plain id finds nothing
+    // here, and the handler is never called. No exception and no log line would show that.
     awaitUntil(
         () -> {
           final var results = taskRepository.findById(aggregateId).orElseThrow().getResults();
@@ -308,10 +308,10 @@ public class Camunda7NameClashAvoidanceIT {
       return saved.getId();
     });
 
-    // the handler throws a TaskException carrying the PLAIN error code the model
-    // declares, and under this mode the deployed model carries the prefixed one - so
-    // the BPMN error the adapter raises has to be prefixed as well or the boundary
-    // event never sees it and the job retries until it gives up
+    // the handler throws a TaskException which carries the PLAIN error code that the model
+    // declares. Under this mode the deployed model carries the prefixed one. So the BPMN
+    // error which the adapter raises has to be prefixed as well. Otherwise the boundary
+    // event never sees it, and the job retries until it gives up.
     awaitUntil(
         () -> runtimeService
             .createProcessInstanceQuery()

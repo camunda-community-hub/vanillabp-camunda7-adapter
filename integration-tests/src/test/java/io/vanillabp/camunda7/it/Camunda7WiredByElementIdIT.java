@@ -14,15 +14,15 @@ import org.springframework.context.ConfigurableApplicationContext;
 import io.vanillabp.integration.test.utils.SuppressOutputExtension;
 
 /**
- * A model whose elements name one thing and whose methods name another, run against a
- * real engine.
+ * A model whose elements name one thing while its methods name another, run against a real
+ * engine.
  * <p>
- * The service task is wired by <code>camunda:delegateExpression</code> and its method
- * carries <code>&#64;WorkflowTask(id = ...)</code>. The user task carries a form key and
- * its method is wired by the element id as well. Both wirings pass the validation while
- * the application boots, so both have to work while a workflow runs. They did not: the
- * service task failed every delivery until the job executor made an incident of it, and
- * the user-task notification was skipped without a word, which is worse because nothing
+ * The service task is wired by <code>camunda:delegateExpression</code>, and its method
+ * carries <code>&#64;WorkflowTask(id = ...)</code>. The user task carries a form key, and
+ * its method is wired by the element id as well. Both wirings pass the validation while the
+ * application boots. So both have to work while a workflow runs. They did not. The service
+ * task failed every delivery, until the job executor made an incident of it. The
+ * notification of the user task was skipped without a word. That is worse, because nothing
  * happens at all.
  */
 @ExtendWith(SuppressOutputExtension.class)
@@ -74,9 +74,9 @@ public class Camunda7WiredByElementIdIT {
   }
 
   /**
-   * Waits for something the engine brings about. Generous on purpose: in a full build
-   * this class shares its machine with the other engines of this module, and a deadline
-   * close to what a quiet machine needs fails while nothing is wrong. Reading the
+   * Waits for something which the engine brings about. The deadline is generous on purpose.
+   * In a full build this class shares its machine with the other engines of this module. A
+   * deadline close to what a quiet machine needs fails while nothing is wrong. Reading the
    * repository needs a transaction of the test's own.
    */
   private static void awaitUntil(

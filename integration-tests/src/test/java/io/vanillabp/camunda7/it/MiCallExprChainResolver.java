@@ -10,14 +10,14 @@ import org.springframework.stereotype.Component;
 import io.vanillabp.spi.service.MultiInstanceElementResolver;
 
 /**
- * Writes down every level the task was told about, in the order it arrived. A resolver
- * rather than one parameter per level, because a case which loses the chain reports nothing
- * at all and a named parameter could not say so: it would refuse the call instead.
+ * Writes down every level the task was told about, in the order it arrived. It is a
+ * resolver, not one parameter per level. A case which loses the chain reports nothing at
+ * all. A named parameter could not say so, because it would refuse the call instead.
  */
 @Component
 public class MiCallExprChainResolver implements MultiInstanceElementResolver<MiCallExprAggregate, String> {
 
-  /** What this resolver reads, which all belongs to the calling process. */
+  /** What this resolver reads. All of it belongs to the calling process. */
   @Override
   public Collection<String> getNames() {
 

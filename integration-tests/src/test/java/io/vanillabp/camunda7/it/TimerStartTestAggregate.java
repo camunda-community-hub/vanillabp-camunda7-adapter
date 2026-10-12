@@ -7,8 +7,8 @@ import lombok.Getter;
 import lombok.Setter;
 
 /**
- * The JPA workflow aggregate of the timer-start integration test. Its ID is a String and
- * no <code>@GeneratedValue</code> is involved, which is what lets the
+ * The JPA workflow aggregate of the timer-start integration test. Its ID is a String, and
+ * no <code>@GeneratedValue</code> is involved. That lets the
  * <code>@WorkflowStartedByBpms</code> method name the workflow itself.
  */
 @Entity

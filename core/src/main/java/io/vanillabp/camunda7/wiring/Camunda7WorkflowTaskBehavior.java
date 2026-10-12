@@ -14,42 +14,42 @@ import io.vanillabp.integration.adapter.spi.workflowtask.WorkflowTaskInvoker;
 import io.vanillabp.integration.adapter.spi.workflowtask.WorkflowTaskOutcome;
 
 /**
- * Executes a <code>&#64;WorkflowTask</code> method for one BPMN task, dispatched
- * through the core's {@link WorkflowTaskInvoker}: the invocation context is built
- * from the {@link DelegateExecution} (business key = serialized aggregate ID,
- * local variables for <code>&#64;TaskParam</code>, multi-instance context from the
- * execution hierarchy) and the handler runs INSIDE the engine's transaction
- * ({@link TaskInvocationContext#runInCurrentTransaction()}): business changes and
- * engine state commit or roll back together.
+ * Executes a <code>&#64;WorkflowTask</code> method for one BPMN task, through the core's
+ * {@link WorkflowTaskInvoker}. The invocation context is built from the
+ * {@link DelegateExecution}. The business key is the serialized aggregate ID, the local
+ * variables give the <code>&#64;TaskParam</code> values, and the execution hierarchy gives
+ * the multi-instance context. The handler runs INSIDE the engine's transaction
+ * ({@link TaskInvocationContext#runInCurrentTransaction()}). So business changes and engine
+ * state commit or roll back together.
  * <p>
- * That holds while the engine shares the application's datasource. An engine given one of
- * its own commits on a resource the application's persistence cannot join, so VanillaBP
- * opens the transaction around the handler itself, the aggregate commits before the job
- * does, and the job the engine hands out again after a crash in between is a REPEATED
- * delivery. Which is why an engine in that mode names its deliveries
- * ({@link TaskInvocationContext#getDeliveryId()} - the id of the job at hand) and the core
+ * That holds while the engine shares the application's datasource. An engine with a
+ * datasource of its own commits on a resource the application's persistence cannot join.
+ * So VanillaBP itself opens the transaction around the handler. The aggregate commits
+ * before the job does. After a crash in between, the engine hands the job out again, and
+ * that is a REPEATED delivery. That is why an engine in that mode names its deliveries
+ * ({@link TaskInvocationContext#getDeliveryId()}, the id of the job at hand). The core
  * answers the repetition from what it recorded.
  * <p>
  * Outcome mapping:
  * <ul>
- * <li>COMPLETED - the activity is left (task completes);</li>
- * <li>COMPLETION_PENDING (<code>&#64;TaskId</code> methods) - the activity is NOT
- * left: the execution stays at the task until it is completed asynchronously via
- * <code>ProcessService#completeTask</code> (which signals the execution);</li>
- * <li>BPMN_ERROR ({@code TaskException}) - a {@link BpmnError} with the
- * exception's error code is thrown for error-boundary routing; the aggregate
- * changes were saved and commit with the engine's transaction;</li>
- * <li>any other exception - propagates: the engine rolls back the job transaction
- * (business changes included) and applies its retry semantics.</li>
+ * <li>COMPLETED: the activity is left, and the task completes.</li>
+ * <li>COMPLETION_PENDING (<code>&#64;TaskId</code> methods): the activity is NOT left. The
+ * execution stays at the task until it is completed asynchronously through
+ * <code>ProcessService#completeTask</code>, which signals the execution.</li>
+ * <li>BPMN_ERROR ({@code TaskException}): a {@link BpmnError} with the exception's error
+ * code is thrown, so an error boundary event can catch it. The aggregate changes were
+ * saved, and they commit with the engine's transaction.</li>
+ * <li>any other exception: it propagates. The engine rolls back the job transaction,
+ * business changes included, and applies its retry rules.</li>
  * </ul>
- * Used for <code>camunda:delegateExpression</code> tasks (as an
- * {@link AbstractBpmnActivityBehavior}, so the activity can stay open) and for
- * <code>camunda:expression</code> tasks (executed inline by the
- * {@link Camunda7TaskELResolver}; staying open is impossible there, so
- * <code>&#64;TaskId</code> methods require a delegate expression).
+ * It is used for <code>camunda:delegateExpression</code> tasks, as an
+ * {@link AbstractBpmnActivityBehavior}, so the activity can stay open. It is also used for
+ * <code>camunda:expression</code> tasks, which the {@link Camunda7TaskELResolver} executes
+ * inline. Such a task cannot stay open. So <code>&#64;TaskId</code> methods require a
+ * delegate expression.
  * <p>
- * Why the handler runs in the engine's own job transaction, and why the engine's retry is the
- * recovery this adapter relies on, is decision 6 in the repository's DECISIONS.md.
+ * Decision 6 in the repository's DECISIONS.md says why the handler runs in the engine's own
+ * job transaction, and why this adapter relies on the engine's retry for recovery.
  */
 public class Camunda7WorkflowTaskBehavior extends AbstractBpmnActivityBehavior {
 
@@ -58,9 +58,9 @@ public class Camunda7WorkflowTaskBehavior extends AbstractBpmnActivityBehavior {
   private final WorkflowTaskInvoker workflowTaskInvoker;
 
   /**
-   * Translates the error code of a {@code TaskException} into what the engine knows
-   * (the model's error codes are prefixed too, see decision 3 in the repository's
-   * DECISIONS.md). May be <code>null</code>.
+   * Translates the error code of a {@code TaskException} into what the engine knows.
+   * The model's error codes are prefixed too, see decision 3 in the repository's
+   * DECISIONS.md. May be <code>null</code>.
    */
   private final io.vanillabp.integration.adapter.spi.NameClashAvoidanceSupport scoping;
 
@@ -68,13 +68,13 @@ public class Camunda7WorkflowTaskBehavior extends AbstractBpmnActivityBehavior {
 
   /**
    * Answers the version of the process definition an execution runs on.
-   * May be <code>null</code> (tests): no version is reported then.
+   * May be <code>null</code> (tests). Then no version is reported.
    */
   private final Camunda7TaskRegistry taskRegistry;
 
   /**
-   * Convenience constructor for a test: no scoping, so the identifiers reach the engine as
-   * the application wrote them, and no version is reported with a delivery.
+   * For a test. There is no scoping, so the identifiers reach the engine as the application
+   * wrote them. And no version is reported with a delivery.
    *
    * @param connectable The wired task this behavior serves
    * @param workflowTaskInvoker Where the application's method is called
@@ -116,13 +116,13 @@ public class Camunda7WorkflowTaskBehavior extends AbstractBpmnActivityBehavior {
   /**
    * The BPMN error code as the engine knows it.
    * <p>
-   * Composed from the workflow module of the process this task belongs to, which is the
-   * module the catcher belongs to as well: this engine looks for the called process of a call
-   * activity in the tenant of the calling instance, and a static called element carries the
-   * calling module's prefix under {@code use-prefix}, so a call activity stays inside its
-   * module. The one model which leaves it names another tenant on the call activity, and the
-   * deployment warns about that one, because the code raised there would carry the other
-   * module's prefix and this code is not bent to fit.
+   * It is built from the workflow module of the process this task belongs to. The catcher
+   * belongs to that module as well. This engine looks for the called process of a call
+   * activity in the tenant of the calling instance. And under {@code use-prefix} a static
+   * called element carries the prefix of the calling module. So a call activity stays inside
+   * its module. Only a model which names another tenant on the call activity leaves it. The
+   * deployment warns about that one. The code raised there would carry the other module's
+   * prefix, and this code is not bent to fit.
    */
   private String scopedErrorCode(
       final String errorCode) {
@@ -139,8 +139,8 @@ public class Camunda7WorkflowTaskBehavior extends AbstractBpmnActivityBehavior {
 
     final var outcome = invokeHandler(execution);
     if (outcome.kind() == WorkflowTaskOutcome.Kind.COMPLETION_PENDING) {
-      // @TaskId method: the task stays open, completion arrives via
-      // ProcessService#completeTask which signals this execution
+      // @TaskId method. The task stays open. The completion arrives through
+      // ProcessService#completeTask, which signals this execution
       return;
     }
     leave(execution);
@@ -148,9 +148,8 @@ public class Camunda7WorkflowTaskBehavior extends AbstractBpmnActivityBehavior {
   }
 
   /**
-   * The signal name carrying a cancellation
-   * ({@code ProcessService#cancelTask}): the signal data is the BPMN error code to
-   * propagate.
+   * The signal name which carries a cancellation ({@code ProcessService#cancelTask}).
+   * The signal data is the BPMN error code to propagate.
    */
   public static final String SIGNAL_CANCEL = "vanillabp:cancel";
 
@@ -160,12 +159,12 @@ public class Camunda7WorkflowTaskBehavior extends AbstractBpmnActivityBehavior {
       final String signalName,
       final Object signalData) throws Exception {
 
-    // asynchronous completion/cancellation (ProcessService#completeTask/cancelTask
-    // signals the parked execution - see Camunda7ProcessService)
+    // asynchronous completion or cancellation. ProcessService#completeTask and
+    // #cancelTask signal the parked execution, see Camunda7ProcessService
     if (SIGNAL_CANCEL.equals(signalName)) {
-      // cancelTask: route the workflow through an error boundary event; thrown
-      // BpmnErrors are not translated automatically on the signal path, so the
-      // error is propagated explicitly
+      // cancelTask: route the workflow through an error boundary event. On the signal
+      // path a thrown BpmnError is not translated by itself, so the error is propagated
+      // explicitly
       org.camunda.bpm.engine.impl.bpmn.helper.BpmnExceptionHandler.propagateBpmnError(
           new BpmnError(String.valueOf(signalData)),
           execution);
@@ -176,10 +175,9 @@ public class Camunda7WorkflowTaskBehavior extends AbstractBpmnActivityBehavior {
   }
 
   /**
-   * Runs the handler for the given execution and maps a
-   * {@code TaskException} outcome to a {@link BpmnError}. Shared by the
-   * delegate-expression path (this behavior) and the expression path (the EL
-   * resolver).
+   * Runs the handler for the given execution, and maps a {@code TaskException} outcome to
+   * a {@link BpmnError}. The delegate-expression path (this behavior) and the expression
+   * path (the EL resolver) both use it.
    *
    * @param execution The current execution
    * @return The outcome (never BPMN_ERROR - that one is thrown)
@@ -191,13 +189,13 @@ public class Camunda7WorkflowTaskBehavior extends AbstractBpmnActivityBehavior {
         connectable.workflowModuleId(),
         connectable.bpmnProcessId(),
         new Camunda7TaskInvocationContext(connectable, execution, taskRegistry));
-    // What the handler computed has to reach the engine BEFORE it evaluates
-    // what comes next - a gateway right behind this task would otherwise decide on the
-    // values of the last ProcessService call. Written here, inside the engine's
-    // transaction, so the variables commit with the aggregate and with the token
+    // what the handler computed has to reach the engine BEFORE it evaluates what comes
+    // next. Otherwise a gateway right behind this task would decide on the values of the
+    // last ProcessService call. They are written here, inside the engine's transaction, so
+    // the variables commit with the aggregate and with the token
     writeSharedValues(execution);
     if (outcome.kind() == WorkflowTaskOutcome.Kind.BPMN_ERROR) {
-      // error-boundary routing; the aggregate changes were saved and commit
+      // for the error boundary event. The aggregate changes were saved, and they commit
       // with the engine's transaction (the V1 contract). The values are written above,
       // because the flow behind the error boundary may branch on them as well
       throw outcome.errorName() != null
@@ -211,10 +209,10 @@ public class Camunda7WorkflowTaskBehavior extends AbstractBpmnActivityBehavior {
   /**
    * Writes the values the aggregate shares with the BPMS onto the execution.
    * <p>
-   * The values are read in the CALLER's transaction, which is the engine's: the handler
-   * just changed the aggregate there, and reading in a new transaction would either see
-   * the state before the handler or wait for the row this transaction holds. The read
-   * never throws, and where nothing is shared nothing is written.
+   * The values are read in the CALLER's transaction, which is the engine's. The handler
+   * just changed the aggregate there. A read in a new transaction would either see the
+   * state before the handler, or wait for the row this transaction holds. The read never
+   * throws. Where nothing is shared, nothing is written.
    *
    * @param execution The execution of the task just processed
    */
@@ -223,7 +221,7 @@ public class Camunda7WorkflowTaskBehavior extends AbstractBpmnActivityBehavior {
 
     final var businessKey = execution.getProcessBusinessKey();
     if (businessKey == null) {
-      // no aggregate identity at hand (a process started outside VanillaBP): there is
+      // no aggregate identity at hand (a process started outside VanillaBP). There is
       // nothing to read the values from
       return;
     }
@@ -258,11 +256,12 @@ public class Camunda7WorkflowTaskBehavior extends AbstractBpmnActivityBehavior {
     private final io.vanillabp.spi.service.TaskEvent.Event taskEvent;
 
     /**
-     * What this context asks about the engine it was built in: the version of the
-     * execution's process definition, the adapter holding it, and whether a called process
-     * continues the business case of its caller. May be <code>null</code> (tests): no
-     * version is reported then, which matches every method, and the multi-instance walk
-     * ends at a call activity naming its called process in an expression.
+     * What this context asks about the engine it was built in. It asks for the version of
+     * the execution's process definition and for the adapter which holds the engine. And it
+     * asks whether a called process continues the business case of its caller. May be
+     * <code>null</code> (tests). Then no version is reported, which matches every method.
+     * And the multi-instance walk ends at a call activity which names its called process in
+     * an expression.
      */
     private final Camunda7TaskRegistry taskRegistry;
 
@@ -302,8 +301,8 @@ public class Camunda7WorkflowTaskBehavior extends AbstractBpmnActivityBehavior {
     @Override
     public String getProcessVersion() {
 
-      // resolved once per process definition id and then answered from memory - a
-      // query per task execution would be paid by every workflow
+      // resolved once per process definition id and then answered from memory. A query
+      // per task execution would cost every workflow
       return taskRegistry == null
           ? null
           : taskRegistry.versionOfDefinition(execution.getProcessDefinitionId());
@@ -335,8 +334,8 @@ public class Camunda7WorkflowTaskBehavior extends AbstractBpmnActivityBehavior {
     public String getBpmnElementId() {
 
       // what a modeller wrote as the element's id, read out of the model while wiring.
-      // The task definition next to it is the expression text, so the two are different
-      // answers and a reader of the delivery record needs this one to find the element
+      // The task definition next to it is the expression text. So the two are different
+      // answers, and a reader of the delivery record needs this one to find the element
       return connectable.elementId();
 
     }
@@ -344,9 +343,9 @@ public class Camunda7WorkflowTaskBehavior extends AbstractBpmnActivityBehavior {
     @Override
     public String getWorkflowId() {
 
-      // the engine's own id of the running instance - what an operator types into
-      // Cockpit. A task of a called process reports the id of THAT instance, which is
-      // the workflow the task belongs to
+      // the engine's own id of the running instance. An operator types it into Cockpit.
+      // A task of a called process reports the id of THAT instance, because that is the
+      // workflow the task belongs to
       return execution.getProcessInstanceId();
 
     }
@@ -354,8 +353,8 @@ public class Camunda7WorkflowTaskBehavior extends AbstractBpmnActivityBehavior {
     @Override
     public String getTaskId() {
 
-      // the execution's ID identifies the open task instance - used by
-      // ProcessService#completeTask to signal the parked execution
+      // the execution's ID identifies the open task instance.
+      // ProcessService#completeTask uses it to signal the parked execution
       return execution.getId();
 
     }
@@ -363,9 +362,9 @@ public class Camunda7WorkflowTaskBehavior extends AbstractBpmnActivityBehavior {
     @Override
     public TaskKind getTaskKind() {
 
-      // an execution is the work the engine pushes to the application, so this context
+      // an execution is the work the engine pushes to the application. So this context
       // is only ever built for a task. A user task of this engine travels through a
-      // context of its own (Camunda7UserTaskEventListener) and names a row of
+      // context of its own (Camunda7UserTaskEventListener). It names a row of
       // ACT_RU_TASK, which is not an execution ID. So nothing in the model has to be
       // read to know the kind
       return TaskKind.TASK;
@@ -383,11 +382,11 @@ public class Camunda7WorkflowTaskBehavior extends AbstractBpmnActivityBehavior {
     @Override
     public boolean runInCurrentTransaction() {
 
-      // the embedded engine invokes handlers inside its own (job) transaction -
+      // the embedded engine calls handlers inside its own (job) transaction. So
       // business changes and engine state commit or roll back together. An engine on a
       // datasource of ITS OWN runs that transaction on a resource the application's
-      // persistence knows nothing about, so there is nothing to join and VanillaBP has
-      // to open the transaction it saves the workflow aggregate in itself
+      // persistence knows nothing about. Then there is nothing to join, and VanillaBP
+      // itself has to open the transaction it saves the workflow aggregate in
       return (taskRegistry == null) || !taskRegistry.engineRunsOnItsOwnDataSource();
 
     }
@@ -395,18 +394,17 @@ public class Camunda7WorkflowTaskBehavior extends AbstractBpmnActivityBehavior {
     @Override
     public String getDeliveryId() {
 
-      // On the application's datasource a redelivery proves that nothing was committed,
-      // so there is nothing to remember and no identity is reported. On an own datasource
-      // the aggregate commits before the job does, and the engine hands the same job out
-      // again after a crash in between - which is the delivery the core has to recognize
+      // on the application's datasource a redelivery proves that nothing was committed.
+      // So there is nothing to remember, and no identity is reported. On an own datasource
+      // the aggregate commits before the job does. After a crash in between, the engine
+      // hands the same job out again. The core has to recognize that delivery
       if ((taskRegistry == null) || !taskRegistry.engineRunsOnItsOwnDataSource()) {
         return null;
       }
       // and only the CREATED delivery has a job to itself: the async-before continuation
       // of this very task. A CANCELED notification travels with whatever job cancels the
-      // scope, and ONE such job cancels every task open in it, so that job would name
-      // several notifications and the core would take the second for a repetition of the
-      // first
+      // scope. ONE such job cancels every task open in it. So that job would name several
+      // notifications, and the core would take the second for a repetition of the first
       return taskEvent == io.vanillabp.spi.service.TaskEvent.Event.CREATED
           ? Camunda7DeliveringJob.idOnThisThread()
           : null;
@@ -416,8 +414,8 @@ public class Camunda7WorkflowTaskBehavior extends AbstractBpmnActivityBehavior {
     @Override
     public String getActivationId() {
 
-      // the activity instance is what the engine calls the running element instance:
-      // its id reads '<element-id>:<instance-id>', so the second element of a
+      // the activity instance is what the engine calls the running element instance.
+      // Its id reads '<element-id>:<instance-id>'. So the second element of a
       // multi-instance activity and the next iteration of a loop each get their own.
       // Camunda 7 reports no delivery id at all (a redelivery here proves that nothing
       // was committed) and still answers this one - the two are different questions
@@ -429,8 +427,8 @@ public class Camunda7WorkflowTaskBehavior extends AbstractBpmnActivityBehavior {
     public Map<String, MultiInstanceValue> getMultiInstances() {
 
       if (multiInstances == null) {
-        // with the registry: it answers for a call activity which names the process it
-        // calls in an expression, which the deployed model could say nothing about
+        // the registry is passed along. It answers for a call activity which names the
+        // process it calls in an expression. The deployed model could say nothing about it
         multiInstances = io.vanillabp.camunda7.api.Camunda7MultiInstances.of(execution, taskRegistry);
       }
       return multiInstances;

@@ -7,8 +7,8 @@ import lombok.Getter;
 import lombok.Setter;
 
 /**
- * The workflow aggregate of the workflow the ENGINE starts on its own. Its id is a String
- * and no <code>&#64;GeneratedValue</code> is involved, which is what lets the
+ * The workflow aggregate of the workflow which the ENGINE starts on its own. Its id is a
+ * String, and no <code>&#64;GeneratedValue</code> is involved. That lets the
  * <code>&#64;WorkflowStartedByBpms</code> method name the workflow itself.
  */
 @Entity

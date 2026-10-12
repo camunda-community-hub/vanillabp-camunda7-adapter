@@ -12,26 +12,26 @@ import org.springframework.transaction.support.TransactionTemplate;
 import io.vanillabp.integration.test.utils.SuppressOutputExtension;
 
 /**
- * End-to-end test of <code>&#64;WorkflowTask(version = ...)</code> against a
- * real embedded Camunda 7 engine with TWO deployed versions of one process: the
- * workflow started while only version 1 exists is served by the method of version 1,
- * and a workflow started after a second version was deployed is served by the method
- * naming that version's <code>camunda:versionTag</code>.
+ * End-to-end test of <code>&#64;WorkflowTask(version = ...)</code> against a real embedded
+ * Camunda 7 engine with TWO deployed versions of one process. The method of version 1
+ * serves the workflow started while only version 1 exists. A workflow started after a
+ * second version was deployed is served by the method which names the
+ * <code>camunda:versionTag</code> of that version.
  * <p>
- * The second version is deployed while the application runs, which is what a rolling
- * deployment does from another cluster node - so this also proves the on-demand lookup
- * of a version this node never deployed.
+ * The second version is deployed while the application runs. A rolling deployment does that
+ * from another cluster node. So this also proves the lookup on demand of a version which
+ * this node never deployed.
  */
 @SpringBootTest(classes = TestApplication.class, properties = {
-    // own database: contexts are cached and live in parallel - a foreign engine
-    // (and job executor) on the same H2 database would compete for this test's jobs
+    // own database. Contexts are cached and live in parallel. A foreign engine and its job
+    // executor on the same H2 database would compete for the jobs of this test.
     "spring.datasource.url=jdbc:h2:mem:c7-versions-it;DB_CLOSE_DELAY=-1"
 })
 @ExtendWith(SuppressOutputExtension.class)
 @SuppressOutputExtension.SuppressBackgroundOutput
-// closed when the class is done: this IT has a database (and therefore a context) of its
-// own, Spring would keep every context until the JVM exits, and an engine outliving its
-// test keeps its job executor running against a database the next classes work on
+// closed when the class is done. This IT has a database of its own, and so a context of its
+// own. Spring would keep every context until the JVM exits. An engine which outlives its test
+// keeps its job executor running against a database which the next classes work on.
 @DirtiesContext
 public class Camunda7ProcessVersionIT {
 
@@ -48,8 +48,8 @@ public class Camunda7ProcessVersionIT {
   private TransactionTemplate transactionTemplate;
 
   /**
-   * The task of the model runs on the engine's job executor (VanillaBP makes tasks
-   * asynchronous), so the aggregate carries the answer a moment after the start.
+   * The task of the model runs on the job executor of the engine, because VanillaBP makes
+   * tasks asynchronous. So the aggregate carries the answer a moment after the start.
    */
   private void awaitServedBy(
       final Long aggregateId,
@@ -81,8 +81,8 @@ public class Camunda7ProcessVersionIT {
         "firstVersion",
         "version 1 to be served by the method specifying version '1'");
 
-    // a second version, deployed while the application runs and tagged
-    // 'release-2' - the way another node of a rolling deployment would
+    // a second version, deployed while the application runs and tagged 'release-2'. This is
+    // what another node of a rolling deployment would do.
     repositoryService
         .createDeployment()
         .name("c7-it")

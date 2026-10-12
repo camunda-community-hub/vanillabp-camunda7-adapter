@@ -11,8 +11,8 @@ import lombok.Getter;
 import lombok.Setter;
 
 /**
- * The aggregate of the workflow an interrupting event subprocess takes over. What the
- * test reads is {@link #endedAs}, written by the <code>&#64;WorkflowEnded</code> method.
+ * The aggregate of the workflow which an interrupting event subprocess takes over. The test
+ * reads {@link #endedAs}, which the <code>&#64;WorkflowEnded</code> method writes.
  */
 @Entity
 @Table(name = "C7_END_KIND_EVENT_SUBPROCESS")
@@ -21,7 +21,7 @@ import lombok.Setter;
 public class EndKindEventSubprocessAggregate {
 
   /**
-   * An id range of its own: the Camunda business key is the aggregate's id, so the
+   * An id range of its own. The Camunda business key is the aggregate's id, so the
    * id spaces of the test aggregates must not overlap.
    */
   @Id
@@ -30,8 +30,8 @@ public class EndKindEventSubprocessAggregate {
   private Long id;
 
   /**
-   * The kind and the end event id the application was told, as one string. The engine
-   * never reads it: it is written once the workflow is over.
+   * The kind and the end event id the application was told, as one string. The engine never
+   * reads it, because it is written once the workflow is over.
    */
   @NoSyncWithBPMS
   private String endedAs;

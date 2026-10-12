@@ -15,8 +15,8 @@ import io.vanillabp.integration.test.utils.SuppressOutputExtension;
 
 /**
  * An application whose only datasource is a named one, and an adapter id which asks for the
- * default. There is no default to run on, and the message says the three ways out rather
- * than reporting a missing bean.
+ * default. There is no default to run on. The message names the three ways out, and does
+ * not just report a missing bean.
  */
 @ExtendWith(SuppressOutputExtension.class)
 public class Camunda7WithoutADefaultDataSourceTest {

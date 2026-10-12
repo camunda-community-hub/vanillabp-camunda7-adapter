@@ -20,11 +20,10 @@ import io.vanillabp.integration.spi.AggregatePersistenceAware;
 import io.vanillabp.integration.test.utils.SuppressOutputExtension;
 
 /**
- * Camunda 7 progresses the workflow after the commit, so phase one only
- * ASKS - and an embedded engine answers from the caller's own transaction, exactly and
- * for free. What used to fail synchronously (a task which is gone, a message nobody
- * waits for) therefore still fails synchronously instead of turning into a log line
- * behind the commit.
+ * Camunda 7 moves the workflow on after the commit, so phase one only ASKS. An embedded
+ * engine answers from the caller's own transaction, exactly and for free. So what used to
+ * fail synchronously (a task which is gone, a message nobody waits for) still fails
+ * synchronously. It does not turn into a log line behind the commit.
  */
 @ExtendWith(SuppressOutputExtension.class)
 public class Camunda7PhaseOneChecksTest {
@@ -83,7 +82,8 @@ public class Camunda7PhaseOneChecksTest {
       final long messageStartEvents,
       final String expectedCorrelationId) {
 
-    // built BEFORE stubbing the query: mocking within a 'when' is unfinished stubbing
+    // built BEFORE stubbing the query, because mocking within a 'when' is unfinished
+    // stubbing
     final var waitingExecutions = new ArrayList<Execution>();
     for (var index = 0; index < executions; index++) {
       final var execution = Mockito.mock(Execution.class);
@@ -131,7 +131,7 @@ public class Camunda7PhaseOneChecksTest {
   }
 
   /**
-   * Runs phase one of the given operation, the way the core does: through the handler
+   * Runs phase one of the given operation the way the core does: through the handler which
    * the adapter contributes for it.
    *
    * @param testee The process service under test
@@ -158,7 +158,7 @@ public class Camunda7PhaseOneChecksTest {
 
     final var testee = processService(0, 0, 0);
 
-    // the type is the one the SPI documents for a task no BPMS knows any more, so an
+    // the type is the one the SPI documents for a task no BPMS knows any more. So an
     // application catches the same thing here as when the platform's probe found out
     final var completing = assertThrows(
         io.vanillabp.spi.process.TaskNotFoundException.class,
@@ -167,8 +167,8 @@ public class Camunda7PhaseOneChecksTest {
     assertTrue(completing.getMessage().contains("task-1"), completing.getMessage());
     assertTrue(completing.getMessage().contains("completing"), completing.getMessage());
 
-    // cancelling asks the same question about the same task, which is why the cancel
-    // paths are held here rather than by a second run against an engine
+    // cancelling asks the same question about the same task. That is why the cancel paths
+    // are held here, and not by a second run against an engine
     assertThrows(
         io.vanillabp.spi.process.TaskNotFoundException.class,
         () -> phaseOne(testee, io.vanillabp.integration.spi.PhaseOperation.CANCEL_TASK,
@@ -210,7 +210,7 @@ public class Camunda7PhaseOneChecksTest {
     assertTrue(failure.getMessage().contains("LoanApproved"), failure.getMessage());
     assertTrue(failure.getMessage().contains("4711"), failure.getMessage());
 
-    // with a waiting subscription the call passes - correlating itself happens after
+    // with a waiting subscription the call passes. The correlation itself happens after
     // the commit
     assertDoesNotThrow(
         () -> phaseOne(processService(1, 0, 0), io.vanillabp.integration.spi.PhaseOperation.CORRELATE_MESSAGE,
@@ -252,7 +252,7 @@ public class Camunda7PhaseOneChecksTest {
             io.vanillabp.integration.spi.PhaseOperation.START_WORKFLOW_BY_MESSAGE,
             java.util.Map.of(io.vanillabp.integration.spi.PhaseTwoCall.ARG_MESSAGE_NAME, "LoanRequested")));
     assertTrue(failure.getMessage().contains("LoanRequested"), failure.getMessage());
-    // the engine refuses such a model, see Camunda7MessageNamedByExpressionTest, so the
+    // the engine refuses such a model, see Camunda7MessageNamedByExpressionTest. So the
     // developer learns that an expression is no way out
     assertTrue(
         failure

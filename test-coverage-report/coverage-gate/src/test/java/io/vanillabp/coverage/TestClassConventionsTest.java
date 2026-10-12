@@ -12,18 +12,18 @@ import io.vanillabp.integration.test.utils.SuppressOutputExtension;
 import io.vanillabp.integration.test.utils.TestClassConventions;
 
 /**
- * A gate in the module which already gates this repository as a whole:
- * every test class registers {@link SuppressOutputExtension}, so a build log carries
- * what a FAILING test printed and nothing else.
+ * A gate in the module which already gates this repository as a whole. Every test class
+ * registers {@link SuppressOutputExtension}. So a build log carries what a FAILING test
+ * printed, and nothing else.
  * <p>
- * Four classes of this repository did not, and all four were quiet at the time, which is
- * why nobody noticed. The rule had been written down twice before it drifted, so it is
- * checked here rather than reviewed.
+ * Four classes of this repository did not. All four were quiet at the time, so nobody
+ * noticed. The rule had been written down twice before it drifted. So it is checked here,
+ * not left to a review.
  * <p>
- * It also checks the guiding messages of this repository. A message is what a developer
- * reads in the moment something goes wrong, so a sentence which fell apart in the source
- * takes away the one explanation they get. The check reads the main sources, and one run
- * of it covers every module.
+ * It also checks the guiding messages of this repository. A developer reads a message in
+ * the moment something goes wrong. A sentence which fell apart in the source takes away
+ * the one explanation they get. The check reads the main sources, and one run of it covers
+ * every module.
  */
 @ExtendWith(SuppressOutputExtension.class)
 public class TestClassConventionsTest {

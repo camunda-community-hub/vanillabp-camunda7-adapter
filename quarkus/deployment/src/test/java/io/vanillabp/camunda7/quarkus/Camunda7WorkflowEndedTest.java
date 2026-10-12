@@ -18,11 +18,10 @@ import jakarta.persistence.EntityManager;
 import jakarta.transaction.UserTransaction;
 
 /**
- * A <code>&#64;WorkflowEnded</code> method has to be called when the
- * workflow reaches its end event - on Quarkus it never was, because the engine
- * producer built the engine without the core's invoker and the engine therefore
- * attached no end listener. Nothing failed and nothing was logged; the method simply
- * stayed silent.
+ * A <code>&#64;WorkflowEnded</code> method has to be called when the workflow reaches its
+ * end event. On Quarkus it once never was. The engine producer built the engine without
+ * the core's invoker, so the engine attached no end listener. Nothing failed and nothing
+ * was logged. The method just stayed silent.
  */
 @ExtendWith(SuppressOutputExtension.class)
 @SuppressOutputExtension.SuppressBackgroundOutput

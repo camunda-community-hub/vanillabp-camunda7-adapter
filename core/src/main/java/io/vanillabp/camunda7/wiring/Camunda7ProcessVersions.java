@@ -16,19 +16,17 @@ import io.vanillabp.integration.adapter.spi.workflowstart.BpmsInitiatedStartSpec
 import io.vanillabp.integration.adapter.spi.workflowtask.BpmnTaskSpec;
 
 /**
- * The versions of the process definitions of ONE Camunda 7 engine (= one adapter id):
- * what the core matches <code>&#64;WorkflowTask(version = ...)</code> and its siblings
- * against.
+ * The versions of the process definitions of ONE Camunda 7 engine (= one adapter id). The
+ * core matches <code>&#64;WorkflowTask(version = ...)</code> and its siblings against them.
  * <p>
- * Two things are cached here, both for the same reason - the engine delivers tasks
- * inside its own transaction, and a query per task execution would be paid by every
- * workflow:
+ * Two things are cached here, both for the same reason. The engine delivers tasks inside its
+ * own transaction, and every workflow would pay for a query per task execution:
  * <ul>
- * <li>the version per process DEFINITION ID: the identifier an execution reports is
+ * <li>the version per process DEFINITION ID. The identifier an execution reports is
  * resolved once and then answered from memory (see
  * {@link #versionOfDefinition(String)});</li>
- * <li>the deployed versions per BPMN process, filled by the deployment (which reports
- * what it deployed) and by a definition query for everything deployed before or
+ * <li>the deployed versions per BPMN process. The deployment fills them, because it reports
+ * what it deployed. A definition query fills in everything deployed before or
  * elsewhere - the query only ever runs where a version TAG is involved.</li>
  * </ul>
  */
@@ -37,15 +35,15 @@ import io.vanillabp.integration.adapter.spi.workflowtask.BpmnTaskSpec;
 public class Camunda7ProcessVersions extends CachingProcessVersionCatalog {
 
   /**
-   * The adapter ID - this catalog belongs to ONE engine, and what it reports names it.
+   * The adapter ID. This catalog belongs to ONE engine, and what it reports names it.
    */
   private final String adapterId;
 
   private final RepositoryService repositoryService;
 
   /**
-   * The process definition key the ENGINE knows for a (workflow module, plain BPMN
-   * process id) - the identifiers may be prefixed.
+   * The process definition key the ENGINE knows for a workflow module and a plain BPMN
+   * process id. The identifiers may be prefixed.
    */
   private final BiFunction<String, String, String> scopedProcessIds;
 
@@ -55,61 +53,61 @@ public class Camunda7ProcessVersions extends CachingProcessVersionCatalog {
   private final Function<String, String> tenants;
 
   /**
-   * The deployed version per process definition id - the engine's definition ids are
-   * stable, so this map only grows by the number of deployed versions.
+   * The deployed version per process definition id. The engine's definition ids are stable,
+   * so this map only grows by the number of deployed versions.
    * <p>
-   * It holds the version TAG as well, not only the number: a caller showing a version to a
-   * person needs both, and the definition query which answers the number brings the tag
-   * along at no extra price. {@link #NOTHING_DEPLOYED} marks a definition the engine does
-   * not know, so such a definition does not cause a query per execution either.
+   * It holds the version TAG as well, not only the number. A caller who shows a version to a
+   * person needs both. And the definition query which answers the number brings the tag along
+   * for free. {@link #NOTHING_DEPLOYED} marks a definition the engine does not know. So such a
+   * definition does not cause a query per execution either.
    */
   private final Map<String, DeployedProcessVersion> versionsByDefinitionId = new ConcurrentHashMap<>();
 
   /**
-   * What a definition id the engine does not know is remembered as - a record cannot be
-   * <code>null</code> in a {@link ConcurrentHashMap}, and not remembering it would mean a
+   * What a definition id the engine does not know is remembered as. A value cannot be
+   * <code>null</code> in a {@link ConcurrentHashMap}. And not remembering it would mean a
    * query per execution of a definition the engine dropped.
    */
   private static final DeployedProcessVersion NOTHING_DEPLOYED = new DeployedProcessVersion(null, null, null);
 
   /**
-   * The engine's process definition id per (workflow module, BPMN process, version).
+   * The engine's process definition id per workflow module, BPMN process and version.
    * <p>
    * The startup check for old versions asks two things about every version older than the
-   * one this boot deployed, its model and how many workflows run on it, and both need this
-   * id. Looking it up with a definition query per question meant three queries per version
-   * where one list already held the answer: {@link #fetchDeployedVersions} reads the
-   * definitions and used to keep nothing but their version numbers. So it keeps the ids
-   * as well, and the query below runs only for a version which was deployed after that
-   * list was read - see decision 10 in the repository's DECISIONS.md.
+   * one this boot deployed: its model, and how many workflows run on it. Both need this id.
+   * A definition query per question meant three queries per version, while one list already
+   * held the answer. {@link #fetchDeployedVersions} reads the definitions and used to keep
+   * nothing but their version numbers. So now it keeps the ids as well. The query below runs
+   * only for a version which was deployed after that list was read. See decision 10 in the
+   * repository's DECISIONS.md.
    */
   private final Map<String, String> definitionIdsByVersion = new ConcurrentHashMap<>();
 
   /**
-   * The version this boot deployed per process - what tells a restart
-   * without a model change that it still has to report a version.
+   * The version this boot deployed per process. It tells a restart without a model change
+   * that it still has to report a version.
    */
   private final Map<String, String> deployedVersions = new ConcurrentHashMap<>();
 
   /**
-   * The engine's definition id per version, per (workflow module, BPMN process) and in
-   * deployment order - what the definition query brought back, kept whole so that reading
-   * the MODELS of a process costs no query of its own.
+   * The engine's definition id per version, per workflow module and BPMN process, in
+   * deployment order. It is what the definition query brought back. It is kept whole, so
+   * reading the MODELS of a process costs no query of its own.
    * <p>
    * It holds a suspended definition as well, unlike what {@link #deployedVersionsOf}
-   * answers: the workflows of such a version keep running, so whoever wires their model
-   * has to see it.
+   * answers. The workflows of such a version keep running. So whoever wires their model has
+   * to see it.
    */
   private final Map<String, Map<String, String>> definitionIdsByProcess = new ConcurrentHashMap<>();
 
   /**
-   * The engine's definition id per version of one BPMN process, oldest version first -
-   * how the models the engine still holds are reached, above all the ones of a BPMN
-   * process id the application declares without deploying anything under it.
+   * The engine's definition id per version of one BPMN process, oldest version first. This is
+   * how the models the engine still holds are reached. Above all, the ones of a BPMN process
+   * id the application declares without deploying anything under it.
    * <p>
-   * The definition query behind it runs once per process and boot, because
-   * {@link #deployedVersionsOf} caches it and this method asks it rather than querying
-   * again - which is the shape decision 10 in the repository's DECISIONS.md asks for.
+   * The definition query behind it runs once per process and boot. {@link #deployedVersionsOf}
+   * caches it, and this method asks it instead of querying again. Decision 10 in the
+   * repository's DECISIONS.md asks for this shape.
    *
    * @param workflowModuleId The workflow module ID
    * @param bpmnProcessId The PLAIN BPMN process ID
@@ -131,18 +129,18 @@ public class Camunda7ProcessVersions extends CachingProcessVersionCatalog {
   }
 
   /**
-   * What the deployment service' own extraction says about a model the engine holds. Every
-   * question is the walk a model this boot brings goes through, run over an old version,
-   * so the two directions of a question cannot disagree about what they are looking at.
+   * What the deployment service's own extraction says about a model the engine holds. Every
+   * question runs the same walk a model of this boot goes through, but over an old version.
+   * So the two directions of a question cannot disagree about what they look at.
    * <p>
-   * Handed in rather than done here, because reading a model needs what the deployment
-   * service has: the process id as the ENGINE knows it and the plain identifiers behind a
-   * prefix.
+   * It is handed in and not done here. Reading a model needs what the deployment service
+   * has: the process id as the ENGINE knows it, and the plain identifiers behind a prefix.
    */
   public interface HeldModelReading {
 
     /**
-     * The tasks of that model, as the wiring validation would report them.     *
+     * The tasks of that model, as the wiring validation would report them.
+     *
      * @param workflowModuleId The workflow module the held model belongs to
      * @param bpmnProcessId The plain BPMN process id
      * @param version The version the engine counts this definition under
@@ -157,7 +155,8 @@ public class Camunda7ProcessVersions extends CachingProcessVersionCatalog {
 
     /**
      * The start events the engine fires on its own in that model, as the start
-     * validation would report them.     *
+     * validation would report them.
+     *
      * @param workflowModuleId The workflow module the held model belongs to
      * @param bpmnProcessId The plain BPMN process id
      * @param version The version the engine counts this definition under
@@ -172,7 +171,8 @@ public class Camunda7ProcessVersions extends CachingProcessVersionCatalog {
 
     /**
      * The elements of that model which can put a second token into a running workflow,
-     * as the deployment reports them.     *
+     * as the deployment reports them.
+     *
      * @param workflowModuleId The workflow module the held model belongs to
      * @param bpmnProcessId The plain BPMN process id
      * @param version The version the engine counts this definition under
@@ -186,7 +186,8 @@ public class Camunda7ProcessVersions extends CachingProcessVersionCatalog {
         BpmnModelInstance model);
 
     /**
-     * The identifiers that model declares which the workflow module scopes, plain.     *
+     * The identifiers that model declares which the workflow module scopes, plain.
+     *
      * @param workflowModuleId The workflow module the held model belongs to
      * @param bpmnProcessId The plain BPMN process id
      * @param version The version the engine counts this definition under
@@ -204,14 +205,13 @@ public class Camunda7ProcessVersions extends CachingProcessVersionCatalog {
   private final HeldModelReading heldModelReading;
 
   /**
-   * The engine's runtime, asked how many workflows still run on an old version.
-   * Set once the engine is there; <code>null</code> switches the
-   * question off.
+   * The engine's runtime, asked how many workflows still run on an old version. It is set
+   * once the engine is there. <code>null</code> switches the question off.
    */
   private RuntimeService runtimeService;
 
   /**
-   * Asks one engine what it still holds. Nothing is read here: the questions below reach
+   * Asks one engine what it still holds. Nothing is read here. The questions below reach
    * the engine when somebody asks them.
    *
    * @param adapterId The adapter id whose engine is asked, for the log
@@ -240,8 +240,8 @@ public class Camunda7ProcessVersions extends CachingProcessVersionCatalog {
 
   /**
    * Hands over what counts the workflows still running on an old version. It arrives after
-   * construction because the engine is built around this object, and without it the
-   * question is simply not asked.
+   * construction, because the engine is built around this object. Without it the question
+   * is not asked.
    *
    * @param runtimeService The engine's runtime service
    */
@@ -332,8 +332,8 @@ public class Camunda7ProcessVersions extends CachingProcessVersionCatalog {
     }
     final var model = modelOfVersion(workflowModuleId, bpmnProcessId, version);
     if (model == null) {
-      // the engine does not hold that version any more, so it declares nothing anybody
-      // could still collide with - the same answer its tasks and its start events give
+      // the engine does not hold that version any more. So it declares nothing anybody
+      // could still collide with. Its tasks and its start events give the same answer
       return java.util.List.of();
     }
     return heldModelReading.identifiersOf(workflowModuleId, bpmnProcessId, version, model);
@@ -341,14 +341,13 @@ public class Camunda7ProcessVersions extends CachingProcessVersionCatalog {
   }
 
   /**
-   * The model of one version as the engine holds it, or <code>null</code> where the engine
-   * does not hold that version any more - a deployment deleted between the version query
-   * and this call, which is nothing to check and nothing to warn about either.
+   * The model of one version as the engine holds it. It is <code>null</code> where the engine
+   * does not hold that version any more: somebody deleted the deployment between the version
+   * query and this call. That is nothing to check and nothing to warn about either.
    * <p>
-   * Every question about a version asks for the model itself rather than passing one
-   * around, because the engine parses a definition once and answers from its deployment
-   * cache afterwards, and no question can then be answered from a model another question
-   * happened to have read.
+   * Every question about a version asks for the model itself and does not pass one around.
+   * The engine parses a definition once and answers from its deployment cache afterwards. So
+   * no question can be answered from a model which another question happened to read.
    */
   private BpmnModelInstance modelOfVersion(
       final String workflowModuleId,
@@ -385,7 +384,7 @@ public class Camunda7ProcessVersions extends CachingProcessVersionCatalog {
   }
 
   /**
-   * The engine's process definition id of one version of a process - from what the
+   * The engine's process definition id of one version of a process. It comes from what the
    * version list already brought back, and only otherwise from a query of its own.
    */
   private String definitionIdOf(
@@ -437,8 +436,8 @@ public class Camunda7ProcessVersions extends CachingProcessVersionCatalog {
   }
 
   /**
-   * Keeps what a definition query brought back, so the next question about the same
-   * version is answered without asking again.
+   * Keeps what a definition query brought back. So the next question about the same version
+   * is answered without asking again.
    */
   private void remember(
       final String workflowModuleId,
@@ -474,14 +473,13 @@ public class Camunda7ProcessVersions extends CachingProcessVersionCatalog {
   }
 
   /**
-   * The deployed version behind a process definition id, resolved ONCE per definition id
-   * and answered from memory afterwards - the version the engine counted and the
-   * <code>camunda:versionTag</code> the modeller gave it.
+   * The deployed version behind a process definition id. That is the version the engine
+   * counted and the <code>camunda:versionTag</code> the modeller gave it. It is resolved ONCE
+   * per definition id and answered from memory afterwards.
    * <p>
-   * This is the lookup {@link #versionOfDefinition(String)} reads as well, so a caller
-   * which needs the tag pays the engine nothing on top of what a running workflow already
-   * paid. How an operator reads the two together is
-   * {@link DeployedProcessVersion#displayVersion()}.
+   * {@link #versionOfDefinition(String)} reads the same lookup. So a caller which needs the
+   * tag costs the engine nothing more than a running workflow already did. How an operator
+   * reads the two together is {@link DeployedProcessVersion#displayVersion()}.
    *
    * @param processDefinitionId The engine's process definition id
    * @return The version, or <code>null</code> if the engine does not know that definition
@@ -493,10 +491,10 @@ public class Camunda7ProcessVersions extends CachingProcessVersionCatalog {
     if (processDefinitionId == null) {
       return null;
     }
-    // an unknown definition is remembered as well, so a definition the engine dropped does
+    // an unknown definition is remembered as well. So a definition the engine dropped does
     // not cause a query per task execution either. The engine answers such an id by
-    // throwing rather than by returning nothing, and a definition somebody deleted while
-    // its history stayed is a normal thing to be asked about - so the throw is the empty
+    // throwing, not by returning nothing. But somebody may delete a definition while its
+    // history stays, and then it is normal to be asked about it. So that throw is the empty
     // answer here, and only that one. Everything else about the query stays an error
     final var deployed = versionsByDefinitionId
         .computeIfAbsent(
@@ -519,9 +517,8 @@ public class Camunda7ProcessVersions extends CachingProcessVersionCatalog {
   }
 
   /**
-   * Remembers a version the deployment reported - the deploy result names the version
-   * the engine assigned to the model just deployed, including its
-   * <code>camunda:versionTag</code>.
+   * Remembers a version the deployment reported. The deploy result names the version the
+   * engine gave the model just deployed, with its <code>camunda:versionTag</code>.
    *
    * @param workflowModuleId The workflow module ID
    * @param bpmnProcessId The PLAIN BPMN process ID
@@ -564,11 +561,10 @@ public class Camunda7ProcessVersions extends CachingProcessVersionCatalog {
         .orderByProcessDefinitionVersion()
         .asc()
         .list();
-    // this one list holds what every later question about an older version needs, and
-    // keeping it is what spares those questions a definition query each. A suspended
-    // definition is remembered along with the rest even where SuspendedProcessDefinitions
-    // takes it out of the answer: its workflows keep running and keep reporting the
-    // version they are on
+    // this one list holds what every later question about an older version needs. Keeping
+    // it saves those questions a definition query each. A suspended definition is
+    // remembered along with the rest, even where SuspendedProcessDefinitions takes it out
+    // of the answer. Its workflows keep running and keep reporting the version they are on
     definitions.forEach(definition -> remember(workflowModuleId, bpmnProcessId, definition));
     final var byVersion = new java.util.LinkedHashMap<String, String>();
     definitions

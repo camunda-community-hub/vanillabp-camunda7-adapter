@@ -10,12 +10,12 @@ import io.vanillabp.spi.service.WorkflowService;
 import io.vanillabp.spi.service.WorkflowTask;
 
 /**
- * The same application AFTER the rename: the BPMN process carries the new id, and the old
- * one is declared as a secondary process so the workflow which is still on it keeps being
- * served by these very methods.
+ * The same application AFTER the rename. The BPMN process carries the new id. The old id is
+ * declared as a secondary process, so these very methods keep serving the workflow which
+ * still runs on it.
  * <p>
- * Nothing else about the class says that a rename happened, which is the point of the
- * feature: the aggregate is the same, the tasks are the same, and the workflow started
+ * Nothing else about the class says that a rename happened, and that is the point of the
+ * feature. The aggregate is the same, the tasks are the same, and the workflow started
  * under the old id ends under it.
  */
 @Service

@@ -9,7 +9,7 @@
       <bpmn:outgoing>Flow_ToWait</bpmn:outgoing>
     </bpmn:startEvent>
     <bpmn:sequenceFlow id="Flow_ToWait" sourceRef="Event_Start" targetRef="Event_Wait" />
-    <!-- an hour: this event is never reached, it only holds the token until the event
+    <!-- an hour. This event is never reached. It only holds the token until the event
          subprocess takes it away -->
     <bpmn:intermediateCatchEvent id="Event_Wait">
       <bpmn:incoming>Flow_ToWait</bpmn:incoming>

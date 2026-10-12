@@ -29,12 +29,12 @@ import io.vanillabp.spi.service.BpmsStartTrigger;
  * What the start of a CALLED process is, where the call activity named the process to call
  * in an expression.
  * <p>
- * Camunda 7 hands a called process no business key, and a model which names the process to
- * call in an expression cannot be given the propagation while it is deployed - nobody knows
- * then which process will be called. So the instance arrives here without a name, and the
- * listener has to tell the two cases apart: a called process continuing the business case
- * of its caller goes by the caller's name, and a process with a workflow aggregate of its
- * own is the start it looks like.
+ * Camunda 7 hands a called process no business key. A model which names the process to call
+ * in an expression cannot get the hand-over while it is deployed, because nobody knows then
+ * which process will be called. So the instance arrives here without a name. The listener
+ * has to tell the two cases apart. A called process which continues the business case of
+ * its caller goes by the caller's name. A process with a workflow aggregate of its own is
+ * the start it looks like.
  */
 @ExtendWith(SuppressOutputExtension.class)
 public class Camunda7CalledProcessStartTest {
@@ -48,8 +48,8 @@ public class Camunda7CalledProcessStartTest {
   private static final String CALLERS_NAME = "4711";
 
   /**
-   * The engine's one repository service: both the called and the calling process are
-   * looked up in it, the way a running engine answers for every definition it holds.
+   * The engine's one repository service. Both the called and the calling process are looked
+   * up in it, the way a running engine answers for every definition it holds.
    */
   private final RepositoryService repositoryService = mock(RepositoryService.class);
 

@@ -3,11 +3,11 @@ package io.vanillabp.camunda7.quarkus.runtime;
 import java.util.Map;
 
 /**
- * Holds the embedded engines of all configured {@code camunda7} adapter ids (one
- * {@link Camunda7QuarkusEngineHolder} per id), built eagerly at startup by
- * {@link Camunda7EngineProducer} (validation surfaces at boot, never first at
- * runtime). Closed on application shutdown - each holder stops its job executor
- * before closing its engine.
+ * Holds the embedded engines of all configured {@code camunda7} adapter ids, one
+ * {@link Camunda7QuarkusEngineHolder} per id. {@link Camunda7EngineProducer} builds them
+ * eagerly at startup. So validation fails at boot, never first at runtime. The registry is
+ * closed when the application shuts down. Each holder stops its job executor before it
+ * closes its engine.
  */
 public class Camunda7QuarkusEngineRegistry implements AutoCloseable {
 

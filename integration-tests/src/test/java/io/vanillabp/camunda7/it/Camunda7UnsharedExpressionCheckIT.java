@@ -13,23 +13,23 @@ import io.vanillabp.integration.test.utils.CapturedOutput;
 import io.vanillabp.integration.test.utils.SuppressOutputExtension;
 
 /**
- * What the startup check says about the models of the expression suite, read from the
- * boot log of a real engine. This is the check at the level it runs at: the models are
- * the ones {@code AbstractNestedExpressionsIT} measures the RUNTIME of, so every
- * expression named here has a case in that suite saying what the engine does with it.
+ * What the startup check says about the models of the expression suite, read from the boot
+ * log of a real engine. This is the check at the level it runs at.
+ * {@code AbstractNestedExpressionsIT} measures the RUNTIME of the same models. So every expression
+ * named here has a case in that suite which says what the engine does with it.
  * <p>
- * The cases which matter are the quiet ones. A conditional event reading an unshared
- * nested attribute waits for good without an incident and without a log line, so the boot
- * is the only place a developer can hear about it at all.
+ * The cases which matter are the quiet ones. A conditional event which reads an unshared
+ * nested attribute waits for good, without an incident and without a log line. So the boot
+ * is the only place where a developer can hear about it at all.
  */
 @ExtendWith(SuppressOutputExtension.class)
 @SuppressOutputExtension.SuppressBackgroundOutput
 public class Camunda7UnsharedExpressionCheckIT {
 
   /**
-   * The boot log of an application deploying the expression models, whose aggregates
-   * share a nested {@code order} and keep back {@code order.internalCode} and the whole
-   * of {@code hiddenOrder}.
+   * The boot log of an application which deploys the expression models. Their aggregates
+   * share a nested {@code order}, and they keep back {@code order.internalCode} and the
+   * whole of {@code hiddenOrder}.
    *
    * @param output What the test class captured so far
    * @return Everything logged while this application booted
@@ -60,9 +60,9 @@ public class Camunda7UnsharedExpressionCheckIT {
 
     final var log = bootLog(output);
 
-    // the conditional start event of an event subprocess, whose condition reads an
-    // attribute two levels down that the aggregate keeps back. Nothing about this
-    // workflow ever looks wrong at runtime
+    // the conditional start event of an event subprocess. Its condition reads an attribute
+    // two levels down, which the aggregate keeps back. Nothing about this workflow ever
+    // looks wrong at runtime.
     final var quietEventSubprocess = warningAbout(log, "EQ_SubStart");
     Assertions
         .assertTrue(
@@ -85,8 +85,8 @@ public class Camunda7UnsharedExpressionCheckIT {
             () -> "a reported path must not be promised a fallback which does not serve it: "
                 + quietEventSubprocess);
 
-    // the second silent mechanism: a property of a value which reaches the engine as
-    // its text, which Camunda swallows in a conditional event and nowhere else
+    // the second silent mechanism: a property of a value which reaches the engine as its
+    // text. Camunda swallows that in a conditional event and nowhere else.
     final var swallowedProperty = warningAbout(log, "EX_P03");
     Assertions
         .assertTrue(
@@ -134,7 +134,7 @@ public class Camunda7UnsharedExpressionCheckIT {
 
     final var log = bootLog(output);
 
-    // a collection is one of the placements which refuses a null instead of coercing it
+    // a collection is one of the placements which refuse a null instead of coercing it
     final var collection = warningAbout(log, "EX_P15");
     Assertions
         .assertTrue(
@@ -147,7 +147,7 @@ public class Camunda7UnsharedExpressionCheckIT {
             () -> "expected the sentence about a multi-instance collection but got: "
                 + collection);
 
-    // and a whole nested object the aggregate has not got at all
+    // and a whole nested object which the aggregate has not got at all
     final var absentNestedObject = warningAbout(log, "EC_yes_C21");
     Assertions
         .assertTrue(
@@ -162,9 +162,9 @@ public class Camunda7UnsharedExpressionCheckIT {
   public void whatWorksAndWhatCannotBeJudgedStayQuiet(
       final CapturedOutput output) {
 
-    // only the lines of THIS check. The same models are read by the check which says what
-    // an expression costs the application, and that one quotes every expression it found,
-    // method calls included, see Camunda7ModelExpressionsIT
+    // only the lines of THIS check. The check which says what an expression costs the
+    // application reads the same models. That one quotes every expression it found, method
+    // calls included, see Camunda7ModelExpressionsIT.
     final var log = bootLog(output)
         .lines()
         .filter(line -> line.contains("of element '"))
@@ -175,10 +175,11 @@ public class Camunda7UnsharedExpressionCheckIT {
         .assertFalse(
             log.contains("'order.customer.vip'"),
             "a path whose every segment is shared is a model which works");
-    // a method call resolves against the runtime class the engine's serialization
-    // produced, which a declared type does not say, so the check judges the path up to
-    // the call and nothing more. 'order' is shared, so this stays quiet - the engine
-    // raises an incident naming the expression, which is the loud half of the story
+    // a method call resolves against the runtime class which the serialization of the
+    // engine produced. A declared type does not say which class that is. So the check
+    // judges the path up to the call and nothing more. 'order' is shared, so this stays
+    // quiet. The engine raises an incident which names the expression, and that is the loud
+    // half of the story.
     Assertions
         .assertFalse(
             log.contains("getTotal"),
@@ -192,7 +193,7 @@ public class Camunda7UnsharedExpressionCheckIT {
   }
 
   /**
-   * The one warning of the boot log naming that BPMN element.
+   * The one warning of the boot log which names that BPMN element.
    *
    * @param log The boot log
    * @param elementId The element the expression sits on

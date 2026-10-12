@@ -18,23 +18,23 @@ import org.springframework.transaction.support.TransactionTemplate;
 import io.vanillabp.integration.test.utils.SuppressOutputExtension;
 
 /**
- * End-to-end test of pushing a changed aggregate against a real embedded
- * Camunda 7 engine. Two things are worth an engine: a conditional event only ever
- * looks at its condition when a variable of its scope changes - so the push is what
- * makes it fire - and a task-scoped push has to land in the scope the task RUNS IN
- * (here: one iteration of a multi-instance embedded subprocess), because that is the
- * scope an event subprocess with a conditional start event listens on.
+ * End-to-end test of pushing a changed aggregate against a real embedded Camunda 7 engine.
+ * Two things are worth an engine. First, a conditional event only looks at its condition
+ * when a variable of its scope changes, so the push is what makes it fire. Second, a push
+ * for a task has to land in the scope the task RUNS IN (here: one iteration of a
+ * multi-instance embedded subprocess). An event subprocess with a conditional start event
+ * listens on that scope.
  */
 @SpringBootTest(classes = TestApplication.class, properties = {
-    // own database: contexts are cached and live in parallel - a foreign engine
-    // (and job executor) on the same H2 database would compete for this test's jobs
+    // own database. Contexts are cached and live in parallel. A foreign engine and its job
+    // executor on the same H2 database would compete for the jobs of this test.
     "spring.datasource.url=jdbc:h2:mem:c7-aggregate-changed-it;DB_CLOSE_DELAY=-1"
 })
 @ExtendWith(SuppressOutputExtension.class)
 @SuppressOutputExtension.SuppressBackgroundOutput
-// closed when the class is done: this IT has a database (and therefore a context) of its
-// own, Spring would keep every context until the JVM exits, and an engine outliving its
-// test keeps its job executor running against a database the next classes work on
+// closed when the class is done. This IT has a database of its own, and so a context of its
+// own. Spring would keep every context until the JVM exits. An engine which outlives its test
+// keeps its job executor running against a database which the next classes work on.
 @DirtiesContext
 public class Camunda7AggregateChangedIT {
 
@@ -59,9 +59,9 @@ public class Camunda7AggregateChangedIT {
   private TransactionTemplate transactionTemplate;
 
   /**
-   * Lets the test PARK the engine's job executor. What a push lands in is asserted by
-   * reading the variables of an execution, and an interrupting event subprocess ends
-   * exactly that execution as soon as its task ran - which is an async job. With the
+   * Lets the test PARK the job executor of the engine. The test asserts what a push lands
+   * in by reading the variables of an execution. An interrupting event subprocess ends
+   * exactly that execution as soon as its task ran, and that task is an async job. With the
    * executor parked, nothing moves while the test looks.
    */
   @Autowired
@@ -75,9 +75,9 @@ public class Camunda7AggregateChangedIT {
         .execute(status -> multiInstanceWorkflowService.saveAggregate().getId());
     assertNotNull(aggregateId);
 
-    // the secondary process is started against the engine: the injectable process
-    // service starts the primary process of its workflow service only. The business
-    // key IS the aggregate's id, which is how VanillaBP finds it again
+    // the test starts the secondary process against the engine, because the injectable
+    // process service starts only the primary process of its workflow service. The business
+    // key IS the id of the aggregate. That is how VanillaBP finds it again.
     transactionTemplate
         .executeWithoutResult(status -> runtimeService
             .startProcessInstanceByKey("AggregateChangedBoundaryProcess", String.valueOf(aggregateId)));
@@ -94,8 +94,8 @@ public class Camunda7AggregateChangedIT {
     transactionTemplate
         .executeWithoutResult(status -> multiInstanceWorkflowService.escalateAt(aggregateId, taskId));
 
-    // The pushed VALUES are the change now - the technical marker is written
-    // only for an aggregate which shares nothing at all
+    // The pushed VALUES are the change now. The technical marker is written only for an
+    // aggregate which shares nothing at all.
     final var marker = "escalate";
     // the push happens after the commit, so the scope it lands in is
     // waited for
@@ -103,8 +103,8 @@ public class Camunda7AggregateChangedIT {
     AwaitPhaseTwo.until(
         () -> runtimeService.getVariablesLocal(instanceId).containsKey(marker),
         "the scope around the task is the workflow itself here");
-    // the boundary event makes the engine give the activity a scope of its own, and
-    // that scope is the task's context - not the scope the task RUNS in
+    // the boundary event makes the engine give the activity a scope of its own. That scope
+    // is the context of the task, not the scope the task RUNS in.
     assertFalse(
         runtimeService.getVariablesLocal(taskId).containsKey(marker),
         "the activity's own scope may not be written at");
@@ -127,8 +127,8 @@ public class Camunda7AggregateChangedIT {
   }
 
   /**
-   * The workflow is created by the phase-two outbox after the commit, so
-   * the lookup waits for it instead of reading a moment too early.
+   * The phase-two outbox creates the workflow after the commit. So the lookup waits for it,
+   * instead of reading a moment too early.
    *
    * @param aggregateId The aggregate's id (the business key)
    * @return The process instance's id
@@ -148,9 +148,9 @@ public class Camunda7AggregateChangedIT {
   }
 
   /**
-   * The SCOPE execution of the iteration working on the given item. Camunda 7 keeps
-   * the multi-instance element variable on the concurrent execution ABOVE that scope,
-   * so the scope is found as its child.
+   * The SCOPE execution of the iteration which works on the given item. Camunda 7 keeps the
+   * multi-instance element variable on the concurrent execution ABOVE that scope. So the
+   * scope is found as its child.
    */
   private String executionIdOfIteration(
       final Long aggregateId,
@@ -194,7 +194,7 @@ public class Camunda7AggregateChangedIT {
             .count() > 0,
         "the workflow to wait at the conditional event");
 
-    // the attribute the condition reads is set, but nothing tells the engine yet
+    // the attribute which the condition reads is set, but nothing tells the engine yet
     Thread.sleep(500);
     assertEquals(
         null,
@@ -219,24 +219,24 @@ public class Camunda7AggregateChangedIT {
 
     final var aggregateId = startedMultiInstanceWorkflow();
 
-    // "item=taskId" per iteration - the test has to know WHICH iteration it pushed into
+    // "item=taskId" per iteration. The test has to know WHICH iteration it pushed into.
     final var parked = multiInstanceRepository.findById(aggregateId).orElseThrow().getTaskIds().split(",");
     final var pushedItem = parked[0].split("=")[0];
     final var pushedTaskId = parked[0].split("=")[1];
     final var siblingItem = parked[1].split("=")[0];
 
-    // park the executor: the conditional start event of the event subprocess fires
-    // within the push's transaction and INTERRUPTS its iteration once the task behind
-    // it ran - which would take the very execution this test reads
+    // park the executor. The conditional start event of the event subprocess fires within
+    // the transaction of the push. Once the task behind it ran, it INTERRUPTS its
+    // iteration. That would take the very execution which this test reads.
     engineHolder.stopWorkflowProcessing(MODULE_ID);
 
     transactionTemplate
         .executeWithoutResult(status -> multiInstanceWorkflowService.escalateAt(aggregateId, pushedTaskId));
 
-    // the values land in the scope the task RUNS IN - the iteration of the
-    // multi-instance subprocess, recognizable by its own 'item' variable
-    // The pushed VALUES are the change now - the technical marker is written
-    // only for an aggregate which shares nothing at all
+    // the values land in the scope the task RUNS IN: the iteration of the multi-instance
+    // subprocess, which can be recognized by its own 'item' variable.
+    // The pushed VALUES are the change now. The technical marker is written only for an
+    // aggregate which shares nothing at all.
     final var marker = "escalate";
     final var iterationExecutionId = executionIdOfIteration(aggregateId, pushedItem);
     AwaitPhaseTwo.until(
@@ -247,9 +247,9 @@ public class Camunda7AggregateChangedIT {
         Boolean.TRUE,
         runtimeService.getVariablesLocal(iterationExecutionId).get(marker),
         "the iteration the task runs in has to carry the pushed value");
-    // the workflow's global scope keeps what the START wrote (the shared values are
-    // written there when the workflow begins), so the sibling iterations read the old
-    // value - which is the point of writing at the scope the task runs in
+    // the global scope of the workflow keeps what the START wrote, because the shared
+    // values are written there when the workflow begins. So the sibling iterations read the
+    // old value. That is the point of writing at the scope the task runs in.
     assertEquals(
         Boolean.FALSE,
         runtimeService.getVariablesLocal(processInstanceIdOf(aggregateId)).get(marker),
@@ -260,18 +260,18 @@ public class Camunda7AggregateChangedIT {
             .containsKey(marker),
         "the sibling iteration's scope stays as it was");
 
-    // deliberately NOT asserted: that the sibling iteration stays untouched afterwards.
-    // Camunda 7 evaluates the conditional events of a scope whenever a variable of a
-    // PARENT scope changes, and the first iteration ending updates the counters of the
-    // multi-instance body - which is a parent of the sibling. Where the values land is
-    // what this adapter decides; which conditions the engine then re-evaluates is the
-    // engine's business.
+    // NOT asserted on purpose: that the sibling iteration stays untouched afterwards.
+    // Camunda 7 evaluates the conditional events of a scope whenever a variable of a PARENT
+    // scope changes. When the first iteration ends, it updates the counters of the
+    // multi-instance body, which is a parent of the sibling. This adapter decides where the
+    // values land. Which conditions the engine then evaluates again is the business of the
+    // engine.
 
-    // let the engine run again: the escalation was recognized, the rest is jobs
+    // let the engine run again. The escalation was recognized, and the rest is jobs.
     engineHolder.startWorkflowProcessing(MODULE_ID);
 
-    // the payoff: the event subprocess of that iteration has a conditional start
-    // event, and the write in its scope is what makes the engine look at it
+    // the payoff. The event subprocess of that iteration has a conditional start event, and
+    // the write in its scope makes the engine look at it.
     awaitUntil(
         () -> {
           final var escalated = multiInstanceRepository
@@ -288,8 +288,8 @@ public class Camunda7AggregateChangedIT {
   @DisplayName("a global push lands at the workflow's scope")
   public void aGlobalPushReachesTheWorkflowScope() throws Exception {
 
-    // an own workflow: the escalation of the test above interrupts an iteration and
-    // may take the whole instance with it, and a push needs a workflow which is there
+    // a workflow of its own. The escalation of the test above interrupts an iteration and
+    // may take the whole instance with it. A push needs a workflow which is there.
     final var aggregateId = startedMultiInstanceWorkflow();
 
     transactionTemplate.executeWithoutResult(status -> multiInstanceWorkflowService.pushGlobally(aggregateId));
@@ -304,8 +304,8 @@ public class Camunda7AggregateChangedIT {
   }
 
   /**
-   * Starts the multi-instance workflow and waits until both iterations park at their
-   * task, which is where a push can be observed.
+   * Starts the multi-instance workflow and waits until both iterations park at their task.
+   * A push can be observed there.
    *
    * @return The aggregate's id
    */

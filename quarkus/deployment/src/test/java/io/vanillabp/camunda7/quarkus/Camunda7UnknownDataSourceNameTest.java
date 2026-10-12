@@ -14,10 +14,9 @@ import io.vanillabp.camunda7.quarkus.sample.TestWorkflowService;
 import io.vanillabp.integration.test.utils.SuppressOutputExtension;
 
 /**
- * Startup validation on Quarkus (26c style): a {@code camunda7} adapter id
- * referencing an UNDECLARED datasource name
- * (<code>vanillabp.adapters.&lt;id&gt;.data-source-name</code>) must fail the boot
- * with a guiding message naming the <code>quarkus.datasource.&lt;name&gt;.*</code>
+ * Startup validation on Quarkus. A {@code camunda7} adapter id which names an UNDECLARED
+ * datasource (<code>vanillabp.adapters.&lt;id&gt;.data-source-name</code>) must fail the
+ * boot. The guiding message names the <code>quarkus.datasource.&lt;name&gt;.*</code>
  * remedy and the declared datasource names.
  */
 @ExtendWith(SuppressOutputExtension.class)

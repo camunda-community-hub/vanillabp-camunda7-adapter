@@ -1,15 +1,15 @@
 package io.vanillabp.camunda7.deployment;
 
 /**
- * Controls the engine's asynchronous job processing per workflow module - implemented
- * by the platform module owning the engine (Spring Boot:
+ * Controls the engine's asynchronous job processing per workflow module. The platform
+ * module which owns the engine implements it (Spring Boot:
  * <code>Camunda7EngineHolder</code> controlling the <code>SpringJobExecutor</code>).
  * <p>
- * The job executor is ENGINE-global while the deployment pipeline notifies start/stop
- * PER workflow module: implementations start the executor when the first module
- * starts and stop it only when the last started module stops (stopping on the first
- * module's stop would starve the remaining modules), plus unconditionally on shutdown
- * before the engine closes.
+ * There is one job executor for the whole ENGINE. But the deployment pipeline reports
+ * start and stop PER workflow module. So implementations start the executor when the
+ * first module starts. They stop it only when the last started module stops. Stopping it
+ * on the first module's stop would starve the other modules. On shutdown they always stop
+ * it, before the engine closes.
  */
 public interface Camunda7WorkflowProcessingLifecycle {
 

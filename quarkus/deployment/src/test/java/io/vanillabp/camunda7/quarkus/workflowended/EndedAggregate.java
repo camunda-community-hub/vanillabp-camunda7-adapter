@@ -9,8 +9,8 @@ import lombok.Getter;
 import lombok.Setter;
 
 /**
- * The aggregate of the workflow-ended test: what the notification wrote is the only
- * thing this test looks at.
+ * The aggregate of the workflow-ended test. The test looks only at what the notification
+ * wrote.
  */
 @Entity
 @Table(name = "C7_ENDED_AGGREGATE")

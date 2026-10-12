@@ -8,21 +8,21 @@ import io.vanillabp.integration.adapter.spi.values.ValueDirection;
 import io.vanillabp.integration.adapter.spi.values.ValueTypeVerdict;
 
 /**
- * What Camunda 7 does with one Java type, answered for the startup check which asks
- * whether a value survives the way to the engine and back.
+ * What Camunda 7 does with one Java type. The startup check asks this to find out whether a
+ * value survives the way to the engine and back.
  * <p>
- * Camunda 7 keeps a value in a variable of its own type where it HAS a type for it, and
- * in an object variable otherwise. The types it has are the texts, the boolean, the
+ * Camunda 7 keeps a value in a variable of its own type where it HAS a type for it. Otherwise
+ * it keeps it in an object variable. The types it has are the texts, the boolean, the
  * numbers of the JDK, a date and a byte array. An arbitrary-precision number is not among
- * them, so a {@link BigDecimal} is written in the serialization format configured for the
- * workflow, and what an expression reads back is that format's answer rather than the
- * value the application had.
+ * them. So a {@link BigDecimal} is written in the serialization format configured for the
+ * workflow. An expression then reads back what that format made of it, not the value the
+ * application had.
  * <p>
- * What the format costs exactly is not guessed here.
+ * This class does not guess what the format costs exactly.
  * {@link Camunda7SerializationRoundTrip} measures it by writing a sample through the
  * engine's own serializer, and the deployment reports what it measured. This class answers
- * the shorter question the startup check asks: does the type reach the engine as itself,
- * and does it come back as itself.
+ * the shorter question of the startup check: does the type reach the engine as itself, and
+ * does it come back as itself?
  */
 public final class Camunda7ValueTypes {
 

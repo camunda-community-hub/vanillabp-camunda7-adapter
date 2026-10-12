@@ -13,30 +13,30 @@ import io.vanillabp.integration.test.utils.SuppressOutputExtension;
 
 /**
  * What an application is told at startup when an adapter id may repeat a delivery and
- * nothing is there to remember one. The core writes that message for every adapter
- * answering {@code deliversTasksAtLeastOnce}, so this is where the datasource mode of
- * this adapter becomes visible to the developer:
+ * nothing is there to remember one. The core writes that message for every adapter which
+ * answers {@code deliversTasksAtLeastOnce}. So this is where the datasource mode of this
+ * adapter becomes visible to the developer:
  * <ul>
- * <li>an adapter id on a datasource of its own is named by the guiding message;</li>
- * <li>an application whose adapter ids all share the application's datasource hears
+ * <li>The guiding message names an adapter id on a datasource of its own.</li>
+ * <li>An application whose adapter ids all share the datasource of the application hears
  * nothing, because no delivery of theirs is deduplicated.</li>
  * </ul>
- * Both applications are booted WITHOUT the platform's JDBC delivery log, which is the
- * situation the message is about; everything else about them is the same.
+ * Both applications are booted WITHOUT the JDBC delivery log of the platform, which is the
+ * situation the message is about. Everything else about them is the same.
  */
 @ExtendWith(SuppressOutputExtension.class)
 @SuppressOutputExtension.SuppressBackgroundOutput
 public class Camunda7MissingDeliveryLogIT {
 
   /**
-   * The message the core writes, recognized by the words naming the missing log rather
-   * than by the whole text. The core publishes those words, so a rewording there changes
+   * The message the core writes. It is recognized by the words which name the missing log,
+   * not by the whole text. The core publishes those words, so a rewording there changes
    * nothing here.
    */
   private static final String MISSING_DELIVERY_LOG = DeliveryRecords.NO_DELIVERY_LOG;
 
   /**
-   * Boots the test application without the platform's JDBC delivery log. Command-line
+   * Boots the test application without the JDBC delivery log of the platform. Command-line
    * arguments have the highest precedence, so they outrank the application.yaml of this
    * module.
    *
@@ -61,7 +61,8 @@ public class Camunda7MissingDeliveryLogIT {
   }
 
   /**
-   * The application-provided datasource bean the own-datasource adapter id runs on.
+   * The datasource bean which the application provides. The adapter id with its own
+   * datasource runs on it.
    */
   @org.springframework.boot.test.context.TestConfiguration
   public static class NamedDataSourceConfiguration {

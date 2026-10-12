@@ -17,10 +17,9 @@ import org.camunda.bpm.engine.delegate.JavaDelegate;
  * the same moment, on which threads, and in which order they were entered.
  * <p>
  * A handler waits for the other one after it entered. Where the engine runs both at the
- * same time the second arrival releases the first immediately; where it runs them one after
- * the other the wait runs out and the overlap it was looking for never happened. So the
- * measurement answers with a fact either way instead of with a timing which might have been
- * luck.
+ * same time, the second one to arrive releases the first at once. Where the engine runs them
+ * one after the other, the wait runs out and the overlap never happens. So the measurement
+ * answers with a fact either way, not with a timing which might have been luck.
  */
 public final class CompensationRecorder {
 
@@ -39,7 +38,7 @@ public final class CompensationRecorder {
 
   /**
    * The transaction each handler ran in, as the identity of the command context the engine
-   * opened for it. One command context is one transaction here: the engine builds it per
+   * opened for it. One command context is one transaction here. The engine builds one per
    * command it executes, and a job is one such command.
    */
   private static final List<Integer> handlerTransactions = new CopyOnWriteArrayList<>();
@@ -103,9 +102,9 @@ public final class CompensationRecorder {
   }
 
   /**
-   * Lets the handler which is entered SECOND throw once, so what a failing handler costs the
-   * other one can be read. Which handler that is follows the order the engine picks, which is
-   * not stable, and the measurement does not depend on it.
+   * Lets the handler which is entered SECOND throw once. Then the test can read what a
+   * failing handler costs the other one. Which handler that is depends on the order the engine
+   * picks. That order is not stable, and the measurement does not depend on it.
    */
   static void makeTheHandlerEnteredSecondFailOnce() {
 
@@ -142,8 +141,8 @@ public final class CompensationRecorder {
 
   /**
    * The transaction the engine runs the current delegate in. The command context is the
-   * engine's own unit of work: it carries the transaction, and the engine opens one per
-   * command, which for a job is the execution of that job.
+   * engine's own unit of work. It carries the transaction. The engine opens one per command,
+   * and for a job that command is the execution of the job.
    *
    * @return An identity which is equal for two delegates sharing a transaction
    */
@@ -164,8 +163,8 @@ public final class CompensationRecorder {
   }
 
   /**
-   * The delegate of an activity which is compensated later - it does nothing, it only has to
-   * complete so that the engine remembers it for the compensation throw event.
+   * The delegate of an activity which is compensated later. It does nothing. It only has to
+   * complete, so that the engine remembers it for the compensation throw event.
    */
   public static class DoingNothing implements JavaDelegate {
 
@@ -180,7 +179,7 @@ public final class CompensationRecorder {
   }
 
   /**
-   * The delegate of a compensation handler - it records itself and then waits for the other
+   * The delegate of a compensation handler. It records itself and then waits for the other
    * handler as long as {@link #WAIT_FOR_THE_OTHER_HANDLER_MILLIS} allows.
    */
   public static class Handler implements JavaDelegate {
@@ -193,8 +192,8 @@ public final class CompensationRecorder {
       final var transaction = transactionOfTheMoment();
       handlerTransactions.add(transaction);
       if (watchedTransactions.add(transaction)) {
-        // counted once per transaction, so two handlers inside one transaction answer with
-        // one commit rather than with two
+        // counted once per transaction. So two handlers inside one transaction count as one
+        // commit, not as two
         org.camunda.bpm.engine.impl.context.Context
             .getCommandContext()
             .getTransactionContext()

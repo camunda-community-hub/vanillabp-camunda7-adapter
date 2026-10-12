@@ -10,9 +10,9 @@ import io.vanillabp.spi.service.WorkflowTask;
 import jakarta.enterprise.context.ApplicationScoped;
 
 /**
- * The workflow service of the timer-started workflow. Nobody starts it through VanillaBP,
- * so the aggregate is built here and nowhere else, and the name it gets is what the engine
- * holds as the business key.
+ * The workflow service of the workflow a timer starts. Nobody starts it through VanillaBP.
+ * So the aggregate is built here and nowhere else. The engine holds the name it gets here
+ * as the business key.
  */
 @ApplicationScoped
 @WorkflowService(
@@ -31,8 +31,8 @@ public class C7TimerWorkflowService {
       final BpmsStartTrigger trigger) {
 
     final var aggregate = new C7TimerAggregate();
-    // the name of the workflow is the application's choice, and the engine holds it as
-    // the business key from here on
+    // the application chooses the name of the workflow. The engine holds it as the
+    // business key from here on
     aggregate.setId("timer-"
         + java.util.UUID.randomUUID());
     aggregate.setStartedBy(trigger.kind().name());

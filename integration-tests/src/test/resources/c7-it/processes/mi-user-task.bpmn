@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" id="Definitions_MiUserTask" targetNamespace="http://bpmn.io/schema/bpmn">
-  <!-- the model of the test about the levels a USER TASK is told about. A multi-instance
-       subprocess holding a user task which is multi-instance itself, so the chain is two
-       levels deep and the inner level belongs to the task. Both iterate in parallel, so
-       every round creates its task in the same transaction and no completion stands
-       between the test and its measurement. -->
+  <!-- the model of the test about the levels which a USER TASK is told about. A
+       multi-instance subprocess holds a user task which is multi-instance itself. So
+       the chain is two levels deep, and the inner level belongs to the task. Both
+       iterate in parallel. So every round creates its task in the same transaction,
+       and no completion stands between the test and its measurement. -->
   <bpmn:process id="MiUserTaskLevels" isExecutable="true">
     <bpmn:startEvent id="MUT_Start">
       <bpmn:outgoing>MUT_f1</bpmn:outgoing>

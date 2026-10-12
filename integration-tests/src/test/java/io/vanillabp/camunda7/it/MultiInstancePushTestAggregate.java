@@ -13,10 +13,10 @@ import lombok.Getter;
 import lombok.Setter;
 
 /**
- * The aggregate of the multi-instance half of the aggregateChanged integration test:
- * the workflow parks in every iteration of a multi-instance
- * embedded subprocess, so the test can push into the scope of ONE iteration and see
- * that only that iteration's event subprocess reacts.
+ * The aggregate of the multi-instance half of the aggregateChanged integration test. The
+ * workflow parks in every iteration of a multi-instance embedded subprocess. So the test
+ * can push into the scope of ONE iteration and see that only the event subprocess of that
+ * iteration reacts.
  */
 @Entity
 @Table(name = "C7_MI_PUSH_TEST")
@@ -33,8 +33,8 @@ public class MultiInstancePushTestAggregate {
   private Long id;
 
   /**
-   * The parked executions of the iterations as "item=taskId", comma-separated - a
-   * list attribute would need a table of its own for what two strings do here.
+   * The parked executions of the iterations as "item=taskId", separated by commas. A list
+   * attribute would need a table of its own for what two strings do here.
    */
   private String taskIds;
 
@@ -46,7 +46,7 @@ public class MultiInstancePushTestAggregate {
   private boolean escalate;
 
   /**
-   * The items whose iteration reached the event subprocess, comma-separated.
+   * The items whose iteration reached the event subprocess, separated by commas.
    */
   private String escalatedItems;
 

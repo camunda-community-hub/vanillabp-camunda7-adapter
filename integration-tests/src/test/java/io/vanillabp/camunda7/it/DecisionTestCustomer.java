@@ -5,7 +5,7 @@ import lombok.Getter;
 import lombok.Setter;
 
 /**
- * A nested type of the decision aggregate: shared values which are not scalars
+ * A nested type of the decision aggregate. Shared values which are not scalars
  * become object variables in the configured serialization format.
  */
 @Embeddable

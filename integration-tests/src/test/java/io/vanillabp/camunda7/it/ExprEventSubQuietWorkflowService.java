@@ -7,9 +7,11 @@ import io.vanillabp.spi.service.BpmnProcess;
 import io.vanillabp.spi.service.WorkflowService;
 
 /**
- * Starts <code>ExprEventSubQuiet</code>, which carries the conditional start event of an event subprocess, which is measured apart because its condition is evaluated on every variable change of the scope. The process has no
- * workflow task of its own: everything it does is decide, wait or iterate, so nothing
- * has to be wired and a failing expression is the only thing that can go wrong.
+ * Starts <code>ExprEventSubQuiet</code>. The process carries the conditional start event of
+ * an event subprocess. It is measured on its own, because the engine evaluates that
+ * condition on every change of a variable in its scope. The process has no workflow task of
+ * its own. All it does is decide, wait or iterate. So nothing has to be wired, and a
+ * failing expression is the only thing that can go wrong.
  */
 @Service
 @WorkflowService(

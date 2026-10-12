@@ -14,10 +14,10 @@ import lombok.Getter;
 import lombok.Setter;
 
 /**
- * The JPA workflow aggregate of the task-processing integration tests.
- * BPMN expressions reference its attributes through VanillaBP's EL resolver:
- * {@code ${approved}} (gateway condition, via {@link #isApproved()}) and
- * {@code ${items}} (multi-instance collection, via {@link #getItems()}).
+ * The JPA workflow aggregate of the task-processing integration tests. BPMN expressions
+ * reach its attributes through the EL resolver of VanillaBP. {@code ${approved}} is a
+ * gateway condition and reads {@link #isApproved()}. {@code ${items}} is a multi-instance
+ * collection and reads {@link #getItems()}.
  */
 @Entity
 @Table(name = "C7_TASK_TEST_AGGREGATE")
@@ -40,7 +40,7 @@ public class TaskTestAggregate {
   private List<String> items;
 
   /**
-   * Appends one result entry (the handlers record their execution here).
+   * Appends one result entry. The handlers record here that they ran.
    */
   public void appendResult(
       final String result) {

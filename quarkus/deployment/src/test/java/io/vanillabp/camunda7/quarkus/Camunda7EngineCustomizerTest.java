@@ -22,10 +22,10 @@ import jakarta.persistence.EntityManager;
 import jakarta.transaction.UserTransaction;
 
 /**
- * The engine hooks an extension needs, on Quarkus: a {@code Camunda7EngineCustomizer}
- * bean is asked for the adapter id whose engine is being built, the parse listener it
- * contributes sees the deployed models, and the engine's history events reach the handler
- * it contributed - installed as a composite, so history is still written as before.
+ * The engine hooks an extension needs, on Quarkus. A {@code Camunda7EngineCustomizer} bean
+ * is asked for the adapter id whose engine is being built. The parse listener it adds sees
+ * the deployed models. The engine's history events reach the handler it adds. That handler
+ * is installed as a composite, so history is still written as before.
  */
 @ExtendWith(SuppressOutputExtension.class)
 @SuppressOutputExtension.SuppressBackgroundOutput
@@ -111,7 +111,7 @@ public class Camunda7EngineCustomizerTest {
       Thread.sleep(100);
     }
 
-    // history is still WRITTEN, which is what the composite handler is for
+    // history is still WRITTEN. That is what the composite handler is for
     Assertions
         .assertEquals(
             1,

@@ -19,10 +19,10 @@ import io.vanillabp.integration.adapter.spi.workflowtask.WorkflowTaskWiring;
  * deployment prepares them.
  * <p>
  * Every called process lives in a BPMN file of ITS OWN, and that is the point of this
- * harness. The walk looks an enclosing element up by id, and with the calling and the
- * called process in one file that lookup finds the element of the other process by
- * chance. The defect this harness measures stayed invisible for exactly that reason, in
- * version 1 as well as in version 2.
+ * harness. The walk looks up an enclosing element by id. With the calling and the called
+ * process in one file, that lookup finds the element of the other process by chance. For
+ * exactly that reason, the defect this harness measures stayed invisible, in version 1 as
+ * well as in version 2.
  */
 final class AnEngineRunningCalledProcesses implements AutoCloseable {
 
@@ -43,9 +43,9 @@ final class AnEngineRunningCalledProcesses implements AutoCloseable {
       .of("api/mi-callers.bpmn", "api/mi-outer-caller.bpmn", "api/mi-called.bpmn");
 
   /**
-   * What the core answers about these models: everything of this workflow module
-   * continues the aggregate of whoever called it, except the one process which has one of
-   * its own.
+   * What the core answers about these models. Every process of this workflow module
+   * continues the aggregate of whoever called it, except the one process which has an
+   * aggregate of its own.
    */
   private static final WorkflowTaskWiring CORE = new WorkflowTaskWiring() {
 
@@ -86,10 +86,10 @@ final class AnEngineRunningCalledProcesses implements AutoCloseable {
   private final ProcessEngine processEngine;
 
   /**
-   * The registry of this engine, filled the way the deployment fills it and told the same
-   * answer about the workflow aggregate the core gives above. The walk needs it for a call
-   * activity which names the process it calls in an expression, where no answer was written
-   * into the model.
+   * The registry of this engine. It is filled the way the deployment fills it, and it gives
+   * the same answer about the workflow aggregate as the core above. The walk needs it for a
+   * call activity which names the process it calls in an expression. For such a call
+   * activity, no answer was written into the model.
    */
   private final Camunda7TaskRegistry taskRegistry = new Camunda7TaskRegistry();
 
@@ -112,8 +112,8 @@ final class AnEngineRunningCalledProcesses implements AutoCloseable {
           final var model = Bpmn
               .readModelFromStream(
                   AnEngineRunningCalledProcesses.class.getClassLoader().getResourceAsStream(resource));
-          // what the deployment does with a call activity, so the note about the
-          // workflow aggregate is on the models this engine runs
+          // what the deployment does with a call activity. So the note about the workflow
+          // aggregate is on the models this engine runs
           Camunda7CallActivities.prepareCallActivities(model, WORKFLOW_MODULE, CORE);
           model
               .getModelElementsByType(org.camunda.bpm.model.bpmn.instance.Process.class)

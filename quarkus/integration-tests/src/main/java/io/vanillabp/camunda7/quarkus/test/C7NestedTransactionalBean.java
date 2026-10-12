@@ -5,12 +5,11 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.transaction.Transactional;
 
 /**
- * A bean of the application carrying its own transaction annotation, called by a
- * <code>&#64;WorkflowTask</code> handler. On Camunda 7 the handler shares its
- * transaction with the engine's job, so the rollback-only mark this bean's
- * interceptor sets takes the engine's transaction down as well: the workflow does not
- * even reach its error boundary event, and VanillaBP turns that into a failure naming
- * the cause.
+ * A bean of the application with its own transaction annotation, called by a
+ * <code>&#64;WorkflowTask</code> handler. On Camunda 7 the handler shares its transaction
+ * with the engine's job. So the rollback-only mark which this bean's interceptor sets takes
+ * the engine's transaction down as well. The workflow does not even reach its error
+ * boundary event, and VanillaBP turns that into a failure which names the cause.
  */
 @ApplicationScoped
 @Transactional

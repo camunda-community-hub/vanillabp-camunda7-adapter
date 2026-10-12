@@ -26,8 +26,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import io.vanillabp.integration.test.utils.SuppressOutputExtension;
 
 /**
- * What Camunda 7 itself does with <code>databaseTablePrefix</code> - recorded here,
- * without VanillaBP in the way, because the answer decides what
+ * What Camunda 7 itself does with <code>databaseTablePrefix</code>. It is recorded here,
+ * without VanillaBP in the way. The answer decides what
  * <code>vanillabp.adapters.&lt;id&gt;.table-prefix</code> can promise.
  * <p>
  * The engine states the answer in its own API:
@@ -35,26 +35,26 @@ import io.vanillabp.integration.test.utils.SuppressOutputExtension;
  * is not respected by automatic database schema management. If you use
  * DB_SCHEMA_UPDATE_CREATE_DROP or DB_SCHEMA_UPDATE_TRUE, activiti will create the
  * database tables using the default names, regardless of the prefix configured
- * here."</i> The tests below are that sentence, executed:
+ * here."</i> The tests below run that sentence:
  * <ul>
  *   <li>the shipped DDL carries fixed table names in EVERY dialect, so no database
  *       behaves differently;</li>
  *   <li><code>databaseSchemaUpdate=true</code> plus a prefix creates the
- *       <code>ACT_*</code> tables under their DEFAULT names and then fails on the
- *       engine's first prefixed query - a prefix naming a schema included;</li>
+ *       <code>ACT_*</code> tables under their DEFAULT names. Then it fails on the
+ *       engine's first prefixed query. This holds for a prefix naming a schema too;</li>
  *   <li>an engine whose prefixed tables EXIST starts and runs.</li>
  * </ul>
- * The last one is the mode the adapter supports:
+ * The last one is the mode the adapter supports.
  * {@link Camunda7TablePrefixSchema} makes the application learn about it while
- * booting instead of through a MyBatis stack trace.
+ * booting, not through a MyBatis stack trace.
  */
 @ExtendWith(SuppressOutputExtension.class)
 public class Camunda7TablePrefixEngineBehaviourTest {
 
   /**
-   * The engine components enabled by default, in the order Camunda creates them -
-   * used to build a prefixed schema by hand (which is what an application has to do
-   * for a prefixed adapter id).
+   * The engine components enabled by default, in the order Camunda creates them. They are
+   * used to build a prefixed schema by hand. An application has to do that for a prefixed
+   * adapter id.
    */
   private static final List<String> COMPONENTS = List.of(
       "engine", "history", "identity", "case.engine", "case.history", "decision.engine",
@@ -124,23 +124,23 @@ public class Camunda7TablePrefixEngineBehaviourTest {
   }
 
   /**
-   * Which <code>ACT_</code> names are objects and which are columns: the tables live
+   * Which <code>ACT_</code> names are objects and which are columns. The tables live
    * under <code>ACT_GE_</code>, <code>ACT_HI_</code>, <code>ACT_RE_</code>,
-   * <code>ACT_RU_</code> and <code>ACT_ID_</code>, the indexes and constraints under
-   * <code>ACT_IDX_</code>, <code>ACT_FK_</code> and <code>ACT_UNIQ_</code>, while
+   * <code>ACT_RU_</code> and <code>ACT_ID_</code>. The indexes and constraints live under
+   * <code>ACT_IDX_</code>, <code>ACT_FK_</code> and <code>ACT_UNIQ_</code>. But
    * <code>ACT_ID_</code>, <code>ACT_INST_ID_</code>, <code>ACT_INST_STATE_</code>,
    * <code>ACT_NAME_</code> and <code>ACT_TYPE_</code> are columns which keep their
-   * names. Simpler rules break in ways nothing reports until a query runs - see
+   * names. Simpler rules break in ways which nothing reports until a query runs. See
    * {@code PrefixedEngineSchema} of the integration tests.
    */
   private static final java.util.regex.Pattern OBJECT_NAME = java.util.regex.Pattern
       .compile("\\bACT_(?:(?:GE|HI|RE|RU|FK|IDX|UNIQ)_[A-Z0-9_]+|ID_[A-Z][A-Z0-9_]*)");
 
   /**
-   * Applies Camunda's own DDL with every <code>ACT_</code> object name renamed - what
-   * an application has to do to run an engine on a prefix, and deliberately NOT what
-   * the adapter does: the rename covers tables, indexes and constraints of one
-   * engine version, and the next version brings its own scripts along.
+   * Applies Camunda's own DDL with every <code>ACT_</code> object name renamed. An
+   * application has to do this to run an engine on a prefix. The adapter does NOT do it, on
+   * purpose. The rename covers tables, indexes and constraints of one engine version, and
+   * the next version brings its own scripts along.
    */
   private static void createPrefixedSchema(
       final DataSource dataSource,
@@ -151,8 +151,8 @@ public class Camunda7TablePrefixEngineBehaviourTest {
         final var ddl = OBJECT_NAME
             .matcher(ddlOf("h2", component))
             .replaceAll(match -> prefix + match.group());
-        // the same reading Camunda's executeSchemaResource() does: comment lines are
-        // dropped, a line ending with a semicolon ends a statement
+        // the same reading as in Camunda's executeSchemaResource(). Comment lines are
+        // dropped, and a line ending with a semicolon ends a statement
         final var statement = new StringBuilder();
         for (final var rawLine : ddl.lines().toList()) {
           final var line = rawLine.trim();
@@ -180,7 +180,7 @@ public class Camunda7TablePrefixEngineBehaviourTest {
 
   /**
    * @param failure A caught exception
-   * @return Its message and the messages of all of its causes - the table name of a
+   * @return Its message and the messages of all of its causes. The table name of a
    *         failed engine build sits in the innermost one
    */
   private static String messages(
@@ -200,9 +200,8 @@ public class Camunda7TablePrefixEngineBehaviourTest {
   @DisplayName("Camunda's create scripts name the tables verbatim - in every dialect")
   public void createScriptsCarryFixedTableNames() {
 
-    // the answer cannot differ by database: executeSchemaResource()
-    // runs these files statement by statement, and none of them has a placeholder a
-    // prefix could be substituted into
+    // the answer cannot differ by database. executeSchemaResource() runs these files
+    // statement by statement, and none of them has a placeholder for a prefix
     for (final var database : List.of("h2", "postgres", "oracle", "mysql", "mssql", "db2")) {
       final var ddl = ddlOf(database, "engine");
       assertTrue(
@@ -226,7 +225,7 @@ public class Camunda7TablePrefixEngineBehaviourTest {
         () -> engineConfiguration(dataSource, "true", "NEW_").buildProcessEngine());
 
     // the failure comes from a QUERY against the prefixed table, not from a rejected
-    // CREATE - exactly what Camunda does here
+    // CREATE. That is exactly what Camunda does here
     assertTrue(
         messages(failure).contains("NEW_ACT_GE_PROPERTY"),
         () -> messages(failure));
@@ -240,8 +239,8 @@ public class Camunda7TablePrefixEngineBehaviourTest {
   @DisplayName("A prefix naming a schema behaves the same way")
   public void aPrefixNamingASchemaIsIgnoredAsWell() {
 
-    // 'MY_SCHEMA.' is the multi-tenancy shape of Camunda's documentation; the engine
-    // derives databaseSchema from it, and the DDL still creates ACT_* wherever the
+    // 'MY_SCHEMA.' is the multi-tenancy shape of Camunda's documentation. The engine
+    // derives databaseSchema from it. And the DDL still creates ACT_* wherever the
     // connection points
     final var dataSource = h2("table-prefix-schema;INIT=create schema if not exists NEW_ENGINE");
 
@@ -264,8 +263,8 @@ public class Camunda7TablePrefixEngineBehaviourTest {
     final var engine = assertDoesNotThrow(
         () -> engineConfiguration(dataSource, "false", "NEW_").buildProcessEngine());
     try {
-      // the engine works on its prefixed tables - runtime operations honor the prefix,
-      // only the schema management does not
+      // the engine works on its prefixed tables. Runtime operations honor the prefix, only
+      // the schema management does not
       assertTrue(engine.getRepositoryService().createDeploymentQuery().count() == 0);
       assertTrue(tableExists(dataSource, "NEW_ACT_GE_PROPERTY"));
       assertFalse(tableExists(dataSource, "ACT_GE_PROPERTY"), "nothing was created unprefixed");

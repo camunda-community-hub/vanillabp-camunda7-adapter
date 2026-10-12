@@ -26,9 +26,10 @@ import io.vanillabp.integration.test.utils.SuppressOutputExtension;
 /**
  * What the adapter answers when its engine cannot answer at all, and how it classifies a
  * failed phase-two attempt. Both decisions are invisible in a green system and expensive
- * when they are wrong: an engine on its own datasource which is down must never look like
- * "this workflow is not mine" (the election would hand the workflow to the next
- * adapter), and an outbox entry the engine rejects as wrong must not be retried forever.
+ * when they are wrong. An engine on its own datasource which is down must never look like
+ * "this workflow is not mine". The election would then hand the workflow to the next
+ * adapter. And an outbox entry which the engine rejects as wrong must not be retried
+ * forever.
  */
 @ExtendWith(SuppressOutputExtension.class)
 public class Camunda7AwarenessTest {
@@ -59,8 +60,8 @@ public class Camunda7AwarenessTest {
   }
 
   /**
-   * A process service whose engine throws on every query - what an engine with its own
-   * datasource does while the database is unreachable.
+   * A process service whose engine throws on every query. An engine with its own datasource
+   * does that while the database is unreachable.
    */
   private static Camunda7ProcessService<String> withUnreachableEngine() {
 
@@ -92,8 +93,8 @@ public class Camunda7AwarenessTest {
 
     final var testee = withUnreachableEngine();
 
-    // UNKNOWN_TO_BPMS would let the election move on to the next adapter and start or
-    // complete the workflow a second time somewhere else
+    // UNKNOWN_TO_BPMS would let the election move on to the next adapter. That adapter
+    // would start or complete the workflow a second time somewhere else
     assertEquals(WorkflowAwareness.BPMS_UNAVAILABLE, testee.awarenessOfTask(SCOPE, "4711", "execution-1"));
     assertEquals(WorkflowAwareness.BPMS_UNAVAILABLE, testee.awarenessOfUserTask(SCOPE, "4711", "user-task-1"));
     assertEquals(WorkflowAwareness.BPMS_UNAVAILABLE, testee.awarenessOfWorkflow(SCOPE, persistence(), "4711"));
@@ -109,7 +110,7 @@ public class Camunda7AwarenessTest {
 
     final var testee = withUnreachableEngine();
 
-    // a task id which does not exist looks the same on every attempt, so repeating it
+    // a task id which does not exist looks the same on every attempt. So repeating it
     // would keep the outbox entry moving without ever getting anywhere
     assertFalse(testee.isPhaseTwoFailureRepeatable(new BadUserRequestException("no such task")));
     assertFalse(
@@ -117,7 +118,7 @@ public class Camunda7AwarenessTest {
             .isPhaseTwoFailureRepeatable(
                 new IllegalStateException("wrapped", new BadUserRequestException("no such task"))));
 
-    // the conflict this adapter went two-phase for: the next attempt simply wins
+    // the conflict this adapter went two-phase for. The next attempt simply wins
     assertTrue(
         testee
             .isPhaseTwoFailureRepeatable(
@@ -132,10 +133,10 @@ public class Camunda7AwarenessTest {
 
     final var testee = withUnreachableEngine();
 
-    // How the engine reports a model which calls a method the value has not got: the
+    // How the engine reports a model which calls a method the value does not have. The
     // JUEL exception is the cause of the ProcessEngineException the command throws
     // (JuelExpression#getValue). A conditional start event of an event subprocess is
-    // evaluated while the instance is created, so this arrives as a failed START and
+    // evaluated while the instance is created. So this arrives as a failed START, and
     // repeating it produces the same sentence every time.
     assertFalse(
         testee
@@ -143,7 +144,7 @@ public class Camunda7AwarenessTest {
                 new ProcessEngineException(
                     "Unknown method used in expression: ${order.getTotal() > 100}", new MethodNotFoundException("Method not found: class java.util.LinkedHashMap.getTotal()"))));
 
-    // the second shape of the same thing: the value is there and has no such property
+    // the second shape of the same thing: the value is there but has no such property
     assertFalse(
         testee
             .isPhaseTwoFailureRepeatable(
@@ -151,12 +152,12 @@ public class Camunda7AwarenessTest {
                     "Unknown property used in expression: ${order.dueDate.year}", new PropertyNotFoundException(
                         "The class 'java.lang.String' does not have the property 'year'"))));
 
-    // the ancestor both of those carry, which is what the adapter actually looks for
+    // the ancestor both of those carry. The adapter actually looks for this one
     assertFalse(
         testee.isPhaseTwoFailureRepeatable(new ProcessEngineException("evaluation failed", new ELException("no"))));
 
     // whatever wrapped the engine's exception on the way through the outbox must not
-    // hide the verdict, so the whole cause chain is read and not just the first link
+    // hide the verdict. So the whole cause chain is read, not just the first link
     assertFalse(
         testee
             .isPhaseTwoFailureRepeatable(

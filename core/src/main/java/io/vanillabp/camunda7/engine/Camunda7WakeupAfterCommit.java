@@ -9,34 +9,34 @@ import org.slf4j.LoggerFactory;
 
 /**
  * What wakes an acquisition which is sleeping until a due date. It hangs off the
- * TRANSACTION, not off a list of methods: every engine command registers a listener for
- * its own commit, and a job can only be written by an engine command, so everything which
- * creates one is covered. A workflow which is started, a message which is correlated, a
- * task which is completed, a signal, a continuation the engine wrote for itself, a retry
- * it rescheduled, a request to Cockpit or to the REST API all arrive here, and none of
+ * TRANSACTION, not off a list of methods. Every engine command registers a listener for
+ * its own commit. Only an engine command can write a job. So everything which creates a
+ * job is covered. A workflow which is started, a message which is correlated, a task which
+ * is completed, a signal, a continuation the engine wrote for itself, a retry it
+ * rescheduled, a request to Cockpit or to the REST API: all of them arrive here. None of
  * them is named anywhere in this class.
  * <p>
  * The engine already does part of this by itself. {@code JobManager} hints its own executor
- * after a commit which inserted a job due NOW, and it hints for a timer only where the due
- * date falls inside the executor's wait time. So a job due LATER is the gap, and it is
- * exactly the gap the due-date sleep opens: without the sleep it shortens nothing, with
- * the sleep it is the difference between a timer firing on time and a timer firing when the
- * sleep happens to end.
+ * after a commit which inserted a job due NOW. It hints for a timer only where the due date
+ * falls inside the executor's wait time. So a job due LATER is the gap. And it is exactly
+ * the gap which the due-date sleep opens. Without the sleep, a wake-up here shortens
+ * nothing. With the sleep, it decides whether a timer fires on time or only when the sleep
+ * happens to end.
  * <p>
- * The price is one extra acquisition cycle per committed engine command, which is
- * two indexed statements. The engine pays the same for every asynchronous continuation it
- * writes, and an application whose engine is never idle has no reason to switch the sleep
+ * The price is one extra acquisition cycle per committed engine command. That is two
+ * indexed statements. The engine pays the same for every asynchronous continuation it
+ * writes. And an application whose engine is never idle has no reason to switch the sleep
  * on. Several notifications for one transaction are one wake-up, because each of them sets
  * the same flag and notifies the same monitor.
  * <p>
- * One case stays uncovered: a job another application's node inserted into a shared
- * engine. That node's commit runs in its own process and reaches no listener here, so the
- * sleeping node learns about the job when its own due-date question next runs. Running two
- * applications against one engine is not a setup this adapter supports.
+ * One case stays uncovered: a job which another application's node inserted into a shared
+ * engine. That node's commit runs in its own process and reaches no listener here. So the
+ * sleeping node learns about the job when its own due-date question runs next. This adapter
+ * does not support two applications on one engine.
  * <p>
- * Why the waking hangs off the transaction, and why that transaction is reached through the
- * engine's command chain instead of a hook per platform, is decision 18 in the repository's
- * DECISIONS.md.
+ * Decision 18 in the repository's DECISIONS.md says why the waking hangs off the
+ * transaction. It also says why we reach that transaction through the engine's command
+ * chain, and not through a hook per platform.
  */
 public class Camunda7WakeupAfterCommit extends CommandInterceptor {
 
@@ -67,9 +67,9 @@ public class Camunda7WakeupAfterCommit extends CommandInterceptor {
   }
 
   /**
-   * Asks the current transaction to wake the acquisition once it committed. Registered
-   * BEFORE the command runs, so a command which throws leaves nothing behind, and the
-   * engine discards the listeners of a transaction which rolled back anyway.
+   * Asks the current transaction to wake the acquisition once it committed. It is
+   * registered BEFORE the command runs. So a command which throws leaves nothing behind,
+   * because the engine discards the listeners of a transaction which rolled back anyway.
    */
   private void registerWakeup() {
 
@@ -82,31 +82,31 @@ public class Camunda7WakeupAfterCommit extends CommandInterceptor {
     if (jobExecutor == null) {
       return;
     }
-    // only the acquisition this adapter installed has a wait worth shortening: a stopped
-    // executor has no loop at all, and an executor something else put in place has the
-    // engine's own timing, where a wake-up from its own acquisition's commit would turn the
+    // only the acquisition this adapter installed has a wait worth shortening. A stopped
+    // executor has no loop at all. An executor which something else put in place has the
+    // engine's own timing. There a wake-up from its own acquisition's commit would turn the
     // loop into a spin
     if (!(jobExecutor.getAcquireJobsRunnable() instanceof Camunda7SleepingAcquisition acquisition)) {
       return;
     }
-    // the loop's own cycle commits like any other engine command, and waking the loop from
-    // inside itself would end every wait immediately
+    // the loop's own cycle commits like any other engine command. Waking the loop from
+    // inside itself would end every wait at once
     if (acquisition.runsTheAcquisition(Thread.currentThread())) {
       return;
     }
 
     try {
-      // the executor is captured here rather than read in the listener: a transaction
-      // listener may run on another thread than the command, so the engine's thread-local
-      // context is not available where the wake-up happens
+      // the executor is captured here and not read in the listener. A transaction
+      // listener may run on another thread than the command. So the engine's thread-local
+      // context is not there when the wake-up happens
       commandContext
           .getTransactionContext()
           .addTransactionListener(
               TransactionState.COMMITTED,
               context -> jobExecutor.jobWasAdded());
     } catch (final RuntimeException e) {
-      // a wake-up which cannot be registered is a sleep which ends a bit later, never a
-      // reason to fail the caller's command
+      // a wake-up which cannot be registered means a sleep which ends a bit later. It is
+      // never a reason to fail the caller's command
       log
           .debug(
               "Camunda7[{}]: could not ask this transaction to wake the job acquisition",

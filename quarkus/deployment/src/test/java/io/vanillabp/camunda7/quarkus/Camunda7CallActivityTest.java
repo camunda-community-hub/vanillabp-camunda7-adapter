@@ -18,15 +18,13 @@ import jakarta.persistence.EntityManager;
 import jakarta.transaction.UserTransaction;
 
 /**
- * Camunda 7 does not pass its business key to a called process, and the
- * business key is where VanillaBP keeps the workflow aggregate's ID. Without it the
- * first task of the called process failed while resolving the aggregate, with the
- * persistence's own message - naming neither the call activity nor the business key
- * nor VanillaBP.
+ * Camunda 7 does not pass its business key to a called process. But the business key is
+ * where VanillaBP keeps the workflow aggregate's ID. Without it the first task of the
+ * called process failed while it resolved the aggregate. The error was the persistence's
+ * own message. It named neither the call activity nor the business key nor VanillaBP.
  * <p>
- * The model here deliberately declares NO {@code camunda:in businessKey}: VanillaBP
- * injects it while preparing the BPMN, because both processes work on the same
- * aggregate.
+ * The model here declares NO {@code camunda:in businessKey}, on purpose. VanillaBP adds it
+ * while it prepares the BPMN, because both processes work on the same aggregate.
  */
 @ExtendWith(SuppressOutputExtension.class)
 @SuppressOutputExtension.SuppressBackgroundOutput

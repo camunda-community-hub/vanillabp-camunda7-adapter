@@ -23,9 +23,9 @@ import io.vanillabp.integration.test.utils.SuppressOutputExtension;
  * Which execution listeners of a model this adapter recognises, and what it makes of each
  * form the BPMN offers.
  * <p>
- * The separation from VanillaBP's own listeners needs no assertion about a prefix here: every
- * listener this adapter and its extensions attach goes onto the element the engine PARSED and
- * never into the BPMN, so reading the BPMN sees the modeller's and nothing else.
+ * Keeping these apart from VanillaBP's own listeners needs no assertion about a prefix here.
+ * This adapter and its extensions attach every listener to the element the engine PARSED,
+ * never to the BPMN. So reading the BPMN finds the modeller's listeners and nothing else.
  */
 @ExtendWith(SuppressOutputExtension.class)
 public class Camunda7ListenersTest {
@@ -33,8 +33,8 @@ public class Camunda7ListenersTest {
   private static final String PROCESS = "TestProcess";
 
   /**
-   * The expression reader the deployment hands in: the tolerant half of the adapter's own
-   * unwrapping, which answers <code>null</code> for an expression VanillaBP cannot read.
+   * The expression reader the deployment hands in. It is the tolerant half of the adapter's
+   * own unwrapping. It answers <code>null</code> for an expression VanillaBP cannot read.
    */
   private static final java.util.function.UnaryOperator<String> READ_EXPRESSION = expression -> {
     final var matcher = Pattern.compile("^[#$]\\{([^}]+)}$").matcher(expression.trim());

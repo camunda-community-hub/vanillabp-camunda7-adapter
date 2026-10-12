@@ -20,13 +20,13 @@ import io.vanillabp.integration.test.utils.SuppressOutputExtension;
 /**
  * What a boot says about the transaction a compensation runs in.
  * <p>
- * This adapter gives every service-like task a job and therefore a transaction of its own, and
- * a compensation handler is the one place where the engine does not follow: it starts the
- * handler outside the normal flow, where no job is created, so the handlers of a throw event
- * run in that event's transaction. {@code Camunda7CompensationTokensTest} measures it on a
- * running engine, and this test asserts that somebody is told while the application boots.
+ * This adapter gives every service-like task a job, and so a transaction of its own. A
+ * compensation handler is the one place where the engine does not follow. It starts the
+ * handler outside the normal flow, where no job is created. So the handlers of a throw event
+ * run in that event's transaction. {@code Camunda7CompensationTokensTest} measures this on a
+ * running engine. This test asserts that somebody is told while the application boots.
  * <p>
- * A hint and not a refusal, which is why the model carrying no compensation is asserted too: a
+ * It is a hint, not a refusal. That is why the model without compensation is asserted too. A
  * warning about a model this does not happen to would be worse than none.
  */
 @ExtendWith(SuppressOutputExtension.class)
@@ -39,8 +39,8 @@ public class Camunda7CompensationTransactionReportTest {
   private static final String FILE = "travel-booking.bpmn";
 
   /**
-   * Two activities which can be compensated, drawn the way a modeller draws them: a
-   * compensation boundary event on each, and an association to the handler undoing it.
+   * Two activities which can be compensated, drawn the way a modeller draws them. Each has a
+   * compensation boundary event and an association to the handler which undoes it.
    */
   private static final String TWO_ACTIVITIES_WITH_A_HANDLER = """
           <bpmn:serviceTask id="Activity_Book" camunda:delegateExpression="${book}" />

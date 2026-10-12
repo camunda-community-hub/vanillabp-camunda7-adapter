@@ -21,7 +21,7 @@ import io.vanillabp.integration.test.utils.SuppressOutputExtension;
 /**
  * An application which brings its own users leaves the <code>admin-user</code> section
  * out. Then this module creates nobody, and the web applications ask the visitor to set
- * an administrator up - which is their own behaviour, not something VanillaBP arranges.
+ * an administrator up. That is their own behaviour, VanillaBP does not arrange it.
  */
 @ExtendWith(SuppressOutputExtension.class)
 @SpringBootTest(

@@ -14,9 +14,9 @@ import io.vanillabp.camunda7.quarkus.sample.TestWorkflowService;
 import io.vanillabp.integration.test.utils.SuppressOutputExtension;
 
 /**
- * The table-prefix check on Quarkus: an adapter id configured with
- * <code>table-prefix</code> and the default <code>database-schema-update: true</code>
- * ends the boot with the same guiding message as on Spring Boot, because Camunda's
+ * The table-prefix check on Quarkus. An adapter id is configured with
+ * <code>table-prefix</code> and the default <code>database-schema-update: true</code>. That
+ * ends the boot with the same guiding message as on Spring Boot. The reason: Camunda's
  * schema management ignores the prefix and would create a set of unprefixed
  * <code>ACT_*</code> tables instead.
  */

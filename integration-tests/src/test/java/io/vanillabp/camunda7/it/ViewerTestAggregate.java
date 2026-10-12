@@ -9,8 +9,8 @@ import lombok.Getter;
 import lombok.Setter;
 
 /**
- * The aggregate of the viewer/history API test - its own aggregate class
- * because the viewer API is asked on the process service of the process being viewed
+ * The aggregate of the test of the viewer and history API. It has a class of its own,
+ * because the test asks the viewer API on the process service of the process it views
  * ({@code ViewerParentProcess}).
  */
 @Entity

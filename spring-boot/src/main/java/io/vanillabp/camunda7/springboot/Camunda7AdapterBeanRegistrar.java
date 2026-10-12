@@ -24,39 +24,43 @@ import io.vanillabp.integration.adapter.AdapterBeanRegistrarSupport;
 import io.vanillabp.integration.adapter.spi.workflowtask.WorkflowTaskInvoker;
 
 /**
- * Registers the Camunda 7 adapter's per-adapter-id beans: for EACH configured adapter
- * id of type {@code camunda7} (multiple ids of one BPMS type = the migration scenario,
- * e.g. two embedded engines side by side on separate schemas) one
- * {@link Camunda7EngineHolder} bean owning THAT id's embedded engine (engine name
- * <code>vanillabp-camunda7-&lt;id&gt;</code>, incl. job-executor and - optional - own
- * datasource lifecycle), one {@link Camunda7ProcessService} <i>element</i> bean, one
- * {@link Camunda7DeploymentService} <i>element</i> bean and named per-id
- * {@link ProcessEngine}/{@link RuntimeService}/{@link RepositoryService} convenience
- * beans - never beans of type {@code List<...>}: the platform collects element beans
- * via {@code ObjectProvider.stream()}. One
- * {@link io.vanillabp.camunda7.api.Camunda7EngineFacts} bean per id joins them, which is
- * what an extension of this adapter asks about the engine it runs in.
+ * Registers the beans of the Camunda 7 adapter, per adapter id. Several ids of one BPMS
+ * type are the migration scenario, e.g. two embedded engines side by side on separate
+ * schemas. For EACH configured adapter id of type {@code camunda7} it registers:
+ * <ul>
+ * <li>one {@link Camunda7EngineHolder} bean. It owns THAT id's embedded engine, named
+ * <code>vanillabp-camunda7-&lt;id&gt;</code>. It also runs the lifecycle of the job
+ * executor and, if there is one, of the id's own datasource.</li>
+ * <li>one {@link Camunda7ProcessService} <i>element</i> bean and one
+ * {@link Camunda7DeploymentService} <i>element</i> bean.</li>
+ * <li>named convenience beans {@link ProcessEngine}, {@link RuntimeService} and
+ * {@link RepositoryService}.</li>
+ * <li>one {@link io.vanillabp.camunda7.api.Camunda7EngineFacts} bean. An extension of this
+ * adapter asks it about the engine it runs in.</li>
+ * </ul>
+ * It never registers beans of type {@code List<...>}. The platform collects element beans
+ * through {@code ObjectProvider.stream()}.
  * <p>
- * The id set comes from the runtime configuration, so the beans are registered
- * programmatically ({@link BeanRegistrar} +
- * {@link AdapterBeanRegistrarSupport#forEachConfiguredAdapterId}); the adapter id is a
- * CONSTRUCTOR parameter of each instance. Without any configured {@code camunda7}
- * adapter id no bean is registered at all - no {@code ACT_*} tables and no job
- * executor appear in applications merely having the adapter jar on the classpath.
+ * The set of ids comes from the runtime configuration. So the beans are registered in
+ * code, through {@link BeanRegistrar} and
+ * {@link AdapterBeanRegistrarSupport#forEachConfiguredAdapterId}. The adapter id is a
+ * CONSTRUCTOR parameter of each instance. Without a configured {@code camunda7} adapter id
+ * no bean is registered at all. So an application which only has the adapter jar on the
+ * classpath gets no {@code ACT_*} tables and no job executor.
  * <p>
- * <b>Startup validation:</b> two embedded engines on one schema are the same engine
- * state. That check runs through the adapter SPI hook
- * {@code AdapterDeploymentService#validateDistinctAdapterInstances} (implemented ONCE
- * in {@link Camunda7DeploymentService} for both platforms): adapter ids sharing one
- * datasource AND one table prefix fail the boot with a guiding message. An
- * application providing SEVERAL datasources additionally has to name the one an
- * adapter id runs on (see {@link #applicationBean}).
+ * <b>Startup validation:</b> two embedded engines on one schema share the same engine
+ * state. The adapter SPI hook
+ * {@code AdapterDeploymentService#validateDistinctAdapterInstances} checks that. It is
+ * implemented ONCE, in {@link Camunda7DeploymentService}, for both platforms. Adapter ids
+ * which share one datasource AND one table prefix fail the boot with a guiding message. An
+ * application which provides SEVERAL datasources also has to name the one an adapter id
+ * runs on (see {@link #applicationBean}).
  */
 public class Camunda7AdapterBeanRegistrar implements BeanRegistrar {
 
   /**
-   * Spring Boot builds the class when the auto-configuration imports it. It holds nothing:
-   * which adapter ids exist is read from the environment while registering.
+   * Spring Boot builds the class when the auto-configuration imports it. It holds nothing.
+   * It reads the adapter ids from the environment while it registers.
    */
   public Camunda7AdapterBeanRegistrar() {
 
@@ -84,9 +88,9 @@ public class Camunda7AdapterBeanRegistrar implements BeanRegistrar {
               Camunda7EngineHolder.class,
               spec -> spec.supplier(supplierContext -> {
                 final var engineProperties = enginePropertiesFor(environment, adapterId);
-                // the application's DEFAULT DataSource/PlatformTransactionManager
-                // are only needed (and only required to exist) if the id references
-                // no named datasource bean (data-source-name)
+                // the application's DEFAULT DataSource and PlatformTransactionManager
+                // are only needed, and only have to exist, if the id names no
+                // datasource bean (data-source-name)
                 final var usesNamedDataSource = engineProperties.usesSeparateDataSource();
                 return new Camunda7EngineHolder(
                     adapterId, engineProperties, usesNamedDataSource
@@ -113,17 +117,17 @@ public class Camunda7AdapterBeanRegistrar implements BeanRegistrar {
                     adapterId, engine.getRuntimeService(), engine.getTaskService(), engine
                         .getRepositoryService(), engine.getHistoryService(), AdapterBeanRegistrarSupport
                             .collaborators(supplierContext, adapterId));
-                // an engine on a datasource of its own commits separately from the
-                // application, which makes its deliveries repeatable
+                // an engine on a datasource of its own commits apart from the
+                // application. That makes its deliveries repeatable
                 processService.setEngineRunsOnItsOwnDataSource(engine.usesSeparateDataSource());
-                // a start reports the version of its process definition from the cache
-                // the deliveries of this engine read it from
+                // a start reports the version of its process definition. It reads it
+                // from the same cache the deliveries of this engine use
                 processService.setTaskRegistry(engine.getTaskRegistry());
                 processService
                     .setConfiguredTenants(
                         configuredTenantsOf(supplierContext.bean(VanillaBpCamunda7Properties.class), adapterId));
-                // Which serialization format nested shared values are stored
-                // in, resolved per workflow with a fallback to the module and the adapter
+                // which serialization format nested shared values are stored in. It is
+                // resolved per workflow, with a fallback to the module and the adapter
                 final var overlay = supplierContext.bean(VanillaBpCamunda7Properties.class);
                 processService.setSerializationFormats(
                     (
@@ -166,8 +170,8 @@ public class Camunda7AdapterBeanRegistrar implements BeanRegistrar {
                         .bean(VanillaBpCamunda7Properties.class)
                         .enginePropertiesFor(adapterId)
                         .isAcceptUnscopedIdentifiers());
-                // Which format a workflow's values travel in, and what this engine's
-                // serializers make of them - the startup check reads both
+                // which format a workflow's values travel in, and what this engine's
+                // serializers make of them. The startup check reads both
                 final var deploymentOverlay = supplierContext.bean(VanillaBpCamunda7Properties.class);
                 deploymentService.setSerializationFormats(
                     (
@@ -176,15 +180,15 @@ public class Camunda7AdapterBeanRegistrar implements BeanRegistrar {
                             .serializationFormatFor(adapterId, workflowModuleId, bpmnProcessId));
                 deploymentService.setSerializationRoundTrip(
                     io.vanillabp.camunda7.sync.Camunda7SerializationRoundTrip.of(engine.getProcessEngine()));
-                // Whether the listeners somebody modelled are served by this application,
-                // resolvable down to the workflow
+                // whether this application serves the listeners somebody modelled. It
+                // can be set down to the workflow
                 deploymentService.setAllowListenersResolver(
                     (
                         workflowModuleId,
                         bpmnProcessId) -> deploymentOverlay
                             .allowListenersFor(adapterId, workflowModuleId, bpmnProcessId));
-                // a key at a level which does not resolve it changes nothing and would be
-                // silent, which is worse than a line saying where the key is read
+                // a key at a level which does not resolve it changes nothing. Silence
+                // would be worse than a line which says where the key is read
                 io.vanillabp.camunda7.wiring.Camunda7Listeners.reportKeysSetAtTaskLevel(
                     adapterId,
                     deploymentOverlay.allowListenersKeysAtTaskLevel(adapterId),
@@ -192,9 +196,9 @@ public class Camunda7AdapterBeanRegistrar implements BeanRegistrar {
                 return deploymentService;
               }));
 
-          // what this adapter knows about THIS engine, for an extension running inside it:
-          // one Camunda7EngineFacts per adapter id, built from what the engine wiring
-          // computed anyway rather than from a second reading of the configuration
+          // what this adapter knows about THIS engine, for an extension which runs in it.
+          // One Camunda7EngineFacts per adapter id. It is built from what the engine
+          // wiring computed anyway, not from a second reading of the configuration
           registry.registerBean(
               "Camunda7_EngineFacts_%s".formatted(adapterId),
               io.vanillabp.camunda7.api.Camunda7EngineFacts.class,
@@ -251,11 +255,11 @@ public class Camunda7AdapterBeanRegistrar implements BeanRegistrar {
   }
 
   /**
-   * Resolves an application-provided bean with a GUIDING failure instead of a
-   * bean-wiring error: the embedded engine needs a {@code DataSource} and a
-   * {@code PlatformTransactionManager} - a configured adapter without a database is
-   * a configuration defect the developer has to learn about with the remedy named,
-   * not via a {@code NoSuchBeanDefinitionException}.
+   * Resolves a bean the application provides. If that fails, it fails with a GUIDING
+   * message, not with a bean-wiring error. The embedded engine needs a {@code DataSource}
+   * and a {@code PlatformTransactionManager}. A configured adapter without a database is a
+   * configuration defect. The developer has to learn about it with the remedy named, not
+   * through a {@code NoSuchBeanDefinitionException}.
    *
    * @param <S> The bean type
    * @param supplierContext The bean supplier context
@@ -268,9 +272,9 @@ public class Camunda7AdapterBeanRegistrar implements BeanRegistrar {
       final Class<S> beanType,
       final String adapterId) {
 
-    // several datasources available: which one the engine runs on is not VanillaBP's
-    // guess - not even a @Primary bean decides it, because an embedded
-    // engine writes its ACT_* tables into whatever database it gets
+    // several datasources available: VanillaBP does not guess which one the engine runs
+    // on. Not even a @Primary bean decides it, because an embedded engine writes its
+    // ACT_* tables into whatever database it gets
     final var availableBeanNames = availableBeanNames(supplierContext, beanType);
     if ((availableBeanNames.size() > 1) && DataSource.class.equals(beanType)) {
       throw new IllegalStateException(
@@ -304,9 +308,9 @@ public class Camunda7AdapterBeanRegistrar implements BeanRegistrar {
   }
 
   /**
-   * What makes an adapter id a distinct engine: its datasource and table prefix
-   * (see {@link Camunda7InstanceIdentity}). Read from the environment because the
-   * check runs before/independently of the engine beans.
+   * What makes an adapter id a distinct engine: its datasource and table prefix (see
+   * {@link Camunda7InstanceIdentity}). It is read from the environment, because the check
+   * runs before the engine beans exist and does not depend on them.
    */
   private static Camunda7InstanceIdentity instanceIdentityOf(
       final Environment environment,
@@ -334,9 +338,9 @@ public class Camunda7AdapterBeanRegistrar implements BeanRegistrar {
 
 
   /**
-   * The NAMES of all beans of the given type - looked up without instantiating them
-   * (bean types only). An empty list if the bean factory cannot be reached, in
-   * which case the ambiguity check simply does not fire.
+   * The NAMES of all beans of the given type. The lookup reads bean types only and creates
+   * no bean. The list is empty if the bean factory cannot be reached. Then the ambiguity
+   * check does not fire.
    */
   private static List<String> availableBeanNames(
       final BeanRegistry.SupplierContext supplierContext,
@@ -355,11 +359,11 @@ public class Camunda7AdapterBeanRegistrar implements BeanRegistrar {
 
 
   /**
-   * What a workflow module's tenant is configured as, per workflow module
-   * (<code>vanillabp.workflow-modules.&lt;module&gt;.adapters.&lt;id&gt;.tenant-id</code>)
-   * with a fallback to the adapter (<code>vanillabp.adapters.&lt;id&gt;.tenant-id</code>) -
-   * <code>null</code> for a module neither names one for, which the workflow module id then
-   * names.
+   * The configured tenant of each workflow module. It is read per workflow module
+   * (<code>vanillabp.workflow-modules.&lt;module&gt;.adapters.&lt;id&gt;.tenant-id</code>),
+   * with a fallback to the adapter (<code>vanillabp.adapters.&lt;id&gt;.tenant-id</code>).
+   * It is <code>null</code> for a module which neither names. Then the workflow module id
+   * names the tenant.
    */
   private static java.util.function.Function<String, io.vanillabp.camunda7.wiring.Camunda7ConfiguredTenant> configuredTenantsOf(
       final VanillaBpCamunda7Properties overlay,

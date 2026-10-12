@@ -10,9 +10,9 @@ import lombok.Getter;
 import lombok.Setter;
 
 /**
- * The aggregate of the renamed-process integration test. It outlives the application
- * which started its workflow: the second boot of that test reads it from the same
- * database, which is what a workflow running across an upgrade needs.
+ * The aggregate of the renamed-process integration test. It outlives the application which
+ * started its workflow. The second boot of that test reads it from the same database. A
+ * workflow which runs across an upgrade needs exactly that.
  */
 @Entity
 @Table(name = "C7_RENAMED_PROCESS_TEST")
@@ -41,9 +41,9 @@ public class RenamedProcessAggregate {
   private String finishedBy;
 
   /**
-   * The id of that last task while it is open - it is completed by the test, which is
-   * only possible if the connectable the engine resolved carries the type the OLD model
-   * wired the task with.
+   * The id of that last task while it is open. The test completes it. That is only possible
+   * if the connectable which the engine resolved carries the type which the OLD model wired
+   * the task with.
    */
   private String openTaskId;
 

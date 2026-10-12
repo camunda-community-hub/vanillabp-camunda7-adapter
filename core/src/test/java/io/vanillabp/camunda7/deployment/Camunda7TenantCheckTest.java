@@ -14,7 +14,7 @@ import org.mockito.Mockito;
 import io.vanillabp.integration.test.utils.SuppressOutputExtension;
 
 /**
- * What VanillaBP can say about a Camunda 7 tenant: the engine needs none to exist, so
+ * What VanillaBP can say about a Camunda 7 tenant. The engine needs no tenant to exist. So
  * the only thing worth reporting is a tenant missing in an identity service which knows
  * others.
  */
@@ -24,8 +24,8 @@ public class Camunda7TenantCheckTest {
   private static org.camunda.bpm.engine.IdentityService identityServiceKnowing(
       final String... tenantIds) {
 
-    // the tenants are stubbed FIRST: stubbing a mock inside an unfinished stubbing of
-    // another one is what Mockito rejects as unfinished stubbing
+    // the tenants are stubbed FIRST. Mockito rejects the stubbing of a mock inside an
+    // unfinished stubbing of another one
     final var tenants = Arrays
         .stream(tenantIds)
         .map(tenantId -> {
@@ -150,8 +150,8 @@ public class Camunda7TenantCheckTest {
 
   /**
    * A runtime service answering how many instances of a process id there are, in total
-   * and without a tenant. Both counts are what the check subtracts, so a double is more
-   * honest here than an engine: the query is the whole mechanism.
+   * and without a tenant. The check subtracts these two counts. So a test double is more
+   * honest here than an engine, because the query is the whole mechanism.
    *
    * @param total Instances of the process id under any scope
    * @param withoutTenant Instances of it carrying no tenant

@@ -8,12 +8,12 @@ import io.vanillabp.spi.service.BpmnProcess;
 import io.vanillabp.spi.service.WorkflowService;
 
 /**
- * Owns <code>LossyFormat</code>, whose gateway reads the decimal of
+ * Owns <code>LossyFormat</code>. The gateway of that process reads the decimal of
  * {@link LossyFormatAggregate} at both levels.
  * <p>
- * A bean only under the profile of its own test, like every other scenario of this
- * module: all tests here boot the same application, and a workflow service whose model is
- * not deployed would report a process nobody serves in every one of them.
+ * It is a bean only under the profile of its own test, like every other scenario of this
+ * module. All tests here boot the same application. A workflow service whose model is not
+ * deployed would report a process nobody serves in every one of them.
  */
 @Service
 @Profile("lossy-format")

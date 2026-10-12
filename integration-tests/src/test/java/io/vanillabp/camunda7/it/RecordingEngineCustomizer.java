@@ -20,16 +20,17 @@ import org.camunda.bpm.engine.impl.util.xml.Element;
 import io.vanillabp.camunda7.engine.Camunda7EngineCustomizer;
 
 /**
- * An extension reaching into the embedded engine, in miniature: a parse listener which
- * attaches a built-in task listener of its own to every user task, and a handler for the
- * engine's history events. What the Business Cockpit needs, and nothing else.
+ * An extension which reaches into the embedded engine, in miniature. It has a parse
+ * listener, which attaches a built-in task listener of its own to every user task. And it
+ * has a handler for the history events of the engine. That is what the Business Cockpit
+ * needs, and nothing else.
  * <p>
  * Everything it sees is recorded, so the tests can ask what happened and in which order.
  */
 public class RecordingEngineCustomizer implements Camunda7EngineCustomizer {
 
   /**
-   * The adapter ids this customizer was asked for - one per engine.
+   * The adapter ids this customizer was asked for, one per engine.
    */
   private final Set<String> askedAdapterIds = new LinkedHashSet<>();
 
@@ -40,14 +41,14 @@ public class RecordingEngineCustomizer implements Camunda7EngineCustomizer {
   private final List<String> parsedUserTasks = new CopyOnWriteArrayList<>();
 
   /**
-   * The user tasks which already carried VanillaBP's own built-in CREATE listener when
-   * this customizer's parse listener saw them - the proof that a parse listener
-   * contributed "after" really runs after the adapter's own.
+   * The user tasks which already carried the own built-in CREATE listener of VanillaBP when
+   * the parse listener of this customizer saw them. This proves that a parse listener
+   * contributed "after" really runs after the own one of the adapter.
    */
   private final List<String> userTasksAlreadyWiredByVanillaBp = new CopyOnWriteArrayList<>();
 
   /**
-   * The task-listener invocations of this customizer's own built-in listener.
+   * The calls of the own built-in task listener of this customizer.
    */
   private final List<String> taskEvents = new CopyOnWriteArrayList<>();
 

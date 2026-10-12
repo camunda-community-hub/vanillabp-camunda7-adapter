@@ -10,9 +10,9 @@ import io.vanillabp.spi.service.WorkflowService;
 import io.vanillabp.spi.service.WorkflowTask;
 
 /**
- * The workflow service of the test about the iteration a process called by an expression
- * runs in. Both processes are declared on ONE aggregate class, which is how an application
- * says that the called process continues the business case of its caller.
+ * The workflow service of the test about the iteration which a process called by an
+ * expression runs in. Both processes are declared on ONE aggregate class. That is how an
+ * application says that the called process continues the business case of its caller.
  */
 @Service
 @WorkflowService(
@@ -40,8 +40,8 @@ public class MiCallExprWorkflowService {
   }
 
   /**
-   * The one task of the called process. It names no level of its own: every iteration it
-   * runs in belongs to the caller.
+   * The one task of the called process. It names no level of its own, because every
+   * iteration it runs in belongs to the caller.
    *
    * @param aggregate The workflow aggregate of the caller
    * @param chain What the task was told about the iteration it runs in

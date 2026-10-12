@@ -3,8 +3,8 @@ package io.vanillabp.camunda7.it;
 import java.math.BigDecimal;
 
 /**
- * One element of the collection a multi-instance element iterates. Carries a
- * {@link BigDecimal} so the nested conversion of a number can be told apart from the
+ * One element of the collection which a multi-instance element iterates. It carries a
+ * {@link BigDecimal}, so the nested conversion of a number can be told apart from the
  * top-level one.
  */
 public class ExprItem {

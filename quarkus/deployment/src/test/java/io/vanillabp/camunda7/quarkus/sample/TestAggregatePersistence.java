@@ -6,9 +6,9 @@ import jakarta.inject.Inject;
 import jakarta.persistence.EntityManager;
 
 /**
- * JPA persistence of the {@link TestAggregate} - saves within the caller's JTA
- * transaction, so the aggregate commits/rolls back together with the embedded
- * engine's state (the property asserted by the transaction tests).
+ * JPA persistence of the {@link TestAggregate}. It saves within the caller's JTA
+ * transaction. So the aggregate commits or rolls back together with the embedded engine's
+ * state. The transaction tests check exactly that.
  */
 @ApplicationScoped
 public class TestAggregatePersistence implements AggregatePersistenceAware<TestAggregate> {

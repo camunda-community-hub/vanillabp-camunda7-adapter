@@ -9,7 +9,7 @@ import io.vanillabp.spi.service.WorkflowEnded;
 import io.vanillabp.spi.service.WorkflowService;
 
 /**
- * A workflow which waits, until an interrupting event subprocess takes the waiting token
+ * A workflow which waits until an interrupting event subprocess takes the waiting token
  * away and ends the instance. It exists to record what this engine calls that end.
  */
 @Service

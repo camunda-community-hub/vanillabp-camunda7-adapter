@@ -9,9 +9,9 @@ import lombok.Getter;
 import lombok.Setter;
 
 /**
- * JPA workflow aggregate persisted in the same H2 database (and the same JTA
- * transaction) as the embedded Camunda 7 engine. The generated (non-string) ID is
- * used as the Camunda business key of the started workflow.
+ * JPA workflow aggregate. It is persisted in the same H2 database, and in the same JTA
+ * transaction, as the embedded Camunda 7 engine. The generated ID, which is not a string,
+ * is used as the Camunda business key of the started workflow.
  */
 @Entity
 @Table(name = "C7_TEST_AGGREGATE")

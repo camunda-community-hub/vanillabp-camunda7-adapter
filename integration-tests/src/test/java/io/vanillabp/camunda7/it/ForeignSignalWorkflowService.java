@@ -11,8 +11,8 @@ import io.vanillabp.spi.service.WorkflowStartedByBpms;
 import io.vanillabp.spi.service.WorkflowTask;
 
 /**
- * The workflow service of the signal-started process of the foreign-start integration
- * test. Two workflows started by one broadcast are two workflows, so each of them gets a
+ * The workflow service of the signal-started process of the foreign-start integration test.
+ * One broadcast can start two workflows. They are two workflows, so each of them gets a
  * name of its own.
  */
 @Service

@@ -9,13 +9,13 @@ import io.vanillabp.spi.service.WorkflowService;
 import io.vanillabp.spi.service.WorkflowTask;
 
 /**
- * A method which keeps its task open, wired by the ELEMENT id: the model names
- * <code>signTheContract</code> as the task's expression, and the method names the element
- * that expression sits on. Both wirings serve the task, so both have to meet the check
- * about a task which cannot stay open.
+ * A method which keeps its task open, wired by the ELEMENT id. The model names
+ * <code>signTheContract</code> as the expression of the task. The method names the element
+ * which that expression sits on. Both wirings serve the task, so both have to pass the
+ * check about a task which cannot stay open.
  * <p>
- * A bean only under the profile of its own test, like every other workflow service which
- * must not reach the contexts of the other tests of this module.
+ * It is a bean only under the profile of its own test, like every other workflow service
+ * which must not reach the contexts of the other tests of this module.
  */
 @Service
 @Profile("async-by-element-id")

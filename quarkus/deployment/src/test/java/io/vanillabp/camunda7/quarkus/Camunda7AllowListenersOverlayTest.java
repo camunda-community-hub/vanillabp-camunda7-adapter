@@ -22,10 +22,10 @@ import io.vanillabp.integration.test.utils.SuppressOutputExtension;
  * Where the Quarkus overlay reads <code>allow-listeners</code>, and what it says about a value
  * written at a level it does not read.
  * <p>
- * The same three levels and the same most-specific-wins rule the Spring Boot module reads, and
- * the same the Camunda 8 adapter reads for the very same key. The module this boot deploys
- * carries no listener, so the boot says the switch is on and nothing uses it, which is the case
- * worth having in a boot test as well.
+ * The Spring Boot module reads the same three levels with the same rule: the most specific
+ * value wins. The Camunda 8 adapter does the same for the very same key. The module this
+ * boot deploys carries no listener. So the boot says that the switch is on and nothing uses
+ * it. That case is worth having in a boot test as well.
  */
 @ExtendWith(SuppressOutputExtension.class)
 @SuppressOutputExtension.SuppressBackgroundOutput
@@ -64,7 +64,7 @@ public class Camunda7AllowListenersOverlayTest {
         perWorkflow.propertyKey(),
         "the report has to name the line the reader can find in their configuration");
 
-    // the module switches OFF what the adapter switched on, which version 1 could not
+    // the module switches OFF what the adapter switched on. Version 1 could not do that
     final var perModule = overlay.allowListenersFor("c7", "c7-test", "OtherProcess");
     Assertions.assertFalse(perModule.allowed());
     Assertions.assertEquals(

@@ -35,61 +35,61 @@ import io.vanillabp.integration.test.utils.SuppressOutputExtension;
 
 /**
  * What an idle engine costs its database, measured. Every connection the engine takes is
- * counted, so the claim this feature lives by can be stated as a number rather than as a
- * description of a sleep: while nothing is due, the count does not move.
+ * counted. So the claim this feature lives by is a number, not a description of a sleep:
+ * while nothing is due, the count does not move.
  * <p>
- * The engine here is a plain standalone one on H2, built twice per comparison: once with
- * the acquisition which sleeps until something is due, once exactly as the engine ships.
- * The wait times are turned down to 100 ms so the difference between sleeping and polling
- * is visible in seconds rather than in minutes; the adapter leaves them at the engine's
+ * The engine here is a plain standalone one on H2, built twice per comparison. Once it has
+ * the acquisition which sleeps until something is due. Once it is exactly as the engine
+ * ships. The wait times are turned down to 100 ms, so the difference between sleeping and
+ * polling shows in seconds, not in minutes. The adapter leaves them at the engine's
  * defaults.
  * <p>
  * The platform halves prove the wiring instead, each on its own datasource counter
  * ({@code Camunda7SleepingEngineIT} on Spring Boot and {@code Camunda7SleepingEngineTest} on
- * Quarkus), because a correct strategy says nothing about a platform ever installing it.
+ * Quarkus). A correct strategy says nothing about whether a platform ever installs it.
  * <p>
- * Where a measurement begins is read from the engine and not from the clock: a cycle which
- * found nothing to do, with the acquisition thread parked afterwards. Before both of those
- * the engine is backing off after work rather than sleeping, and a measurement which starts
+ * The start of a measurement is read from the engine, not from the clock. It is a cycle
+ * which found nothing to do, with the acquisition thread parked afterwards. Before both of
+ * those, the engine is backing off after work, not sleeping. A measurement which starts
  * there measures the backoff. Waiting for a fixed number of polling intervals did that, and
- * it turned a busy build machine into a red test.
+ * a busy build machine then turned the test red.
  * <p>
- * Where a measurement ends is read from the engine as well, and for a reason of the same
- * kind: a listener on the workflow says that the job ran. Asking the engine in a loop
- * instead would answer the question and spoil the answer, because every committed engine
- * command wakes the acquisition, and each of those wake-ups is a cycle in the count being
- * taken. Twenty questions a second turned eleven connections into sixty-four.
+ * The end of a measurement is read from the engine as well, for a similar reason. A
+ * listener on the workflow says that the job ran. Asking the engine in a loop would answer
+ * the question but spoil the answer. Every committed engine command wakes the acquisition,
+ * and each of those wake-ups is a cycle in the count being taken. Twenty questions a second
+ * turned eleven connections into sixty-four.
  */
 @ExtendWith(SuppressOutputExtension.class)
 @SuppressOutputExtension.SuppressBackgroundOutput
 public class Camunda7DueDateSleepTest {
 
   /**
-   * How long the engine waits between two cycles while it polls. Small enough that a
-   * polling engine and a sleeping one are told apart within a second or two.
+   * How long the engine waits between two cycles while it polls. It is small enough to tell
+   * a polling engine and a sleeping one apart within a second or two.
    */
   private static final int POLLING_INTERVAL = 100;
 
   /**
-   * The window the measurements watch. Long enough for a polling engine to come back
-   * several times, short enough to keep this test class quick.
+   * The window the measurements watch. It is long enough for a polling engine to come back
+   * several times, and short enough to keep this test class quick.
    */
   private static final long QUIET_WINDOW = 2000;
 
   /**
-   * How long the timer of the due date test runs. Further out than the wait time of the
-   * executor, so the hint the engine gives its own executor does not cover it and the due
-   * date has to.
+   * How long the timer of the due date test runs. It is further out than the wait time of
+   * the executor. So the hint the engine gives its own executor does not cover it, and the
+   * due date has to.
    */
   private static final Duration TIMER = Duration.ofSeconds(2);
 
   /**
-   * How long a test waits for something which should have happened before it says that it
-   * never will. Three times the longest thing any test here waits for, which is the timer,
-   * and never less than twenty seconds, because a machine carrying other builds leaves this
-   * JVM without a turn for seconds at a time and such a pause does not get smaller when the
-   * timer does. Nothing is measured against this number, so it is spent only when a test
-   * fails; a test which is right stops waiting the moment the thing has happened.
+   * How long a test waits for something which should have happened, before it says that it
+   * never will. It is three times the longest thing any test here waits for, which is the
+   * timer. And it is never less than twenty seconds. A machine which runs other builds leaves
+   * this JVM without a turn for seconds at a time, and such a pause does not get smaller when
+   * the timer does. Nothing is measured against this number, so it is used up only when a
+   * test fails. A test which is right stops waiting the moment the thing has happened.
    */
   private static final long PATIENCE = Math.max(20000, TIMER.multipliedBy(3).toMillis());
 
@@ -107,9 +107,9 @@ public class Camunda7DueDateSleepTest {
   private static final int CONNECTIONS_PER_CYCLE = 4;
 
   /**
-   * When the acquisition counts as polling rather than as waiting for the due date. A
-   * polling engine comes back every {@link #POLLING_INTERVAL} instead, which over this
-   * timer is twenty cycles where four are allowed here.
+   * When the acquisition counts as polling and not as waiting for the due date. A polling
+   * engine comes back every {@link #POLLING_INTERVAL} instead. Over this timer that is
+   * twenty cycles, where four are allowed here.
    */
   private static final int TOO_MANY_CONNECTIONS = CYCLES_A_DUE_DATE_COSTS * CONNECTIONS_PER_CYCLE;
 
@@ -125,8 +125,8 @@ public class Camunda7DueDateSleepTest {
 
   /**
    * Counted down when the workflow which waits in a timer has reached its end. The engine
-   * itself says so, from a listener on the end event, which is the last thing the timer job
-   * does before it commits.
+   * itself says so, from a listener on the end event. That listener is the last thing the
+   * timer job does before it commits.
    */
   private final CountDownLatch theTimerHasFired = new CountDownLatch(1);
 
@@ -143,9 +143,9 @@ public class Camunda7DueDateSleepTest {
   }
 
   /**
-   * An H2 datasource which counts every connection the engine takes. A connection is what
-   * an engine command needs before it can say a word to the database, so a count which
-   * does not move is a database which was not spoken to.
+   * An H2 datasource which counts every connection the engine takes. An engine command needs
+   * a connection before it can say a word to the database. So a count which does not move
+   * means that nobody spoke to the database.
    */
   private static final class CountingConnections implements DataSource {
 
@@ -353,8 +353,8 @@ public class Camunda7DueDateSleepTest {
   }
 
   /**
-   * When the acquisition last started a cycle. The loop writes it into the context it keeps,
-   * so a cycle which ran while nobody was looking is still visible afterwards.
+   * When the acquisition last started a cycle. The loop writes it into the context it keeps.
+   * So a cycle which ran while nobody was looking is still visible afterwards.
    */
   private long lastCycleAt() {
 
@@ -365,27 +365,27 @@ public class Camunda7DueDateSleepTest {
   }
 
   /**
-   * Starts the executor and waits until the acquisition is asleep, which takes two things
-   * being true at once: its last cycle found nothing to do, and its thread is parked.
+   * Starts the executor and waits until the acquisition is asleep. Two things must be true at
+   * once: its last cycle found nothing to do, and its thread is parked.
    * <p>
-   * A cycle which found nothing is the one case whose wait the due date decides; a cycle
-   * which found work backs off instead. And the cycle which found nothing is still running
-   * for a moment after it says so, so the parked thread is what says the cycle is over and
-   * its connection given back. Starting a measurement before both were true measured the
+   * Only for a cycle which found nothing does the due date decide the wait. A cycle which
+   * found work backs off instead. And the cycle which found nothing still runs for a moment
+   * after it says so. So the parked thread is what says that the cycle is over and its
+   * connection is given back. A measurement which started before both were true measured the
    * backoff and called it a sleep. Waiting for a fixed number of polling intervals did
-   * exactly that, and it made these measurements red on a machine busy with something else.
+   * exactly that. It made these measurements red on a machine busy with something else.
    * <p>
-   * Nothing beyond that is waited for, and a wake-up is deliberately not waited for. The
-   * test's own questions of the engine are engine commands, and a committed engine command
-   * asks the acquisition to wake up, so an earlier version of this test sent such a wake-up
-   * itself and waited for the cycle it should cause. That timed out in four runs out of five
-   * on a loaded machine (Camunda 7.24.0, 2026-09-14), because a wake-up arriving while the
-   * next wait was being decided was dropped. That window is closed
-   * ({@code Camunda7WakeupInTheGapTest}), and waiting for the parked thread is still the
-   * cheaper question: it is about this loop and not about who woke it.
+   * Nothing else is waited for. A wake-up is not waited for, on purpose. The test's own
+   * questions to the engine are engine commands, and a committed engine command asks the
+   * acquisition to wake up. So an earlier version of this test sent such a wake-up itself and
+   * waited for the cycle it should cause. That timed out in four runs out of five on a loaded
+   * machine (Camunda 7.24.0, 2026-09-14). A wake-up which arrived while the next wait was
+   * being decided was dropped. That window is closed ({@code Camunda7WakeupInTheGapTest}).
+   * Still, waiting for the parked thread is the cheaper question. It is about this loop, not
+   * about who woke it.
    * <p>
-   * The engine which does not sleep has no thread to ask, so there the cycle is all there
-   * is, which is enough: what that measurement asserts is that the engine keeps coming back.
+   * The engine which does not sleep has no thread to ask. There the cycle is all there is,
+   * and that is enough. That measurement only asserts that the engine keeps coming back.
    *
    * @return When the cycle which found nothing started
    */
@@ -411,10 +411,10 @@ public class Camunda7DueDateSleepTest {
   }
 
   /**
-   * Whether the thread running the acquisition cycles is waiting rather than working. The
-   * adapter answers which thread that is - {@code Camunda7WakeupAfterCommit} asks it about
-   * every committing thread - so the threads of this JVM are held against that answer
-   * instead of against a name somebody guessed.
+   * Whether the thread running the acquisition cycles is waiting and not working. The
+   * adapter answers which thread that is. {@code Camunda7WakeupAfterCommit} asks it about
+   * every committing thread. So the threads of this JVM are compared with that answer, not
+   * with a name somebody guessed.
    *
    * @return Whether it is parked, and <code>true</code> for an executor which does not
    *         sleep, because there is no sleep to wait for
@@ -488,14 +488,14 @@ public class Camunda7DueDateSleepTest {
     waitUntilTheEngineIsAsleep();
 
     // the engine hints its own executor only for a job due inside the executor's wait
-    // time, so a timer further out is the case this feature has to cover itself
+    // time. So this feature has to cover a timer further out by itself
     final var before = connections.count();
     final var dueAt = System.currentTimeMillis() + TIMER.toMillis();
     startTheTimerOf(TIMER);
 
     // halfway through the timer the workflow still has to be waiting. Asking costs a
-    // connection and wakes the acquisition, which is why it is asked once and not in a
-    // loop, and a machine which needed the whole timer to get here is not asked at all
+    // connection and wakes the acquisition. So the test asks once and not in a loop. And
+    // it does not ask at all on a machine which needed the whole timer to get here
     Thread.sleep(TIMER.toMillis() / 2);
     if (System.currentTimeMillis() < dueAt) {
       assertEquals(
@@ -505,9 +505,9 @@ public class Camunda7DueDateSleepTest {
     }
 
     // and here the test waits for the thing it is about: the job ran. The engine says so
-    // itself, so the wait ends the moment it happens and asks the database nothing while
-    // it lasts. Waiting a fixed span instead paid for the slowest machine on every run and
-    // still left the job no more room than that span happened to hold
+    // itself. So the wait ends the moment it happens, and asks the database nothing while
+    // it lasts. Waiting a fixed span instead paid for the slowest machine on every run.
+    // And it still left the job no more room than that span happened to hold
     final var itRan = theTimerHasFired.await(PATIENCE, TimeUnit.MILLISECONDS);
     final var spent = connections.count() - before;
 
@@ -520,7 +520,7 @@ public class Camunda7DueDateSleepTest {
         "the acquisition took %d connections where it should have waited for the due date"
             .formatted(Integer.valueOf(spent)));
 
-    // the listener runs inside the transaction of the job, so this is what says that the
+    // the listener runs inside the transaction of the job. So this is what says that the
     // transaction was committed as well
     waitForEveryWorkflowToEnd();
 

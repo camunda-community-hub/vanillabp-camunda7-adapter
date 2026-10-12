@@ -9,9 +9,9 @@ import lombok.Getter;
 import lombok.Setter;
 
 /**
- * The workflow aggregate of the modelled-listener test. Each flag is set by one
- * <code>&#64;WorkflowTask</code> method, so which of them are true says which of the two
- * listener forms reached the application.
+ * The workflow aggregate of the modelled-listener test. One
+ * <code>&#64;WorkflowTask</code> method sets each flag. So the flags which are true say which
+ * of the two listener forms reached the application.
  */
 @Entity
 @Table(name = "C7_LISTENER_AGGREGATE")

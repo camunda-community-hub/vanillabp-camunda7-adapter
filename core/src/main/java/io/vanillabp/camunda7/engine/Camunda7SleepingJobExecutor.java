@@ -5,8 +5,8 @@ import org.camunda.bpm.engine.impl.jobexecutor.DefaultJobExecutor;
 /**
  * The engine's own job executor, with the acquisition loop which sleeps until something is
  * due. The engine creates its loop in {@code ensureInitialization()} and keeps no factory
- * for it, so replacing the loop means subclassing the executor, and this is the whole
- * subclass.
+ * for it. So the only way to replace the loop is to subclass the executor. This is the
+ * whole subclass.
  * <p>
  * This is the executor of the Quarkus module, where the engine brings its own thread pool.
  * The Spring Boot module has the same two lines over {@code SpringJobExecutor}, because

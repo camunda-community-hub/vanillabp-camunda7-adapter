@@ -19,10 +19,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import io.vanillabp.integration.test.utils.SuppressOutputExtension;
 
 /**
- * How the values a workflow aggregate shares become Camunda 7 variables - a value the
- * engine has a type for stays comparable, everything else keeps its class in an object
- * variable of the configured serialization format (which is what keeps dot-notated
- * expressions working).
+ * How the values a workflow aggregate shares become Camunda 7 variables. A value the engine
+ * has a type for stays comparable. Everything else keeps its class in an object variable of
+ * the configured serialization format. That keeps dot-notated expressions working.
  */
 @ExtendWith(SuppressOutputExtension.class)
 public class Camunda7VariablesTest {
@@ -67,9 +66,9 @@ public class Camunda7VariablesTest {
                     "ratio", 1.5f),
             "application/json");
 
-    // the value the application holds is the value the model reads: widening it to a
-    // double would drop the scale of the decimal and the last digits of the integer,
-    // and a comparison needs neither, because EL coerces to BigDecimal anyway
+    // the value the application holds is the value the model reads. Widening it to a
+    // double would drop the scale of the decimal and the last digits of the integer. A
+    // comparison needs no widening, because EL turns both sides into BigDecimal anyway
     final var amountVariable = assertInstanceOf(ObjectValue.class, variables.get("amount"));
     assertEquals("application/json", amountVariable.getSerializationDataFormat());
     assertEquals(amount, amountVariable.getValue());
@@ -88,8 +87,8 @@ public class Camunda7VariablesTest {
 
     final var variables = Camunda7Variables.of(Map.of("grade", 'A'), "application/json");
 
-    // the only conversion left, and it loses nothing: EL compares a character to 'A' and
-    // to "A" alike, and this buys a readable string variable instead of an object one
+    // the only conversion left, and it loses nothing. EL compares a character to 'A' and
+    // to "A" alike. And the result is a readable string variable, not an object one
     assertEquals("A", variables.get("grade"));
 
   }
@@ -124,8 +123,8 @@ public class Camunda7VariablesTest {
     final var variables = Camunda7Variables.of(Map.of("customer", Map.of("name", "ACME")), null);
 
     final var customerVariable = assertInstanceOf(ObjectValue.class, variables.get("customer"));
-    // no format named here: whatever 'defaultSerializationFormat' says applies, which is
-    // exactly what the adapter warns about once
+    // no format named here, so whatever 'defaultSerializationFormat' says applies. The
+    // adapter warns about exactly this, once
     assertNull(customerVariable.getSerializationDataFormat());
 
   }

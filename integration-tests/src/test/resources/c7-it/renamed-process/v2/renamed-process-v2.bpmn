@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- The model AFTER the rename: the same process, the same tasks, a new process id. It is
-     the ONLY model this generation of the application deploys - the old id lives on in the
-     engine with the workflow which is still running on it. -->
+     the ONLY model which this generation of the application deploys. The old id lives on
+     in the engine, with the workflow which still runs on it. -->
 <bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" id="Definitions_RenamedProcessV2" targetNamespace="http://bpmn.io/schema/bpmn">
   <bpmn:message id="Msg_RenameContinue" name="RenameContinue" />
   <bpmn:process id="RenamedProcessNew" isExecutable="true">

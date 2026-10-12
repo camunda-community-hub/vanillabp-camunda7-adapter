@@ -22,30 +22,30 @@ import io.vanillabp.integration.test.utils.SuppressOutputExtension;
  * What the EMBEDDED Camunda 7 engine gets to see of a workflow aggregate, asserted
  * against the real engine:
  * <ul>
- * <li>this adapter shares like every other BPMS: an aggregate carrying NO
- * annotation writes every attribute as a process variable, and the engine's expressions
- * read those variables;</li>
+ * <li>This adapter shares like every other BPMS. An aggregate which carries NO annotation
+ * writes every attribute as a process variable, and the expressions of the engine read
+ * those variables.</li>
  * <li>an aggregate which minimizes ({@code @SyncWithBPMS} on one attribute derives opt-out
  * for the rest) writes exactly what it named - and an expression reading something it did
  * NOT share only works through the MIGRATION FALLBACK of the EL resolver, which will be
  * removed;</li>
- * <li>the demanding case: the gateway right behind a service task branches
- * on what THAT task computed, which means the value has to be a variable by then. The
- * condition also navigates a NESTED shared value, which travels as an object variable.</li>
+ * <li>The demanding case: the gateway right behind a service task branches on what THAT
+ * task computed. So the value has to be a variable by then. The condition also navigates a
+ * NESTED shared value, which travels as an object variable.</li>
  * </ul>
  */
 @SpringBootTest(classes = TestApplication.class, properties = {
-    // own database: test contexts are cached and live in parallel - another
-    // context's engine (and job executor) on the same H2 database would compete for
-    // this test's jobs, and Hibernate's ddl-auto=create resets the aggregate tables
-    // (restarting the ID sequences) while Camunda's tables survive
+    // own database. Test contexts are cached and live in parallel. The engine and job
+    // executor of another context on the same H2 database would compete for the jobs of
+    // this test. And ddl-auto=create of Hibernate resets the aggregate tables and restarts
+    // the ID sequences, while the tables of Camunda survive.
     "spring.datasource.url=jdbc:h2:mem:c7-sync-it;DB_CLOSE_DELAY=-1"
 })
 @ExtendWith(SuppressOutputExtension.class)
 @SuppressOutputExtension.SuppressBackgroundOutput
-// closed when the class is done: this IT has a database (and therefore a context) of its
-// own, Spring would keep every context until the JVM exits, and an engine outliving its
-// test keeps its job executor running against a database the next classes work on
+// closed when the class is done. This IT has a database of its own, and so a context of its
+// own. Spring would keep every context until the JVM exits. An engine which outlives its test
+// keeps its job executor running against a database which the next classes work on.
 @DirtiesContext
 public class Camunda7AggregateSyncIT {
 
@@ -120,10 +120,10 @@ public class Camunda7AggregateSyncIT {
       return syncWorkflowService.startSyncProcess(aggregate).getId();
     });
 
-    // the gateway condition reads the NOT shared attribute, so the workflow got past it
-    // through the migration fallback - the EL resolver still reads the
-    // aggregate where the engine has no variable of that name. That fallback will be removed,
-    // and the startup check names such expressions while the application boots
+    // the gateway condition reads the attribute which is NOT shared. So the workflow got
+    // past it through the migration fallback: the EL resolver still reads the aggregate
+    // where the engine has no variable of that name. That fallback will be removed. The
+    // startup check names such expressions while the application boots.
     assertTrue(
         waitForTaskId(aggregateId),
         "the workflow has to reach the asynchronous task behind the gateway");
@@ -139,8 +139,8 @@ public class Camunda7AggregateSyncIT {
   @DisplayName("An aggregate without any annotation shares everything - the default of every adapter")
   public void unannotatedAggregateSharesEverything() {
 
-    // started through VanillaBP (the sync point under test): TaskProcess runs to its end,
-    // so the assertion is made against the ENGINE'S HISTORY
+    // started through VanillaBP, which is the sync point under test. TaskProcess runs to
+    // its end, so the assertion is made against the HISTORY OF THE ENGINE.
     final var aggregateId = transactionTemplate.execute(status -> {
       final var aggregate = new TaskTestAggregate();
       aggregate.setApproved(true);
@@ -169,8 +169,8 @@ public class Camunda7AggregateSyncIT {
         .stream()
         .map(org.camunda.bpm.engine.history.HistoricVariableInstance::getName)
         .toList();
-    // FULL is the default of every adapter, so every attribute of this
-    // unannotated aggregate is a variable the model may read
+    // FULL is the default of every adapter. So every attribute of this aggregate without
+    // annotations is a variable which the model may read.
     assertTrue(variableNames.contains("approved"), "shared attributes: "
         + variableNames);
     assertTrue(variableNames.contains("results"), "shared attributes: "
@@ -190,7 +190,7 @@ public class Camunda7AggregateSyncIT {
       customer.setCustomerName("ACME");
       customer.setVip(true);
       aggregate.setCustomer(customer);
-      // NOT decided when the workflow starts - the first task decides
+      // NOT decided when the workflow starts. The first task decides.
       return decisionWorkflowService.startDecisionProcess(aggregate).getId();
     });
 
@@ -205,8 +205,8 @@ public class Camunda7AggregateSyncIT {
         decisionRepository.findById(aggregateId).orElseThrow().getDecisionResult(),
         "the gateway took the rejecting branch - it did not see what the task computed");
 
-    // the value the task computed IS a process variable now, which is what the gateway
-    // read (see decision 1 in the repository's DECISIONS.md)
+    // the value which the task computed IS a process variable now, and the gateway read it
+    // (see decision 1 in the repository's DECISIONS.md)
     final var variables = variablesOfWorkflow(aggregateId, "SyncDecisionProcess");
     assertEquals("true", variables.get("decided"), "variables: "
         + variables);
@@ -233,9 +233,9 @@ public class Camunda7AggregateSyncIT {
             .isPresent()),
         "the workflow has to park at the task behind the gateway");
 
-    // the condition of that gateway reads '${decided and customer.vip}', so the dot
-    // notation navigated the nested value - which only works because it is an OBJECT
-    // variable the engine deserializes, not a text
+    // the condition of that gateway reads '${decided and customer.vip}'. So the dot
+    // notation navigated the nested value. That only works because it is an OBJECT variable
+    // which the engine deserializes, not a text.
     final var processInstance = runtimeService
         .createProcessInstanceQuery()
         .processDefinitionKey("SyncDecisionProcess")

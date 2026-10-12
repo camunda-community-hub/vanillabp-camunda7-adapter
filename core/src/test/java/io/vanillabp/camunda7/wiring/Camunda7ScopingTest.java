@@ -27,9 +27,9 @@ import io.vanillabp.integration.adapter.spi.NameClashAvoidance;
 import io.vanillabp.integration.test.utils.SuppressOutputExtension;
 
 /**
- * Unit tests of {@link Camunda7Scoping}: which identifiers of a Camunda 7
- * model are rewritten in mode {@link NameClashAvoidance#USE_PREFIX} - and that task
- * definitions deliberately are not, because they are process-local in Camunda 7.
+ * Unit tests of {@link Camunda7Scoping}: which identifiers of a Camunda 7 model are
+ * rewritten in mode {@link NameClashAvoidance#USE_PREFIX}. Task definitions are not, on
+ * purpose, because they are process-local in Camunda 7.
  */
 @ExtendWith(SuppressOutputExtension.class)
 public class Camunda7ScopingTest {
@@ -191,7 +191,7 @@ public class Camunda7ScopingTest {
 
     Camunda7Scoping.apply(model, MODULE, ADAPTER_ID, scoping);
 
-    // what the model points at has to be what the DMN file is deployed under, so both
+    // what the model points at has to be what the DMN file is deployed under. So both
     // sides go through the same function of the core
     final var decisionRef = first(model, org.camunda.bpm.model.bpmn.instance.BusinessRuleTask.class)
         .getCamundaDecisionRef();
@@ -217,7 +217,7 @@ public class Camunda7ScopingTest {
 
     Camunda7Scoping.apply(model, MODULE, ADAPTER_ID, new RecordingScoping(NameClashAvoidance.USE_PREFIX));
 
-    // the decision this module deploys carries the prefix, so the expression has to resolve
+    // the decision this module deploys carries the prefix. So the expression has to resolve
     // to the prefixed id as well. Camunda7DecisionByExpressionTest runs that against the
     // engine, which finds nothing without the prefix
     assertEquals(
@@ -235,7 +235,7 @@ public class Camunda7ScopingTest {
 
     Camunda7Scoping.apply(model, MODULE, ADAPTER_ID, new RecordingScoping(NameClashAvoidance.USE_PREFIX));
 
-    // JUEL evaluates composite expressions (literal text + '${...}'), so the engine
+    // JUEL evaluates composite expressions (literal text + '${...}'). So the engine
     // resolves the prefixed process id of whatever the expression yields
     assertEquals(
         "loan-approval__${nextProcess}",

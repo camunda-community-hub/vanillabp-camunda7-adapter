@@ -20,44 +20,44 @@ import io.vanillabp.integration.test.utils.OneFreePortPerJvm;
 import io.vanillabp.integration.test.utils.SuppressOutputExtension;
 
 /**
- * A booted Quarkus application whose Camunda 7 engine was allowed to sleep, measured at its
- * datasource: while nothing is due, not one connection is taken. That is the claim this
- * feature lives by, and it is the only one a cloud bill can read.
+ * A booted Quarkus application whose Camunda 7 engine may sleep, measured at its
+ * datasource. While nothing is due, not one connection is taken. This feature lives by
+ * that claim, and it is the only one a cloud bill can read.
  * <p>
- * Version 1 had no Quarkus artifact at all, so this is the half which did not exist. What
- * is Quarkus-bound here is the engine's own job executor, the JTA transaction the wake-up
- * hangs off and the runtime configuration key; the waiting rule itself is the core's, and
- * {@code Camunda7DueDateSleepTest} holds it against a real engine.
+ * Version 1 had no Quarkus artifact at all, so this is the half which did not exist. Three
+ * things here are bound to Quarkus: the engine's own job executor, the JTA transaction which
+ * the wake-up hangs off, and the runtime configuration key. The waiting rule itself belongs
+ * to the core, and {@code Camunda7DueDateSleepTest} checks it against a real engine.
  * <p>
- * What is measured, and where the two bounds come from. The silence
- * asserted is the one between the acquisition falling asleep and the moment it would wake
- * up again, and both of those are read from the engine rather than from the clock:
+ * What is measured, and where the two bounds come from. The test checks the silence between
+ * the moment the acquisition falls asleep and the moment it would wake up again. Both are
+ * read from the engine, not from the clock:
  * <ul>
  * <li>the lower bound is the cycle which found nothing to do. The application reports it
- * as {@code lastCycleAt}, and a cycle which found nothing is the one case in which the
- * acquisition waits for a due date instead of backing off after work, which is decision 18
- * in the repository's DECISIONS.md;</li>
- * <li>the upper bound is the due date the acquisition would wake up at. The engine holds no
- * job at that point, so there is no due date to reach and the sleep lasts until something
- * wakes it. Both ends of the measurement check that, so a window is only ever judged while
- * it really does lie inside a sleep.</li>
+ * as {@code lastCycleAt}. A cycle which found nothing is the one case in which the
+ * acquisition waits for a due date, and does not back off after work. That is decision 18
+ * in the repository's DECISIONS.md.</li>
+ * <li>the upper bound is the due date at which the acquisition would wake up. The engine
+ * holds no job at that point. So there is no due date to reach, and the sleep lasts until
+ * something wakes it. Both ends of the measurement check that. So a window is only judged
+ * while it really lies inside a sleep.</li>
  * </ul>
- * The wall-clock pause between the two readings decides how much of the sleep is sampled
- * and nothing else. A machine which is busy shortens what the test sees; it can no longer
- * move the measurement outside the sleep, which is what used to make this test red under
- * load while the engine behaved perfectly.
+ * The wall-clock pause between the two readings only decides how much of the sleep is
+ * sampled. A busy machine shortens what the test sees. But it can no longer move the
+ * measurement outside the sleep. That used to make this test red under load, while the
+ * engine behaved perfectly.
  * <p>
- * Whose connections count: the pool is shared, so a total says nothing
- * about the engine. Every take is recorded with the thread that made it, and what is
- * asserted are the takes of the acquisition thread - the adapter itself answers which
- * thread that is, the same question {@code Camunda7WakeupAfterCommit} asks about every
- * committing thread. VanillaBP's outbox polls the same pool, which is turned down to ten
- * minutes here so that a poll is rare as well as attributable, and the engine's own metrics
- * reporter is switched off by the feature itself.
+ * Whose connections count: the pool is shared, so a total says nothing about the engine.
+ * Every take is recorded with the thread which made it. The test checks the takes of the
+ * acquisition thread. The adapter itself answers which thread that is. It is the same
+ * question {@code Camunda7WakeupAfterCommit} asks about every committing thread.
+ * VanillaBP's outbox polls the same pool. Its interval is set to ten minutes here, so a poll
+ * is rare and can be told apart. The feature itself switches off the engine's own metrics
+ * reporter.
  * <p>
  * Nothing may ask the engine anything while the window is open. Every committed engine
- * command asks the acquisition to wake up, so a question about the sleep would end it. The
- * readings inside the window therefore go to the endpoint which reads memory only.
+ * command asks the acquisition to wake up, so a question about the sleep would end it. So
+ * the readings inside the window go to the endpoint which reads memory only.
  */
 @ExtendWith(SuppressOutputExtension.class)
 @SuppressOutputExtension.SuppressBackgroundOutput
@@ -74,8 +74,8 @@ public class Camunda7SleepingEngineTest {
           .addAsResource("c7-e2e/processes/timer-start.bpmn")
           .addAsResource("c7-e2e/processes/versioned-process.bpmn")
           .addAsResource("workflow-module-descriptor/workflow-module", "META-INF/workflow-module"))
-      // JVM args needed for tracking coverage - check this module's POM for the
-      // systemPropertyVariables feeding 'jacoco.agent'
+      // JVM args needed for tracking coverage. See this module's POM for the
+      // systemPropertyVariables which feed 'jacoco.agent'
       .setJVMArgs(testCoverageJavaAgent(quarkusProdModeTestDefaults()))
       .setRun(true)
       .setRuntimeProperties(Map.of(
@@ -86,28 +86,28 @@ public class Camunda7SleepingEngineTest {
               .toAbsolutePath()
               .toString(),
           "vanillabp.adapters.c7.sleep-until-something-is-due", "true",
-          // the outbox is the other poller of a quiet application, and a measurement of the
-          // engine's silence has to be able to tell the two apart
+          // the outbox is the other poller of a quiet application. A measurement of the
+          // engine's silence has to tell the two apart
           "vanillabp.outbox.poll-interval", "PT10M",
           "quarkus.datasource.jdbc.background-validation-interval", "0"));
 
   /**
-   * How much of the sleep is sampled. It is not what the assertion rests on: whatever
-   * happens in here is judged against the sleep the engine itself reports, so a shorter
-   * pause looks at less and a longer one at more, and neither can change the verdict.
+   * How much of the sleep is sampled. The assertion does not rest on it. Whatever happens
+   * in here is judged against the sleep which the engine itself reports. A shorter pause
+   * looks at less, a longer one at more, and neither can change the verdict.
    */
   private static final long SAMPLED = 4000;
 
   /**
    * How long the test waits for the application to finish what booting left behind: the
-   * deployment, the workflow the module's timer start event begins, the outbox entry of it,
+   * deployment, the workflow which the module's timer start event begins, its outbox entry,
    * and the acquisition cycle which finds all of that done.
    */
   private static final long PATIENCE = 60000;
 
   /**
    * How often the acquisition is asked whether it has fallen asleep. Only the endpoint
-   * reading memory is asked, so this costs the database nothing.
+   * which reads memory is asked, so this costs the database nothing.
    */
   private static final long ASKING_INTERVAL = 250;
 
@@ -152,9 +152,9 @@ public class Camunda7SleepingEngineTest {
   }
 
   /**
-   * When the engine's next job is due and how many workflows still run. Asking this is an
-   * engine command, so it costs a connection and it wakes the acquisition - it belongs
-   * before a measurement or after one, never inside.
+   * When the engine's next job is due, and how many workflows still run. Asking this is an
+   * engine command. So it costs a connection and wakes the acquisition. It belongs before a
+   * measurement or after one, never inside.
    */
   private static Map<String, Object> whatIsStillDue() {
 
@@ -229,11 +229,11 @@ public class Camunda7SleepingEngineTest {
   }
 
   /**
-   * Waits until the engine holds no job at all. That is what makes the sleep a sleep
-   * without an end: the acquisition has no due date to wake up at, so the whole window the
-   * test looks at lies inside one wait.
+   * Waits until the engine holds no job at all. That makes the sleep a sleep without an
+   * end. The acquisition has no due date to wake up at. So the whole window the test looks
+   * at lies inside one wait.
    * <p>
-   * What has to finish first is the boot: the deployment, the workflow the module's timer
+   * The boot has to finish first: the deployment, the workflow which the module's timer
    * start event begins, and the outbox entry which starts it.
    */
   private void waitUntilNothingIsDueAnyMore() throws InterruptedException {
@@ -253,24 +253,24 @@ public class Camunda7SleepingEngineTest {
   }
 
   /**
-   * Waits until the acquisition has run a cycle which found nothing to do. Before that
-   * cycle the engine is not asleep at all - it is backing off after work, and a
-   * measurement started there measures the backoff rather than the sleep. That is what
-   * made this test red on a busy machine while the engine behaved exactly as promised.
+   * Waits until the acquisition has run a cycle which found nothing to do. Before that cycle
+   * the engine is not asleep at all. It backs off after work. A measurement started there
+   * measures the backoff, not the sleep. That made this test red on a busy machine, while
+   * the engine behaved exactly as promised.
    * <p>
-   * Its thread has to be parked as well. The cycle which found nothing is still running for a
-   * moment after it says so, and the connection it gives back at the end of it would land
-   * inside a window opened too early.
+   * Its thread has to be parked as well. The cycle which found nothing still runs for a
+   * moment after it says so. The connection it gives back at its end would land inside a
+   * window which was opened too early.
    *
-   * Nothing beyond that is waited for, and a wake-up is deliberately not waited for. The
-   * test's own questions of the engine are engine commands, and a committed engine command
-   * asks the acquisition to wake up, so an earlier version of this test sent such a wake-up
-   * itself and waited for the cycle it should cause. That timed out in four runs out of five
-   * on a loaded machine (Camunda 7.24.0, 2026-09-14): the acquisition copies the flag a
-   * wake-up sets into its cycle and clears it a few steps later, and this adapter's due-date
-   * query runs in between, so a wake-up arriving there is dropped. Waiting for the parked
-   * thread needs none of that - by then the wake-up has either been answered or been lost,
-   * and neither leaves anything on its way into the window.
+   * Nothing beyond that is waited for. A wake-up is not waited for, on purpose. The test's
+   * own questions to the engine are engine commands. A committed engine command asks the
+   * acquisition to wake up. So an earlier version of this test sent such a wake-up itself,
+   * and waited for the cycle it should cause. That timed out in four runs out of five on a
+   * loaded machine (Camunda 7.24.0, 2026-09-14). The acquisition copies the flag which a
+   * wake-up sets into its cycle, and clears it a few steps later. This adapter's due-date
+   * query runs in between. So a wake-up which arrives there is dropped. Waiting for the
+   * parked thread needs none of that. By then the wake-up was either answered or lost, and
+   * neither leaves anything on its way into the window.
    *
    * @return What the acquisition reported once it was asleep
    */

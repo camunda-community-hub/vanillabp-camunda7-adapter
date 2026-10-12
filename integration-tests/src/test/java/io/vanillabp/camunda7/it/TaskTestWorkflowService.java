@@ -58,11 +58,11 @@ public class TaskTestWorkflowService {
   }
 
   /**
-   * What a decision table produced reaches the application like any other process
-   * variable: the engine wrote the result of the business rule task into the workflow's
-   * scope, the task's input mapping brings it into the task's own scope, and the
-   * parameter names it. Nothing about DMN is visible here, which is the
-   * point - VanillaBP deploys the decision, the engine evaluates it.
+   * What a decision table produced reaches the application like any other process variable.
+   * The engine wrote the result of the business rule task into the scope of the workflow.
+   * The input mapping of the task brings it into the own scope of the task, and the
+   * parameter names it. Nothing about DMN is visible here, and that is the point. VanillaBP
+   * deploys the decision, and the engine evaluates it.
    */
   @WorkflowTask(taskDefinition = "readTheRating")
   public void readTheRating(
@@ -94,8 +94,8 @@ public class TaskTestWorkflowService {
   public void errorTask(
       final TaskTestAggregate aggregate) {
 
-    // the mutation has to be COMMITTED although the handler throws - the V1
-    // TaskException contract (BPMN error, no rollback)
+    // the change has to be COMMITTED although the handler throws. That is the TaskException
+    // contract of V1: a BPMN error, and no rollback.
     aggregate.appendResult("error-raised");
     throw new TaskException("PaymentFailed", "PAYMENT_FAILED");
 
@@ -113,8 +113,8 @@ public class TaskTestWorkflowService {
   public void alwaysFails(
       final TaskTestAggregate aggregate) {
 
-    // must NEVER become visible: a technical exception rolls back the job
-    // transaction including this mutation
+    // must NEVER become visible. A technical exception rolls back the job transaction, and
+    // this change with it.
     aggregate.appendResult("must-never-be-visible");
     throw new IllegalStateException("boom-21b");
 
@@ -171,8 +171,8 @@ public class TaskTestWorkflowService {
       @TaskId final String taskId,
       @TaskEvent final io.vanillabp.spi.service.TaskEvent.Event event) {
 
-    // subscribed to ALL events (default): CREATED parks the task, CANCELED is
-    // delivered when the activity is canceled
+    // subscribed to ALL events, which is the default. CREATED parks the task. CANCELED is
+    // delivered when the activity is canceled.
     if (event == io.vanillabp.spi.service.TaskEvent.Event.CREATED) {
       aggregate.setTaskId(taskId);
       aggregate.appendResult("event-created");
@@ -222,8 +222,8 @@ public class TaskTestWorkflowService {
       @TaskId final String taskId,
       @TaskEvent final io.vanillabp.spi.service.TaskEvent.Event event) {
 
-    // user-task lifecycle notification: CREATED when the task shows
-    // up, CANCELED when its activity is canceled
+    // lifecycle notification of the user task. CREATED comes when the task shows up,
+    // CANCELED when its activity is canceled.
     if (event == io.vanillabp.spi.service.TaskEvent.Event.CREATED) {
       aggregate.setTaskId(taskId);
       aggregate.appendResult("usertask-created");
@@ -284,9 +284,9 @@ public class TaskTestWorkflowService {
   }
 
   /**
-   * Calls a bean carrying a transaction annotation of the application. The handler
-   * itself has none, so the startup check cannot see it and the runtime check has to
-   * catch the rollback-only transaction.
+   * Calls a bean which carries a transaction annotation of the application. The handler
+   * itself has none. So the startup check cannot see it, and the runtime check has to catch
+   * the rollback-only transaction.
    */
   @WorkflowTask
   public void nestedTransaction(
@@ -298,10 +298,10 @@ public class TaskTestWorkflowService {
   }
 
   /**
-   * What the core reported as the running activation while a handler ran, in the order
-   * the handlers ran. Read by the test which checks that the adapter names every
-   * activation of an element differently - the value never reaches application code
-   * through the SPI, so this is where an IT can see it.
+   * What the core reported as the running activation while a handler ran, in the order the
+   * handlers ran. The test which checks that the adapter names every activation of an
+   * element differently reads it. The value never reaches application code through the SPI.
+   * So this is where an integration test can see it.
    */
   public static final java.util.List<String> ACTIVATIONS = new java.util.concurrent.CopyOnWriteArrayList<>();
 

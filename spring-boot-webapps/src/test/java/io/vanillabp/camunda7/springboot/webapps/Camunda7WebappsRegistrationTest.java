@@ -26,9 +26,9 @@ import io.vanillabp.integration.test.utils.SuppressOutputExtension;
 
 /**
  * What the registration does with the engines it is given, without booting anything.
- * Registering an engine is what makes it visible to the web applications, and stopping
- * has to take it back - the runtime container is JVM-wide, so an engine left behind
- * would outlive the application context that built it.
+ * Registering an engine makes it visible to the web applications. Stopping has to take
+ * it back. The runtime container is JVM-wide, so an engine left behind would outlive the
+ * application context that built it.
  */
 @ExtendWith(SuppressOutputExtension.class)
 public class Camunda7WebappsRegistrationTest {

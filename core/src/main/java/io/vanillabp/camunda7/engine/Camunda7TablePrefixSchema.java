@@ -15,35 +15,35 @@ import lombok.extern.slf4j.Slf4j;
  * What <code>vanillabp.adapters.&lt;id&gt;.table-prefix</code> means, and the check
  * which says so while the application boots.
  * <p>
- * A prefixed engine RUNS: every runtime statement Camunda issues goes through MyBatis,
- * which prepends the prefix. Creating the tables is the part Camunda leaves out, and it
- * says so itself - {@code ProcessEngineConfigurationImpl#setDatabaseTablePrefix}:
+ * A prefixed engine RUNS. Every runtime statement Camunda issues goes through MyBatis,
+ * and MyBatis adds the prefix. Camunda leaves out only the creation of the tables. It
+ * says so itself in {@code ProcessEngineConfigurationImpl#setDatabaseTablePrefix}:
  * <i>"the prefix is not respected by automatic database schema management. If you use
  * DB_SCHEMA_UPDATE_CREATE_DROP or DB_SCHEMA_UPDATE_TRUE, activiti will create the
  * database tables using the default names, regardless of the prefix configured
  * here."</i> The schema management runs the DDL files shipped with the engine
  * ({@code org/camunda/bpm/engine/db/create/activiti.<database>.create.<component>.sql})
- * statement by statement, and those statements name the tables verbatim, in every
- * dialect. {@code Camunda7TablePrefixEngineBehaviourTest} records all of it.
+ * statement by statement. Those statements name the tables verbatim, in every dialect.
+ * {@code Camunda7TablePrefixEngineBehaviourTest} records all of it.
  * <p>
- * So <code>table-prefix</code> means: the tables of that prefix exist already. Left
- * alone, an engine configured with a prefix and the default
- * <code>database-schema-update: true</code> creates a full set of UNPREFIXED
- * <code>ACT_*</code> tables in the shared database and then dies on its first query
- * against the prefixed ones - a MyBatis stack trace naming neither the adapter id nor
- * the prefix. This class turns that into a message which names both and the way on,
- * and it runs BEFORE the engine is built, so the stray tables are never written.
+ * So <code>table-prefix</code> means: the tables of that prefix exist already. Think of an
+ * engine with a prefix and the default <code>database-schema-update: true</code>, and
+ * nothing checks it. It creates a full set of UNPREFIXED <code>ACT_*</code> tables in the
+ * shared database. Then it dies on its first query against the prefixed ones, with a
+ * MyBatis stack trace which names neither the adapter id nor the prefix. This class turns
+ * that into a message which names both and the way on. It runs BEFORE the engine is
+ * built, so the stray tables are never written.
  * <p>
- * Why a prefix means the tables already exist rather than that the adapter will create them is
- * decision 7 in the repository's DECISIONS.md.
+ * Decision 7 in the repository's DECISIONS.md says why a prefix means that the tables
+ * already exist, and not that the adapter will create them.
  */
 @Slf4j
 public final class Camunda7TablePrefixSchema {
 
   /**
-   * The tables Camunda's own schema check asks for, one per engine component, in the
-   * order of {@code AbstractPersistenceSession#dbSchemaUpdate}. All seven components
-   * are enabled by default, and the adapter switches none of them off.
+   * The tables Camunda's own schema check asks for. There is one per engine component,
+   * in the order of {@code AbstractPersistenceSession#dbSchemaUpdate}. All seven
+   * components are enabled by default, and the adapter switches none of them off.
    */
   private static final Map<String, String> COMPONENT_TABLES = new LinkedHashMap<>();
 
@@ -62,8 +62,8 @@ public final class Camunda7TablePrefixSchema {
 
   /**
    * Whether the engine would create its tables with that setting. Everything Camunda does
-   * not know is treated as creating, because a value nobody recognises is more likely a
-   * typo than a decision to leave the schema alone.
+   * not know is treated as creating. A value nobody recognises is more likely a typo than
+   * a decision to leave the schema alone.
    *
    * @param databaseSchemaUpdate The configured value of
    *          <code>database-schema-update</code>
@@ -81,9 +81,9 @@ public final class Camunda7TablePrefixSchema {
   }
 
   /**
-   * Whether this adapter id has its tables behind a prefix. A prefix is what lets two
-   * engines share one database, and Camunda's own schema management ignores it, which is
-   * why the two answers here belong together.
+   * Whether this adapter id has its tables behind a prefix. With a prefix two engines
+   * share one database. But Camunda's own schema management ignores it. That is why the
+   * two answers here belong together.
    *
    * @param tablePrefix A configured table prefix
    * @return Whether the adapter id runs on a prefix at all
@@ -96,9 +96,9 @@ public final class Camunda7TablePrefixSchema {
   }
 
   /**
-   * Fails the boot of an adapter id whose table prefix cannot work, with a message
-   * naming the prefix, the database and both ways on. Does nothing for an adapter id
-   * without a prefix - there the engine's schema management is in charge, as always.
+   * Fails the boot of an adapter id whose table prefix cannot work. The message names
+   * the prefix, the database and both ways on. It does nothing for an adapter id without
+   * a prefix. There the engine's schema management is in charge, as always.
    *
    * @param adapterId The adapter id
    * @param properties The adapter id's engine settings
@@ -158,8 +158,8 @@ public final class Camunda7TablePrefixSchema {
   }
 
   /**
-   * The remedy both messages end with - written once, because both defects have the
-   * same two answers.
+   * The remedy both messages end with. It is written once, because both defects have
+   * the same two answers.
    */
   private static String waysOn(
       final String adapterId,
@@ -189,11 +189,10 @@ public final class Camunda7TablePrefixSchema {
   }
 
   /**
-   * Which of the engine's component tables are missing under the prefix - asked the
+   * Which of the engine's component tables are missing under the prefix. It asks the
    * way Camunda's own {@code DbSqlSession#isTablePresent} asks: through
-   * {@link java.sql.DatabaseMetaData}, with a prefix naming a schema split off the
-   * table name (Camunda derives {@code databaseSchema} from a prefix containing a
-   * dot).
+   * {@link java.sql.DatabaseMetaData}. A prefix which names a schema is split off the
+   * table name. Camunda derives {@code databaseSchema} from a prefix with a dot in it.
    *
    * @param dataSource The engine's datasource
    * @param tablePrefix The configured prefix
@@ -230,9 +229,9 @@ public final class Camunda7TablePrefixSchema {
   }
 
   /**
-   * Asks the metadata in every casing a database may store identifiers in - the
-   * engine lowercases for PostgreSQL and leaves the name alone everywhere else, and
-   * this check runs before the engine determined which database it talks to.
+   * Asks the metadata in every casing a database may store identifiers in. The engine
+   * lowercases for PostgreSQL and leaves the name alone everywhere else. And this check
+   * runs before the engine found out which database it talks to.
    */
   private static boolean tableExists(
       final java.sql.DatabaseMetaData metaData,

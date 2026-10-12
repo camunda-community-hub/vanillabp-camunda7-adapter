@@ -12,18 +12,18 @@ import jakarta.inject.Inject;
  * The workflow service of the old-process-versions test. Its three methods are the three
  * states an application can be in towards the versions its BPMS holds:
  * <ul>
- * <li>{@code keptInBothVersions} serves every version - the task survived into the deployed
- * model;</li>
- * <li>{@code droppedFromTheNewModel} serves version 2 only, the old model a node of the older
- * release deployed - the new model dropped the task, and the method stays for the workflows
- * still running on that version. It matches no task of the deployed model, which must not
- * fail the start;</li>
- * <li>{@code servedForAnUnknownVersion} names a version this engine does not hold, so it
- * never runs and the task it would serve is unserved in version 2.</li>
+ * <li>{@code keptInBothVersions} serves every version. The task survived into the deployed
+ * model.</li>
+ * <li>{@code droppedFromTheNewModel} serves version 2 only. That is the old model, which a
+ * node of the older release deployed. The new model dropped the task, and the method stays
+ * for the workflows which still run on that version. It matches no task of the deployed
+ * model, and that must not fail the start.</li>
+ * <li>{@code servedForAnUnknownVersion} names a version this engine does not hold. So it
+ * never runs, and the task it would serve has no method in version 2.</li>
  * </ul>
  * <p>
- * The application deploys only the new model. It could not deploy the old one: a start
- * refuses the version it deploys while a task of it has no method for that version, and
+ * The application deploys only the new model. It could not deploy the old one. A start
+ * refuses to deploy a version while a task of it has no method for that version. And
  * 'servedForAnUnknownVersion' has none.
  */
 @ApplicationScoped

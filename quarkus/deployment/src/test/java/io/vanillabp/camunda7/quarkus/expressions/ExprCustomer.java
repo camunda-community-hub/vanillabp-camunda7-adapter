@@ -1,8 +1,9 @@
 package io.vanillabp.camunda7.quarkus.expressions;
 
 /**
- * The customer of an order. It has a name and a flag, and deliberately no address: an
- * expression reading one is the case where a path stops at a name the type does not have.
+ * The customer of an order. It has a name and a flag, and no address, on purpose. An
+ * expression which reads an address is the case where a path stops at a name the type does
+ * not have.
  */
 public class ExprCustomer {
 

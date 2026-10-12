@@ -19,10 +19,10 @@ import io.vanillabp.integration.adapter.spi.NameClashAvoidance;
 import io.vanillabp.integration.test.utils.SuppressOutputExtension;
 
 /**
- * What {@link Camunda7EngineFacts} answers, and that it is the adapter's own answer: the
- * tenant comes out of the method the deployment resolves its own tenant with, and whether
- * the engine joins the caller's transaction is read from the engine the adapter built rather
- * than concluded from a property.
+ * What {@link Camunda7EngineFacts} answers, and that it is the adapter's own answer. The
+ * tenant comes out of the method which the deployment uses for its own tenant. Whether the
+ * engine joins the caller's transaction is read from the engine the adapter built. It is not
+ * concluded from a property.
  */
 @ExtendWith(SuppressOutputExtension.class)
 public class Camunda7EngineFactsTest {

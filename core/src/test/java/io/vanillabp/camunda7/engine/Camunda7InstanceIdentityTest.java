@@ -14,10 +14,10 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import io.vanillabp.integration.test.utils.SuppressOutputExtension;
 
 /**
- * Two <code>camunda7</code> adapter ids only make sense if they are DIFFERENT
- * engines: an own datasource, or an own table prefix on a shared one.
- * The rule is implemented once in the adapter's core and reached through the
- * adapter SPI hook {@code validateDistinctAdapterInstances}.
+ * Two <code>camunda7</code> adapter ids only make sense if they are DIFFERENT engines. Each
+ * needs a datasource of its own, or a table prefix of its own on a shared datasource. The
+ * rule is written once in the adapter's core. The adapter SPI hook
+ * {@code validateDistinctAdapterInstances} reaches it.
  */
 @ExtendWith(SuppressOutputExtension.class)
 public class Camunda7InstanceIdentityTest {
@@ -67,7 +67,7 @@ public class Camunda7InstanceIdentityTest {
             "c7-old", new Camunda7InstanceIdentity("legacy", null),
             "c7-new", new Camunda7InstanceIdentity(null, null))));
 
-    // the migration setup on ONE database: same datasource, separate engine tables
+    // the migration setup on ONE database: the same datasource, separate engine tables
     assertDoesNotThrow(
         () -> validate(Map.of(
             "c7-old", new Camunda7InstanceIdentity(null, null),

@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- The model AFTER the rename. Deliberately WITHOUT a timer start: any workflow a
-     timer starts while this generation runs therefore belongs to the OLD id, which is
-     what the test tells the two apart by. The signal start stays, under a name of its
-     own, so the methods keep serving a BPMS-initiated start of the deployed id too. -->
+<!-- The model AFTER the rename. It has NO timer start, on purpose. So any workflow
+     which a timer starts while this generation runs belongs to the OLD id. That is how
+     the test tells the two apart. The signal start stays, under a name of its own. So
+     the methods also keep serving a start of the deployed id which the BPMS begins. -->
 <bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" id="Definitions_DeclaredRuntimeV2" targetNamespace="http://bpmn.io/schema/bpmn">
   <bpmn:signal id="Sig_DeclRuntimeNew" name="DeclRuntimeSignalNew" />
   <bpmn:process id="DeclaredRuntimeNew" isExecutable="true">

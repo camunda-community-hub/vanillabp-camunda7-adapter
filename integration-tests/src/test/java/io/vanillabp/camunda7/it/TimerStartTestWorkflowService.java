@@ -12,8 +12,8 @@ import io.vanillabp.spi.service.WorkflowTask;
 
 /**
  * The workflow service of the timer-start integration test. The engine starts this
- * workflow, so the aggregate is built here and nowhere else, and the task following the
- * start event has to find it.
+ * workflow. So the aggregate is built here and nowhere else, and the task after the start
+ * event has to find it.
  */
 @Service
 @WorkflowService(
@@ -32,8 +32,8 @@ public class TimerStartTestWorkflowService {
       final BpmsStartTrigger trigger) {
 
     final var aggregate = new TimerStartTestAggregate();
-    // a name of the application's own, which the engine holds as the business key from
-    // here on - a second delivery of the same start finds the workflow under it
+    // a name of the application's own. From here on the engine holds it as the business
+    // key, and a second delivery of the same start finds the workflow under it.
     aggregate.setId("timer-start-"
         + java.util.UUID.randomUUID());
     aggregate.setStartedBy(trigger.kind().name());

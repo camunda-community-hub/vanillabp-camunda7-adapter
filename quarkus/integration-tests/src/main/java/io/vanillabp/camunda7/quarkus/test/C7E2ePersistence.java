@@ -6,8 +6,8 @@ import jakarta.inject.Inject;
 import jakarta.persistence.EntityManager;
 
 /**
- * JPA persistence of {@link C7E2eAggregate} - saves within the caller's JTA
- * transaction, which is the engine's job transaction while a task is processed.
+ * JPA persistence of {@link C7E2eAggregate}. It saves within the caller's JTA transaction.
+ * While a task is processed, that is the engine's job transaction.
  */
 @ApplicationScoped
 public class C7E2ePersistence implements AggregatePersistenceAware<C7E2eAggregate> {
@@ -36,9 +36,9 @@ public class C7E2ePersistence implements AggregatePersistenceAware<C7E2eAggregat
   }
 
   /**
-   * Named explicitly: a workflow the BPMS starts on its own is built by the platform,
-   * which needs the id property's name to hand the aggregate its identity - and a
-   * hand-written persistence has nothing to derive it from.
+   * Named explicitly. The platform builds a workflow which the BPMS starts on its own. It
+   * needs the name of the id property to hand the aggregate its identity. A hand-written
+   * persistence has nothing to derive that name from.
    *
    * @return The name of the aggregate's id property
    */

@@ -12,11 +12,11 @@ import jakarta.persistence.Table;
 import jakarta.persistence.Transient;
 
 /**
- * The aggregate of the BPMN process <code>ParamTypes</code>. It holds the five values
- * which decide what a <code>&#64;TaskParam</code> can be declared as: a decimal with a
- * trailing zero, a whole number above what a double holds exactly, a float whose double
- * form is a number nobody typed, a long above <code>Integer.MAX_VALUE</code> and the same
- * decimal one level down.
+ * The aggregate of the BPMN process <code>ParamTypes</code>. It holds the five values which
+ * decide what a <code>&#64;TaskParam</code> can be declared as: a decimal with a trailing
+ * zero, a whole number above what a double holds exactly, a float whose double form is a
+ * number nobody typed, a long above <code>Integer.MAX_VALUE</code>, and the same decimal
+ * one level down.
  * <p>
  * The columns have no public getters and every shared value has one, so what reaches the
  * engine is exactly those five.

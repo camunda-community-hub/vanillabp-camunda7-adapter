@@ -7,12 +7,12 @@ import io.vanillabp.camunda7.engine.Camunda7SleepingAcquisition;
 /**
  * The adapter's job executor on Spring Boot, with the acquisition loop which sleeps until
  * something is due. The engine creates its loop in {@code ensureInitialization()} and keeps
- * no factory for it, so replacing the loop means subclassing the executor, and this is the
+ * no factory for it. So to replace the loop, we have to subclass the executor. This is the
  * whole subclass.
  * <p>
- * Everything else the sleep needs is platform-neutral and lives in the core's
- * {@code Camunda7JobExecutorSleep}. What keeps this class here is only the class it extends:
- * a {@code SpringJobExecutor} runs the jobs on the application's thread pool.
+ * Everything else the sleep needs is platform-neutral. It lives in the core's
+ * {@code Camunda7JobExecutorSleep}. Only the class it extends keeps this class here. A
+ * {@code SpringJobExecutor} runs the jobs on the application's thread pool.
  */
 public class Camunda7SleepingSpringJobExecutor extends SpringJobExecutor {
 

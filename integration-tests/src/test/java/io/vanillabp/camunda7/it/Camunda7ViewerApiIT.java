@@ -25,14 +25,14 @@ import io.vanillabp.spi.process.WorkflowElementType;
 import io.vanillabp.spi.process.WorkflowNotFoundException;
 
 /**
- * Integration test of the viewer/history API against a <b>real embedded
- * engine on H2</b>: process definitions incl. the call activity's called process,
- * the deployed BPMN XML and the instance timeline - for a RUNNING and for an
- * ENDED workflow.
+ * Integration test of the viewer and history API against a <b>real embedded engine on
+ * H2</b>. It covers the process definitions, including the called process of the call
+ * activity, the deployed BPMN XML and the timeline of the instance. It does so for a
+ * RUNNING and for an ENDED workflow.
  */
 @SpringBootTest(classes = TestApplication.class, properties = {
-    // a database of its own: the phase-two outbox of a test class Spring keeps
-    // cached would otherwise dispatch the entries of the next one
+    // a database of its own. Otherwise the phase-two outbox of a test class which Spring
+    // keeps cached would dispatch the entries of the next one.
     "spring.datasource.url=jdbc:h2:mem:c7-viewer-api-it;DB_CLOSE_DELAY=-1"
 })
 @ExtendWith(SuppressOutputExtension.class)
@@ -59,8 +59,8 @@ public class Camunda7ViewerApiIT {
       return viewerProcessService.startWorkflow(viewerAggregateRepository.save(newAggregate));
     });
 
-    // the instance is created by the phase-two outbox right after the commit, and
-    // there is nothing to view before it exists
+    // the phase-two outbox creates the instance right after the commit. There is nothing to
+    // view before it exists.
     AwaitPhaseTwo.until(
         () -> runtimeService
             .createProcessInstanceQuery()
@@ -98,9 +98,9 @@ public class Camunda7ViewerApiIT {
     assertEquals("ViewerSubProcess", sub.bpmnProcessId());
     assertEquals(List.of("TheCallActivity"), sub.usedByElements());
 
-    // the BPMN XML is what the engine has DEPLOYED - a viewer has to be able to
-    // render it (Camunda 7 stores the model VanillaBP's deployment pipeline handed
-    // over, so the XML is semantically the resource, serialized by the engine)
+    // the BPMN XML is what the engine has DEPLOYED, because a viewer has to be able to
+    // render it. Camunda 7 stores the model which the deployment pipeline of VanillaBP
+    // handed over. So the XML is the resource in meaning, serialized by the engine.
     final String deployedXml;
     try (var xml = viewerProcessService.getBpmnXml(parent.id())) {
       deployedXml = new String(xml.readAllBytes(), StandardCharsets.UTF_8);
@@ -116,7 +116,7 @@ public class Camunda7ViewerApiIT {
         () -> "the BPMN XML has to contain the call activity but got: "
             + deployedXml);
 
-    // the called process' XML is a DIFFERENT definition - the ids stay resolvable
+    // the XML of the called process is a DIFFERENT definition, and the ids stay resolvable
     try (var subXml = viewerProcessService.getBpmnXml(sub.id())) {
       final var subModel = org.camunda.bpm.model.bpmn.Bpmn.readModelFromStream(subXml);
       assertNotNull(subModel.getModelElementById("ViewerSubProcess"));
@@ -192,9 +192,9 @@ public class Camunda7ViewerApiIT {
 
     final var aggregate = startViewedWorkflow();
 
-    // end the workflow deterministically instead of waiting for the job executor
-    // (other integration tests of this module steer it, so its state is nothing
-    // this test may rely on)
+    // end the workflow in a predictable way instead of waiting for the job executor. Other
+    // integration tests of this module steer the job executor, so this test may not rely on
+    // its state.
     final var instanceId = runtimeService
         .createProcessInstanceQuery()
         .processInstanceBusinessKey(String.valueOf(aggregate.getId()))
@@ -226,9 +226,9 @@ public class Camunda7ViewerApiIT {
   @DisplayName("Unknown workflows and unknown process definitions raise the SPI's guiding exceptions")
   public void unknownSubjectsRaiseGuidingErrors() {
 
-    // an ID no workflow ever used - deliberately NOT persisted: the viewing API
-    // only reads the aggregate's ID, and a generated ID could collide with the
-    // business key of a workflow of another test
+    // an ID which no workflow ever used. It is NOT saved, on purpose. The viewing API only
+    // reads the ID of the aggregate, and a generated ID could collide with the business key
+    // of a workflow of another test.
     final var neverStarted = new ViewerTestAggregate();
     neverStarted.setId(987654321L);
     neverStarted.setContent("never-started");

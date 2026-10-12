@@ -9,9 +9,9 @@ import io.vanillabp.spi.service.WorkflowService;
 import io.vanillabp.spi.service.WorkflowTask;
 
 /**
- * The first task of this workflow computes the decision, and the gateway right
- * behind it branches on that value - which means the value has to have reached the engine
- * before the gateway is evaluated.
+ * The first task of this workflow computes the decision. The gateway right behind it
+ * branches on that value. So the value has to reach the engine before the gateway is
+ * evaluated.
  */
 @Service
 @WorkflowService(

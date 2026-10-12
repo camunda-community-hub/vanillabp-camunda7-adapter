@@ -25,8 +25,8 @@ import io.vanillabp.integration.test.utils.SuppressOutputExtension;
 
 /**
  * A workflow is served from the model of the process definition it runs on. Two versions of
- * a process name different expressions at the same element, and the lookup of one version
- * must never answer with the task of the other one.
+ * a process name different expressions at the same element. The lookup of one version must
+ * never answer with the task of the other one.
  * <p>
  * {@code Camunda7HandlersOfTheOwnVersionIT} asks the same of a running engine across an
  * upgrade of the application.

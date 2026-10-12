@@ -19,7 +19,7 @@ import lombok.Setter;
 public class VersionedTestAggregate {
 
   /**
-   * An id range of its own: the Camunda business key is the aggregate's id, so the
+   * An id range of its own. The Camunda business key is the aggregate's id, so the
    * id spaces of the test aggregates must not overlap.
    */
   @Id
@@ -28,7 +28,7 @@ public class VersionedTestAggregate {
   private Long id;
 
   /**
-   * Which <code>&#64;WorkflowTask</code> method served the task - the version of the
+   * Which <code>&#64;WorkflowTask</code> method served the task. The version of the
    * deployed process definition decides it.
    */
   private String servedBy;

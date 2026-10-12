@@ -6,10 +6,10 @@ import org.springframework.stereotype.Component;
 
 /**
  * Fails the engine job of the repeated-delivery scenario AFTER the
- * <code>&#64;WorkflowTask</code> method ran, by throwing from the task's end listener.
- * The engine rolls its job back and hands the same job out again, which is the
- * redelivery the test is about: whatever the handler committed in a transaction of its
- * own survives that rollback, and whatever rode the engine's transaction does not.
+ * <code>&#64;WorkflowTask</code> method ran. It throws from the end listener of the task.
+ * The engine rolls its job back and hands the same job out again. That is the redelivery
+ * the test is about. Whatever the handler committed in a transaction of its own survives
+ * that rollback. Whatever rode on the transaction of the engine does not.
  */
 @Component("failTheJobOnce")
 public class FailTheJobOnce implements ExecutionListener {

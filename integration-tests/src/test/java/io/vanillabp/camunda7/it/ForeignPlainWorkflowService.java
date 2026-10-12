@@ -10,9 +10,9 @@ import io.vanillabp.spi.service.WorkflowTask;
 
 /**
  * The workflow service of the process which starts with a plain start event. It has NO
- * <code>@WorkflowStartedByBpms</code> method on purpose: the engine never starts this
- * process by itself, so the application boots without one, and a start past VanillaBP is
- * refused with a message carrying the method to write.
+ * <code>@WorkflowStartedByBpms</code> method on purpose. The engine never starts this
+ * process by itself, so the application boots without one. A start past VanillaBP is
+ * refused, with a message which names the method to write.
  */
 @Service
 @WorkflowService(

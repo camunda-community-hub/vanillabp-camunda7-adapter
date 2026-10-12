@@ -13,9 +13,9 @@ import io.vanillabp.spi.service.WorkflowStartedByBpms;
 import io.vanillabp.spi.service.WorkflowTask;
 
 /**
- * The workflow service of the timer-started process of the foreign-start integration
- * test. It starts the workflow itself, and it names a workflow which reached the
- * application without VanillaBP starting it.
+ * The workflow service of the timer-started process of the foreign-start integration test.
+ * It starts the workflow itself. It also names a workflow which reached the application
+ * without VanillaBP starting it.
  */
 @Service
 @WorkflowService(
@@ -51,8 +51,8 @@ public class ForeignTimerWorkflowService {
   }
 
   /**
-   * Names a workflow nobody started through VanillaBP, which is what the engine's timer
-   * does here and what anybody starting this process without a business key does.
+   * Names a workflow which nobody started through VanillaBP. The timer of the engine does
+   * that here, and so does anybody who starts this process without a business key.
    *
    * @param trigger Which start event fired
    * @return The workflow aggregate of the started workflow

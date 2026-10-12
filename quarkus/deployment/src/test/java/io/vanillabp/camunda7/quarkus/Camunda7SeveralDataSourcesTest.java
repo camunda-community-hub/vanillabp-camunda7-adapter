@@ -14,10 +14,10 @@ import io.vanillabp.camunda7.quarkus.sample.TestWorkflowService;
 import io.vanillabp.integration.test.utils.SuppressOutputExtension;
 
 /**
- * An application which declares more than one datasource and an adapter id which names
- * none of them. Camunda 7 runs embedded and needs a database, so guessing which of them is
- * meant would put the engine's tables wherever the alphabet decides. The boot stops and says
- * how to name one.
+ * An application which declares more than one datasource, and an adapter id which names
+ * none of them. Camunda 7 runs embedded and needs a database. If the adapter guessed which
+ * one is meant, the alphabet would decide where the engine's tables go. So the boot stops
+ * and says how to name one.
  */
 @ExtendWith(SuppressOutputExtension.class)
 public class Camunda7SeveralDataSourcesTest {

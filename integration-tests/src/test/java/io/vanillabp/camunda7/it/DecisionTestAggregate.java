@@ -11,10 +11,10 @@ import lombok.Getter;
 import lombok.Setter;
 
 /**
- * The aggregate of the decision test: a task computes what the gateway right behind
- * it reads, so the value has to be a process variable by the time the engine evaluates
- * that gateway. It also carries a NESTED shared value, which becomes an object variable in
- * the configured serialization format.
+ * The aggregate of the decision test. A task computes what the gateway right behind it
+ * reads. So the value has to be a process variable by the time the engine evaluates that
+ * gateway. The aggregate also carries a NESTED shared value. It becomes an object variable
+ * in the configured serialization format.
  */
 @Entity
 @Table(name = "C7_DECISION_TEST_AGGREGATE")
@@ -37,14 +37,14 @@ public class DecisionTestAggregate {
   private boolean decided;
 
   /**
-   * Which branch the workflow took - recorded by the handlers.
+   * Which branch the workflow took. The handlers record it.
    */
   private String decisionResult;
 
   private String taskId;
 
   /**
-   * A nested shared value: an object variable in the configured format.
+   * A nested shared value. It becomes an object variable in the configured format.
    */
   @Embedded
   private DecisionTestCustomer customer;

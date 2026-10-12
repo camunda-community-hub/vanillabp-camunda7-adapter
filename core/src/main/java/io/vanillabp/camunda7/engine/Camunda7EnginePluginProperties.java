@@ -6,8 +6,8 @@ import java.util.Map;
  * One engine plugin of an adapter id: which class, and the properties Camunda
  * applies to it.
  * <p>
- * The section is NAMED by the application rather than keyed by the class, because a class
- * name carries dots - which both configuration binders would need quoted:
+ * The application gives the section a NAME. It is not keyed by the class, because a class
+ * name has dots, and both configuration binders would need them quoted:
  *
  * <pre>
  * vanillabp:
@@ -58,7 +58,7 @@ public class Camunda7EnginePluginProperties {
   }
 
   /**
-   * The plugin's own properties in kebab-case - Camunda converts them to the types the
+   * The plugin's own properties in kebab-case. Camunda converts them to the types the
    * plugin declares.
    *
    * @return The properties, empty where the section has none
@@ -68,8 +68,8 @@ public class Camunda7EnginePluginProperties {
   }
 
   /**
-   * Keeps an empty map instead of <code>null</code>, so a plugin section which names a
-   * class and nothing else is applied rather than failing when Camunda reads it.
+   * Keeps an empty map instead of <code>null</code>. So a plugin section which names only a
+   * class is applied, and it does not fail when Camunda reads it.
    *
    * @param properties The plugin's own properties, may be <code>null</code>
    */

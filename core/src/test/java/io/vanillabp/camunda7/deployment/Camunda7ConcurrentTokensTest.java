@@ -23,12 +23,12 @@ import io.vanillabp.integration.adapter.spi.workflowtask.CompensationSpec;
 import io.vanillabp.integration.test.utils.SuppressOutputExtension;
 
 /**
- * Which elements of a model can put a SECOND token into a running workflow -
- * the finding this adapter reports to the core, which turns it into the hint about two
- * writers on one workflow aggregate.
+ * Which elements of a model can put a SECOND token into a running workflow. This adapter
+ * reports that finding to the core. The core turns it into the hint about two writers on one
+ * workflow aggregate.
  * <p>
- * Every construct is asserted together with the variant that does NOT produce a second
- * token, since a hint given for a sequential model would be worse than none.
+ * Every construct is asserted together with the variant which does NOT produce a second
+ * token. A hint given for a sequential model would be worse than none.
  */
 @ExtendWith(SuppressOutputExtension.class)
 public class Camunda7ConcurrentTokensTest {
@@ -78,8 +78,8 @@ public class Camunda7ConcurrentTokensTest {
   }
 
   /**
-   * Two activities which were compensated, drawn the way a modeller draws them: a
-   * compensation boundary event on each, and an association to the handler undoing it.
+   * Two activities which were compensated, drawn the way a modeller draws them. Each has a
+   * compensation boundary event and an association to the handler which undoes it.
    */
   private static final String TWO_ACTIVITIES_WITH_A_HANDLER = """
           <bpmn:serviceTask id="Activity_Book" camunda:delegateExpression="${book}" />
@@ -168,8 +168,8 @@ public class Camunda7ConcurrentTokensTest {
                 </bpmn:subProcess>
             """ + TWO_ACTIVITIES_WITH_A_HANDLER);
 
-    // the two handlers of the process scope are not started by a throw event of the
-    // subprocess, so this one starts one handler and is no finding for the caller
+    // a throw event of the subprocess does not start the two handlers of the process
+    // scope. So this one starts one handler and is no finding for the caller
     assertEquals(
         List.of(new CompensationSpec("Event_UndoTheTrip", List.of("Activity_CancelSeat"))), found);
 
@@ -198,8 +198,8 @@ public class Camunda7ConcurrentTokensTest {
             </bpmn:intermediateThrowEvent>
         """ + TWO_ACTIVITIES_WITH_A_HANDLER);
 
-    // what compensation means is reported with its shape, so nothing of it leaks into the
-    // flat list the other constructs are reported through
+    // compensation is reported with its shape. So nothing of it leaks into the flat list
+    // which the other constructs are reported through
     assertTrue(found.isEmpty(), found.toString());
 
   }
@@ -356,8 +356,8 @@ public class Camunda7ConcurrentTokensTest {
   }
 
   /**
-   * The same question about version 3 of a process the ENGINE holds, asked the way the
-   * core's check asks it: through the version catalog rather than about a model at hand.
+   * The same question about version 3 of a process the ENGINE holds. It is asked the way
+   * the core's check asks it: through the version catalog, not about a model at hand.
    */
   private static Collection<String> elementsOfHeldVersion(
       final String processContent) {

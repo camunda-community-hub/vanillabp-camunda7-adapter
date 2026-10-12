@@ -19,19 +19,20 @@ import io.vanillabp.camunda7.quarkus.lossyformat.LossyWorkflowService;
 import io.vanillabp.integration.test.utils.SuppressOutputExtension;
 
 /**
- * The startup check which measures what the configured serialization format makes of the
- * values an aggregate shares, on Quarkus. A nested value travels in that format, and a format
- * which reads a decimal back as a double changes what a model compares: the number the
- * gateway sees is not the number the application wrote. The engine has a variable type for a
- * top-level decimal, so the same attribute is safe there and lossy one level down, which is
- * exactly the surprise the check exists to name.
+ * The startup check on Quarkus which measures what the configured serialization format
+ * makes of the values an aggregate shares. A nested value travels in that format. A format
+ * which reads a decimal back as a double changes what a model compares. The number the
+ * gateway sees is not the number the application wrote. The engine has a variable type for
+ * a top-level decimal. So the same attribute is safe there and lossy one level down. That
+ * is exactly the surprise the check exists to name.
  * <p>
- * Like the check about unshared paths, it is written once in the core and ran on Spring Boot
- * only. Running it here is what says the Quarkus half of this adapter does the same thing.
+ * Like the check about unshared paths, it is written once in the core. It used to run on
+ * Spring Boot only. Running it here shows that the Quarkus half of this adapter does the
+ * same thing.
  * <p>
  * The engine needs a JSON dataformat for this, which the application configures as an engine
- * plugin. So the test also drives the plugin configuration end to end, which nothing on
- * Quarkus did before.
+ * plugin. So the test also drives the plugin configuration end to end. Nothing on Quarkus
+ * did that before.
  */
 @ExtendWith(SuppressOutputExtension.class)
 @SuppressOutputExtension.SuppressBackgroundOutput
@@ -72,7 +73,7 @@ public class Camunda7LossyFormatCheckTest {
             () -> "the report has to name what came back instead: "
                 + nested);
 
-    // a String survives every format, so saying anything about it would be noise
+    // a String survives every format. So anything said about it would be noise
     final var everything = String.join("\n", log);
     Assertions
         .assertFalse(
@@ -103,7 +104,7 @@ public class Camunda7LossyFormatCheckTest {
   }
 
   /**
-   * What a record says, with its parameters filled in. The adapter logs through SLF4J, so a
+   * What a record says, with its parameters filled in. The adapter logs through SLF4J. So a
    * record still carries the pattern and the values apart.
    */
   private static String textOf(

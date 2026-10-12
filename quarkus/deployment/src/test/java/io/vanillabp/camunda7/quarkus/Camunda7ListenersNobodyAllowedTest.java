@@ -15,9 +15,9 @@ import io.vanillabp.integration.test.utils.SuppressOutputExtension;
 
 /**
  * The same model as {@link Camunda7ModelledListenerTest}, booted without
- * {@code allow-listeners}. A listener runs application code at a moment the engine owns, so
- * the adapter serves one only where the application said so, and it says which key turns it
- * on rather than leaving a model which silently does nothing.
+ * {@code allow-listeners}. A listener runs application code at a moment the engine owns. So
+ * the adapter serves one only where the application said so. And it names the key which
+ * turns it on, so no model is left which does nothing without a word.
  */
 @ExtendWith(SuppressOutputExtension.class)
 public class Camunda7ListenersNobodyAllowedTest {

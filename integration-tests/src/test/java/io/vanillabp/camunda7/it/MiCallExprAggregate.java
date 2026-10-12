@@ -13,9 +13,9 @@ import lombok.Getter;
 import lombok.Setter;
 
 /**
- * The aggregate of the caller and of the called process of the test about the iteration a
- * process called by an expression runs in. One class for both, which is what makes them one
- * business case.
+ * The aggregate of the caller and of the called process of the test about the iteration
+ * which a process called by an expression runs in. One class serves both, and that makes
+ * them one business case.
  */
 @Entity
 @Table(name = "C7_MI_CALL_EXPR")
@@ -24,8 +24,8 @@ import lombok.Setter;
 public class MiCallExprAggregate {
 
   /**
-   * An id range of its own: the Camunda business key is the aggregate's id, so overlapping
-   * id spaces would let another test's business-key query match this test's workflows.
+   * An id range of its own. The Camunda business key is the aggregate's id. With overlapping
+   * id spaces, a business-key query of another test could match the workflows of this test.
    */
   @Id
   @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "c7MiCallExprSeq")
@@ -33,15 +33,16 @@ public class MiCallExprAggregate {
   private Long id;
 
   /**
-   * What the expression of the first call activity reads: the id of the process to call.
+   * What the expression of the first call activity reads, which is the id of the process to
+   * call.
    */
   @io.vanillabp.spi.service.SyncWithBPMS
   private String processToCall;
 
   /**
-   * What every task of the called process reported about its iteration, in the order the
-   * tasks ran, comma-separated. A list attribute would need a table of its own for what one
-   * string does here.
+   * What every task of the called process reported about its iteration. The entries stand
+   * in the order the tasks ran, separated by commas. A list attribute would need a table of
+   * its own for what one string does here.
    */
   private String reported;
 
@@ -71,7 +72,7 @@ public class MiCallExprAggregate {
 
   /**
    * The collection of the subprocess whose call activity names the called process by its
-   * id. One round, because this half is the comparison and not the measurement.
+   * id. It has one round, because this half is the comparison and not the measurement.
    *
    * @return The rounds
    */

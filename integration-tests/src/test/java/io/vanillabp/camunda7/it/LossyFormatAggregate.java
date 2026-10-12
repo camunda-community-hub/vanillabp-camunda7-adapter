@@ -10,12 +10,12 @@ import jakarta.persistence.Table;
 import jakarta.persistence.Transient;
 
 /**
- * The workflow aggregate of the round-trip check: it shares a decimal at both levels a
- * value can travel at, and the model of this scenario reads both of them.
+ * The workflow aggregate of the round-trip check. It shares a decimal at both levels which
+ * a value can travel at. The model of this scenario reads both of them.
  * <p>
  * The values are never pushed anywhere. This scenario is about what the BOOT says, so
- * nothing here has to run - what the engine makes of these values at runtime is measured
- * by {@code AbstractNestedExpressionsIT} against the same types.
+ * nothing here has to run. {@code AbstractNestedExpressionsIT} measures what the engine
+ * makes of these values at runtime, against the same types.
  */
 @Entity
 @Table(name = "C7_LOSSY_FORMAT_AGGREGATE")
@@ -36,7 +36,7 @@ public class LossyFormatAggregate {
   }
 
   /**
-   * A decimal at the top level: an object variable of its own, and what an expression
+   * A decimal at the top level. It is an object variable of its own, and what an expression
    * renders depends on the format it was written in.
    */
   public BigDecimal getTotal() {
@@ -56,7 +56,7 @@ public class LossyFormatAggregate {
   }
 
   /**
-   * A value the engine has a variable type for, which the check has to stay quiet about.
+   * A value which the engine has a variable type for. The check has to stay quiet about it.
    */
   public String getReference() {
 

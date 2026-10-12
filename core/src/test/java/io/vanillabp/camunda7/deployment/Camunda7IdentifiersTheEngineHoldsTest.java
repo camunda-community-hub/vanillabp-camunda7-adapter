@@ -29,11 +29,11 @@ import io.vanillabp.integration.test.utils.SuppressOutputExtension;
 
 /**
  * What this adapter can tell an application about an identifier its engine ALREADY held
- * before this boot deployed anything - asked against a real engine, because the filters and
- * the deployment stamp are what the check consists of.
+ * before this boot deployed anything. It is asked against a real engine, because the check
+ * consists of the filters and the deployment stamp.
  * <p>
- * Every assertion reads what the adapter handed to the core, since the adapter asks and the
- * core words the warning.
+ * Every assertion reads what the adapter handed to the core. The adapter asks, and the core
+ * writes the warning.
  */
 @ExtendWith(SuppressOutputExtension.class)
 public class Camunda7IdentifiersTheEngineHoldsTest {
@@ -47,9 +47,9 @@ public class Camunda7IdentifiersTheEngineHoldsTest {
   private static final String ADAPTER_ID = "c7";
 
   /**
-   * The source this adapter writes on every deployment it makes. What tells a foreign
-   * deployment from this application's own history is the deployment NAME, and the source says
-   * how sure the adapter can be about a deployment carrying another name.
+   * The source this adapter writes on every deployment it makes. The deployment NAME tells a
+   * foreign deployment from this application's own history. The source says how sure the
+   * adapter can be about a deployment which carries another name.
    */
   private static final String OUR_SOURCE = "camunda7:"
       + ADAPTER_ID;
@@ -181,9 +181,9 @@ public class Camunda7IdentifiersTheEngineHoldsTest {
   }
 
   /**
-   * The mode every test below runs in except the ones which say otherwise: no tenant, no
-   * prefix, so the engine sees the identifiers as the application modelled them - the mode
-   * this question matters most in.
+   * The mode every test below runs in, except the ones which say otherwise: no tenant, no
+   * prefix. So the engine sees the identifiers as the application modelled them. In this mode
+   * the question matters most.
    */
   private static RecordingScoping unscoped() {
 
@@ -245,8 +245,8 @@ public class Camunda7IdentifiersTheEngineHoldsTest {
   @DisplayName("What version 1 of this application deployed is not reported either")
   public void whatVersionOneLeftBehindStaysSilent() {
 
-    // version 1 deployed a workflow module under the module's id as well and wrote the
-    // APPLICATION name into the source, which is why the name is what the check reads
+    // version 1 also deployed a workflow module under the module's id, and it wrote the
+    // APPLICATION name into the source. That is why the check reads the name
     deployedBySomebodyElse(MODULE, "my-loan-application", null, java.util.Map
         .of("loan-approval.bpmn", bpmnOf(PROCESS_ID)));
     final var scoping = unscoped();
@@ -286,8 +286,8 @@ public class Camunda7IdentifiersTheEngineHoldsTest {
   @DisplayName("A suspended definition still owns the id")
   public void aSuspendedDefinitionStillOwnsTheId() {
 
-    // a deployment which carries no source at all, which is what the engine's REST API and
-    // its webapps leave behind
+    // a deployment which carries no source at all. The engine's REST API and its webapps
+    // leave such deployments behind
     final var theirDeployment = deployedBySomebodyElse(
         "some-other-application",
         null,
@@ -350,7 +350,7 @@ public class Camunda7IdentifiersTheEngineHoldsTest {
   public void theTenantIsPartOfTheQuestion() {
 
     // the same process id in no tenant at all, while this module is deployed into the tenant
-    // named after it: a second tenant on one engine is a legitimate arrangement
+    // named after it. A second tenant on one engine is a legitimate setup
     deployedBySomebodyElse("some-other-application", "a-modelling-tool", null, java.util.Map
         .of("their-loan-approval.bpmn", bpmnOf(PROCESS_ID)));
     final var outOfScope = new RecordingScoping(NameClashAvoidance.BY_ADAPTER);
@@ -362,8 +362,8 @@ public class Camunda7IdentifiersTheEngineHoldsTest {
         outOfScope.getHeldElsewhere(),
         "a definition outside the tenant this adapter deploys into is nobody's clash");
 
-    // and the case which is one: somebody deploying into OUR tenant, which is what two
-    // applications sharing a configured 'tenant-id' do
+    // and the case which is a finding: somebody deploying into OUR tenant. Two applications
+    // sharing a configured 'tenant-id' do that
     deployedBySomebodyElse("some-other-application", "a-modelling-tool", MODULE, java.util.Map
         .of("their-loan-approval.bpmn", bpmnOf(PROCESS_ID)));
     final var inOurTenant = new RecordingScoping(NameClashAvoidance.BY_ADAPTER);

@@ -12,18 +12,17 @@ import lombok.extern.slf4j.Slf4j;
  *
  * A tenant id is an ATTRIBUTE of a deployment and of the process definitions,
  * instances and tasks below it. The engine accepts any name, creates nothing and
- * deploys happily - so unlike Camunda 8 there is nothing that could reject the
- * deployment, and asking the engine "does this tenant exist" has no answer in the
- * engine's own terms.
+ * deploys happily. So unlike Camunda 8, nothing could reject the deployment. And the
+ * question "does this tenant exist" has no answer in the engine's own terms.
  *
  * <h2>What the identity service knows</h2>
  *
  * Registered tenants ({@code ACT_ID_TENANT}, written by
  * {@link IdentityService#newTenant(String)}) exist for tenant MEMBERSHIPS and the
- * authorizations built on them. They are optional and most applications have none. An
- * application which does register them and forgets the one VanillaBP deploys into ends
- * up with a working deployment whose workflows nobody is authorized for, and that is
- * worth a warning. For everybody else this check stays silent.
+ * authorizations built on them. They are optional, and most applications have none. Some
+ * application may register them and forget the one VanillaBP deploys into. It then has a
+ * working deployment, but nobody is authorized for its workflows. That is worth a warning.
+ * For everybody else this check stays silent.
  */
 @Slf4j
 public final class Camunda7TenantCheck {
@@ -35,12 +34,12 @@ public final class Camunda7TenantCheck {
    * Warns if the given tenant is not registered in the identity service, but only if
    * the identity service knows tenants at all.
    * <p>
-   * Every failure of the query is swallowed (a read-only identity provider such as LDAP
-   * may not answer tenant queries): a diagnostic must never fail a deployment.
+   * Every failure of the query is swallowed, because a diagnostic must never fail a
+   * deployment. A read-only identity provider such as LDAP may not answer tenant queries.
    *
    * @param adapterId The adapter ID
-   * @param workflowModuleId The workflow module about to be deployed, which the message names
-   *          the key of so the developer can change the name for that module alone
+   * @param workflowModuleId The workflow module about to be deployed. The message names its
+   *          key, so the developer can change the name for that module alone
    * @param tenantId The tenant about to be deployed into
    * @param identityService The engine's identity service, or <code>null</code> to skip
    */
@@ -96,26 +95,26 @@ public final class Camunda7TenantCheck {
    *
    * <h4>Which mistake this catches</h4>
    *
-   * <code>name-clash-avoidance</code> decides where a workflow module's processes live,
-   * and its default is <code>by-adapter</code>, which is what VanillaBP 1 did: a tenant
-   * per module, named after the module. An application which ran version 1 with the
-   * defaults therefore needs no setting at all. One which ran it with
-   * <code>use-tenants: false</code> does: its workflows carry NO tenant while the default
-   * deploys into one, so the application deploys happily, starts new workflows happily,
-   * and never finds a single one of the workflows it started before.
+   * <code>name-clash-avoidance</code> decides where a workflow module's processes live.
+   * Its default is <code>by-adapter</code>, which is what VanillaBP 1 did: a tenant per
+   * module, named after the module. So an application which ran version 1 with the
+   * defaults needs no setting at all. One which ran it with
+   * <code>use-tenants: false</code> does need one. Its workflows carry NO tenant, but the
+   * default deploys into one. So the application deploys happily and starts new workflows
+   * happily. But it never finds a single one of the workflows it started before.
    * <p>
    * Nothing else notices that. The deployment succeeds, because Camunda 7 treats a tenant
-   * id as an attribute and creates nothing; the workflows are still there, still running,
-   * and simply out of reach. Hence a query at startup, rather than trust in the guide
-   * being read.
+   * id as an attribute and creates nothing. The workflows are still there and still
+   * running. They are just out of reach. That is why there is a query at startup. We do not
+   * trust that the guide is read.
    *
    * <h4>Why it warns rather than ending the boot</h4>
    *
-   * The finding has a legitimate reading: an application really may be leaving old
-   * workflows behind, which is what the last step of a BPMS migration looks like. Ending
-   * the boot would also stop the very application which is about to repair its
-   * configuration. Every failure of the query is swallowed for the same reason the tenant
-   * query above swallows its own - a diagnostic must never fail a deployment.
+   * The finding may be legitimate. An application really may leave old workflows behind.
+   * This is what the last step of a BPMS migration looks like. Ending the boot would also
+   * stop the very application which is about to repair its configuration. Every failure of
+   * the query is swallowed, for the same reason as in the tenant query above: a diagnostic
+   * must never fail a deployment.
    *
    * @param adapterId The adapter ID
    * @param workflowModuleId The workflow module being deployed
@@ -197,8 +196,8 @@ public final class Camunda7TenantCheck {
       return all - withoutTenant;
     }
     // deploying into a tenant: everything without one is out of reach. Workflows under a
-    // DIFFERENT tenant are not counted - a second tenant on the same engine is a
-    // legitimate arrangement rather than the mistake this looks for
+    // DIFFERENT tenant are not counted. A second tenant on the same engine is a legitimate
+    // setup, not the mistake this looks for
     return runtimeService
         .createProcessInstanceQuery()
         .processDefinitionKey(scopedBpmnProcessId)

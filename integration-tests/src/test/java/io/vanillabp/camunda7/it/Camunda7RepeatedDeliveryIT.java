@@ -25,60 +25,58 @@ import io.vanillabp.integration.test.utils.delivery.TaskDeliveryLogReader;
 import io.vanillabp.integration.test.utils.delivery.TaskDeliveryLogReader.Delivery;
 
 /**
- * What an engine datasource of its own changes about the INBOUND direction, asserted
- * against both modes side by side ({@code c7} shares the application's datasource,
- * {@code c7b} runs on a named one):
+ * What an engine datasource of its own changes about the INBOUND direction. It is asserted
+ * against both modes side by side: {@code c7} shares the datasource of the application, and
+ * {@code c7b} runs on a named one.
  * <ul>
- * <li>the adapter says whether its deliveries may repeat, per mode;</li>
- * <li>on the own datasource the handler's transaction commits before the engine's job
- * does, so a job which fails afterwards is handed out again - and the repeated delivery
- * is answered from the record instead of running the {@code @WorkflowTask} method
- * again;</li>
- * <li>on the shared datasource the same failure rolls the handler's work back with the
- * job, including the record of that delivery, and the handler runs again - which is what
- * a redelivery means there. The run which commits leaves a record all the same, and that
- * record answers no repetition: this mode names no delivery, so there is nothing a
- * repetition could be recognised by, and what the record still says is who holds the task
- * and which kind of id its id is.</li>
+ * <li>The adapter says per mode whether its deliveries may repeat.</li>
+ * <li>On the own datasource, the transaction of the handler commits before the job of the
+ * engine does. So a job which fails afterwards is handed out again. The repeated delivery is
+ * answered from the record, instead of running the {@code @WorkflowTask} method again.</li>
+ * <li>On the shared datasource, the same failure rolls the work of the handler back with
+ * the job, including the record of that delivery. The handler runs again, and that is what
+ * a redelivery means there. The run which commits leaves a record all the same, but that
+ * record answers no repetition. This mode names no delivery, so nothing could recognize a
+ * repetition. The record still says who holds the task, and which kind of id its id
+ * is.</li>
  * </ul>
- * The job is failed by an end listener of the task
- * ({@link FailTheJobOnce}), which is the only moment where the handler is done and the
- * engine's transaction is not.
+ * An end listener of the task ({@link FailTheJobOnce}) fails the job. That is the only
+ * moment where the handler is done and the transaction of the engine is not.
  * <p>
- * The record has a second consequence, and it is asserted here for the same reason: a
- * completion of a task which is gone is routed from that record instead of probing the
- * BPMS, so the adapter's own phase-one check is what finds out, and what it raises has to
- * be the type the SPI documents.
+ * The record has a second consequence, and it is asserted here for the same reason. A
+ * completion of a task which is gone is routed from that record, instead of probing the
+ * BPMS. So the own phase-one check of the adapter is what finds out. What it raises has to
+ * be the type which the SPI documents.
  * <p>
- * What a record CARRIES is asserted here as well, out of the table rather than out of the
- * invocation context: the element id of the BPMN element and the engine's own id of the
- * process instance.
+ * What a record CARRIES is asserted here as well, out of the table and not out of the
+ * invocation context: the element id of the BPMN element, and the own id of the process
+ * instance in the engine.
  * <p>
- * The kind of task a record names is read twice over, out of the column and out of the
- * message a caller gets: somebody asking for a user task under the id of a task is told
- * what the id really is. That message exists only where the record carries the kind, so it
+ * The kind of task which a record names is read twice: out of the column, and out of the
+ * message a caller gets. Somebody who asks for a user task under the id of a task is told
+ * what the id really is. That message exists only where the record carries the kind. So it
  * is the proof that this adapter reported it.
  */
 @SpringBootTest(classes = {
     TestApplication.class, Camunda7RepeatedDeliveryIT.NamedDataSourceConfiguration.class
 }, properties = {
-    // a database of its own: test contexts are cached and live in parallel, and an
-    // engine of another context would poll this one's jobs
+    // a database of its own. Test contexts are cached and live in parallel, and an engine
+    // of another context would poll the jobs of this one.
     "spring.datasource.url=jdbc:h2:mem:c7-repeated-delivery-it;DB_CLOSE_DELAY=-1", "vanillabp.prioritized-adapters=c7,c7b", "vanillabp.adapters.c7b.type=camunda7", "vanillabp.adapters.c7b.name-clash-avoidance=by-adapter", "vanillabp.adapters.c7b.data-source-name=c7bDataSource", "vanillabp.workflow-modules.c7-it.adapters.c7b.resources-location=classpath*:c7-it/processes"
 })
 @ExtendWith(SuppressOutputExtension.class)
 @SuppressOutputExtension.SuppressBackgroundOutput
-// closed when the class is done: this IT has a database (and therefore a context) of its
-// own, Spring would keep every context until the JVM exits, and an engine outliving its
-// test keeps its job executor running against a database the next classes work on
+// closed when the class is done. This IT has a database of its own, and so a context of its
+// own. Spring would keep every context until the JVM exits. An engine which outlives its test
+// keeps its job executor running against a database which the next classes work on.
 @DirtiesContext
 public class Camunda7RepeatedDeliveryIT {
 
   /**
-   * The application-provided datasource bean the {@code c7b} engine runs on.
-   * {@code defaultCandidate = false} keeps it out of by-type injection and lets Spring
-   * Boot's default-datasource auto-configuration stay active (the standard pattern for
-   * additional application datasources).
+   * The datasource bean which the application provides, and which the {@code c7b} engine
+   * runs on. {@code defaultCandidate = false} keeps it out of injection by type. It also
+   * lets the default-datasource auto-configuration of Spring Boot stay active. This is the
+   * standard pattern for additional datasources of an application.
    */
   @org.springframework.boot.test.context.TestConfiguration
   public static class NamedDataSourceConfiguration {
@@ -123,9 +121,9 @@ public class Camunda7RepeatedDeliveryIT {
   private RepeatedDeliveryProbe probe;
 
   /**
-   * The task-processing fixture, borrowed for the one case which needs a task staying
-   * open: this class's own process ends by itself, and a stale completion needs a task
-   * somebody can complete behind VanillaBP's back.
+   * The task-processing fixture, borrowed for the one case which needs a task that stays
+   * open. The own process of this class ends by itself. A stale completion needs a task
+   * which somebody can complete behind the back of VanillaBP.
    */
   @Autowired
   private TaskTestRepository taskRepository;
@@ -228,9 +226,9 @@ public class Camunda7RepeatedDeliveryIT {
         1,
         committedHandlerRuns(aggregateId),
         "only the run which committed is in the aggregate");
-    // this mode names no delivery, so no repetition can be recognised - and a record is
-    // written all the same. Exactly one of them: the run which was rolled back took its
-    // record with it, and the run which committed left one
+    // this mode names no delivery, so no repetition can be recognized. A record is written
+    // all the same, and exactly one. The run which was rolled back took its record with it,
+    // and the run which committed left one.
     final var records = recordsOf("c7");
     assertEquals(
         1,
@@ -255,8 +253,8 @@ public class Camunda7RepeatedDeliveryIT {
         .execute(status -> taskRepository.save(new TaskTestAggregate()).getId());
 
     // AsyncProcess parks at a @TaskId task, so the record of its delivery is written and
-    // stays. Its element id and its task definition differ, which is what makes the two
-    // fields tell apart here
+    // stays. Its element id and its task definition differ, so the two fields can be told
+    // apart here.
     final var processInstance = separateDataSourceEngine
         .getRuntimeService()
         .createProcessInstanceByKey("AsyncProcess")
@@ -265,7 +263,7 @@ public class Camunda7RepeatedDeliveryIT {
         .execute();
 
     // the handler runs before the record is written, and the record becomes visible with
-    // the commit - so the row is waited for rather than read in the next line
+    // the commit. So the test waits for the row, instead of reading it in the next line.
     final var record = AwaitPhaseTwo
         .untilAvailable(
             () -> recordOf(String.valueOf(aggregateId)),
@@ -302,9 +300,9 @@ public class Camunda7RepeatedDeliveryIT {
             "the delivery of the asynchronous task to be recorded");
     final var taskId = parkedTaskOf(aggregateId);
 
-    // the mistake this is about: the id is an execution of the engine, and
-    // completeUserTask asks for a row of ACT_RU_TASK. No engine holds a user task under
-    // that id, so every adapter answers that it knows no such user task
+    // the mistake this is about. The id is an execution of the engine, and completeUserTask
+    // asks for a row of ACT_RU_TASK. No engine holds a user task under that id, so every
+    // adapter answers that it knows no such user task.
     final var refused = org.junit.jupiter.api.Assertions
         .assertThrows(
             io.vanillabp.spi.process.TaskNotFoundException.class,
@@ -324,8 +322,8 @@ public class Camunda7RepeatedDeliveryIT {
   }
 
   /**
-   * The one record of a workflow aggregate, or <code>null</code> while there is none.
-   * Read by aggregate, because this test's process runs only once here.
+   * The one record of a workflow aggregate, or <code>null</code> while there is none. It is
+   * read by aggregate, because the process of this test runs only once per aggregate here.
    *
    * @param aggregateId The workflow aggregate's ID in the form the record carries it
    * @return The record, or <code>null</code>
@@ -350,9 +348,10 @@ public class Camunda7RepeatedDeliveryIT {
     final var aggregateId = transactionTemplate
         .execute(status -> taskRepository.save(new TaskTestAggregate()).getId());
 
-    // started on the own-datasource engine directly, because the record of ITS delivery
-    // is what makes this case: the caller's completion is then routed from that record
-    // instead of probing the BPMS, so the adapter's own check is what meets the gone task
+    // started directly on the engine with the own datasource, because the record of ITS
+    // delivery makes this case. The completion of the caller is then routed from that
+    // record, instead of probing the BPMS. So the own check of the adapter is what meets
+    // the task which is gone.
     separateDataSourceEngine
         .getRuntimeService()
         .createProcessInstanceByKey("AsyncProcess")
@@ -362,9 +361,10 @@ public class Camunda7RepeatedDeliveryIT {
     AwaitPhaseTwo.until(() -> parkedTaskOf(aggregateId) != null, "the asynchronous task to be delivered");
     final var taskId = parkedTaskOf(aggregateId);
 
-    // somebody completes it outside VanillaBP, which is what a stale completion means.
-    // The signal only starts the continuation, so the task is waited for rather than
-    // assumed gone - otherwise this test measures the job executor's speed
+    // somebody completes it outside VanillaBP, which is what a stale completion means. The
+    // signal only starts the continuation. So the test waits until the task is gone,
+    // instead of assuming it. Otherwise this test would measure the speed of the job
+    // executor.
     separateDataSourceEngine
         .getRuntimeService()
         .signal(taskId);
@@ -424,9 +424,9 @@ public class Camunda7RepeatedDeliveryIT {
   }
 
   /**
-   * Waiting for the workflow to END rather than for the handler's work to appear: the
-   * failing job is what makes this scenario, and its retry has to have happened before
-   * anything is counted.
+   * Waits for the workflow to END, not for the work of the handler to appear. The failing
+   * job is what makes this scenario, and its retry has to have happened before anything is
+   * counted.
    *
    * @param engine The engine the workflow runs in
    * @param aggregateId The workflow aggregate's ID
@@ -447,7 +447,7 @@ public class Camunda7RepeatedDeliveryIT {
   }
 
   /**
-   * Counted per adapter id, because both modes run the same BPMN process here and the
+   * Counted per adapter id, because both modes run the same BPMN process here, and the
    * records of the two share one table.
    *
    * @param adapterId The adapter id which delivered

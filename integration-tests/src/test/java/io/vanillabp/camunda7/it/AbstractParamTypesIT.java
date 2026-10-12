@@ -25,20 +25,20 @@ import io.vanillabp.integration.test.utils.SuppressOutputExtension;
 
 /**
  * What a <code>&#64;TaskParam</code> receives when the type it declares and the value the
- * engine reports do not agree. The conversion itself belongs to the platform, and this
- * suite is what proves the whole way through Camunda 7: the aggregate is shared, the
- * engine stores it, an input mapping writes a local variable of its own, the engine
- * deserializes that variable and only then is it bound to the parameter.
+ * engine reports do not agree. The conversion itself belongs to the platform. This suite
+ * proves the whole way through Camunda 7. The aggregate is shared, and the engine stores
+ * it. An input mapping writes a local variable of its own. The engine deserializes that
+ * variable, and only then is it bound to the parameter.
  * <p>
- * Every branch of the model asks one question. A value the declared type holds reaches the
- * handler; a value it does not hold ends the task, and after the job's retries the message
- * stands in the incident, which is where an operator reads it.
+ * Every branch of the model asks one question. A value which the declared type holds
+ * reaches the handler. A value which it does not hold ends the task. After the retries of
+ * the job, the message stands in the incident, where an operator reads it.
  * <p>
- * One subclass per serialization world, because the format is engine configuration and
- * needs a Spring context of its own. Most cells answer the same in both, which is the
- * point: the conversion reads the value in hand and knows nothing about the format it was
- * stored in. The one cell which does differ is the scale of a decimal, and each subclass
- * says what its world does with it.
+ * There is one subclass per serialization world, because the format is engine configuration
+ * and needs a Spring context of its own. Most cells answer the same in both, and that is
+ * the point. The conversion reads the value in hand and knows nothing about the format it
+ * was stored in. Only one cell differs: the scale of a decimal. Each subclass says what its
+ * world does with it.
  */
 @ExtendWith(SuppressOutputExtension.class)
 @SuppressOutputExtension.SuppressBackgroundOutput
@@ -48,9 +48,9 @@ public abstract class AbstractParamTypesIT {
   protected static final String MODULE_ID = "c7-it";
 
   /**
-   * How long the engine is given. Every branch of the model is asynchronous, the four
-   * branches which are refused are retried three times each before the incident is
-   * written, and ten branches run at once.
+   * How long the engine is given. Every branch of the model is asynchronous. The four
+   * branches which are refused are retried three times each before the incident is written.
+   * And ten branches run at once.
    */
   private static final long ENGINE_TIMEOUT_MS = 60_000;
 
@@ -109,8 +109,8 @@ public abstract class AbstractParamTypesIT {
 
     assertArrived("PT_total_Double", Double.class, "120.5");
     assertArrived("PT_nested_Double", Double.class, "120.5");
-    // a Long above Integer.MAX_VALUE into a long, and a whole number above 2^53 into one:
-    // the two pairs version 1 let through by reflection, and they still go through
+    // a Long above Integer.MAX_VALUE into a long, and a whole number above 2^53 into one.
+    // Version 1 let these two pairs through by reflection, and they still go through.
     assertArrived("PT_count_long", Long.class, "3000000000");
     assertArrived("PT_huge_long", Long.class, "9007199254740993");
 
@@ -120,10 +120,9 @@ public abstract class AbstractParamTypesIT {
   @DisplayName("A float reaches a Double as the number it prints, not as the double it widens to")
   void aFloatReachesADoubleAsTheNumberItPrints() {
 
-    // 0.1f widened by floatValue() is 0.10000000149011612, which is what a handler used
-    // to receive here while the same aggregate answered 0.1 on Camunda 8. Converted
-    // through the text of the float, both engines say 0.1 and neither of them was asked
-    // which engine it is.
+    // 0.1f widened by floatValue() is 0.10000000149011612. A handler used to receive that
+    // here, while the same aggregate answered 0.1 on Camunda 8. Converted through the text
+    // of the float, both engines say 0.1, and neither of them was asked which engine it is.
     assertArrived("PT_rate_Double", Double.class, "0.1");
 
   }
@@ -178,8 +177,8 @@ public abstract class AbstractParamTypesIT {
   void theTextOfADecimalEndsTheTaskGuiding() {
 
     // This cell used to leave an operator with 'For input string: "120.50"' and nothing
-    // else: the NumberFormatException of Integer.valueOf escaped uncaught. It now reads
-    // like every other refusal.
+    // else, because the NumberFormatException of Integer.valueOf escaped uncaught. Now it
+    // reads like every other refusal.
     final var incident = awaitIncidentAt("PT_text_int");
     assertTrue(incident.contains("@TaskParam(\"totalText\")"), incident);
     assertTrue(incident.contains("textIntoInt"), incident);

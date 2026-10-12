@@ -9,14 +9,14 @@ import lombok.Getter;
 import lombok.Setter;
 
 /**
- * The aggregate of the aggregate-sync integration test: it shares the
- * attributes it annotates, which DERIVES the class' mode "share nothing else" (opt-in).
+ * The aggregate of the aggregate-sync integration test. It shares the attributes it
+ * annotates. That DERIVES the mode of the class: "share nothing else" (opt-in).
  * <p>
  * Two expressions read it. The gateway of {@code SyncProcess} branches on
- * {@link #isApproved()}, which is NOT shared - that only works through the MIGRATION
- * FALLBACK of the EL resolver, which will be removed; the test pins that, including
- * the warning (see decision 1 in the repository's DECISIONS.md). The decision case - a task
- * computing what the gateway right behind it reads - lives in {@code DecisionTestAggregate}.
+ * {@link #isApproved()}, which is NOT shared. That only works through the MIGRATION FALLBACK of
+ * the EL resolver, which will be removed. The test pins that, including the warning (see
+ * decision 1 in the repository's DECISIONS.md). The decision case lives in
+ * {@code DecisionTestAggregate}: a task computes what the gateway right behind it reads.
  */
 @Entity
 @Table(name = "C7_SYNC_TEST_AGGREGATE")
@@ -35,7 +35,7 @@ public class SyncTestAggregate {
   private Long id;
 
   /**
-   * The only attribute Camunda 7 gets to see - as operator context.
+   * The only attribute which Camunda 7 gets to see, as context for the operator.
    */
   @io.vanillabp.spi.service.SyncWithBPMS
   private String customerName;

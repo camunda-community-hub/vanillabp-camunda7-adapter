@@ -25,8 +25,8 @@ import io.vanillabp.integration.adapter.spi.workflowtask.WorkflowTaskWiring;
 import io.vanillabp.integration.test.utils.SuppressOutputExtension;
 
 /**
- * What a boot says about a handler which wants the item of an iteration the model hands
- * none over for.
+ * What a boot says about a handler which wants the item of an iteration, where the model
+ * hands no item over.
  * <p>
  * Every refusal is asserted together with the model that must NOT be refused. An element
  * which iterates a number of times is a legitimate model, and so is a handler which reads
@@ -79,8 +79,8 @@ public class Camunda7MultiInstanceItemsTest {
       """;
 
   /**
-   * The same subprocess walking a collection and naming the variable each round's value
-   * goes into, which is the model a handler asking for the item needs.
+   * The same subprocess walking a collection. It names the variable which gets each round's
+   * value. A handler asking for the item needs this model.
    */
   private static final String COLLECTING_SUBPROCESS = """
           <bpmn:subProcess id="Subprocess_rounds">
@@ -93,8 +93,8 @@ public class Camunda7MultiInstanceItemsTest {
 
   /**
    * The core of an application whose methods want the item of the given elements, keyed by
-   * what the method was wired by. Everything it is not asked about answers nothing, which
-   * is what a method declaring no <code>@MultiInstanceElement</code> looks like.
+   * what the method was wired by. Everything else answers nothing. That is how a method
+   * declaring no <code>@MultiInstanceElement</code> looks.
    */
   private static WorkflowTaskWiring aCoreWantingTheItemOf(
       final Map<String, List<String>> wantedByWiringName) {

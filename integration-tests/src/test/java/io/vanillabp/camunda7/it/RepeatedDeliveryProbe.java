@@ -6,10 +6,10 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.springframework.stereotype.Component;
 
 /**
- * What the repeated-delivery scenario observes and steers: how often the
- * <code>&#64;WorkflowTask</code> method was entered, and whether the next job is to be
- * failed after it ran. Both live outside the database on purpose - the rollback which
- * produces the redelivery would take a counter stored with the aggregate.
+ * What the repeated-delivery scenario observes and steers. It counts how often the
+ * <code>&#64;WorkflowTask</code> method was entered, and it says whether the next job is to
+ * fail after the method ran. Both live outside the database on purpose. The rollback which
+ * causes the redelivery would also take back a counter stored with the aggregate.
  */
 @Component
 public class RepeatedDeliveryProbe {

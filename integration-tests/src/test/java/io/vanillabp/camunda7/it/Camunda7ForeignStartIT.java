@@ -17,35 +17,35 @@ import org.springframework.test.annotation.DirtiesContext;
 import io.vanillabp.integration.test.utils.SuppressOutputExtension;
 
 /**
- * A workflow started past VanillaBP, against a real embedded Camunda 7 engine. Anybody
- * with access to the engine can start a process which VanillaBP knows, and give it a
- * business key of their own choosing - a timer start event does not stop the engine's own
- * start API, and a conditional start can even be evaluated with a business key.
+ * A workflow started past VanillaBP, against a real embedded Camunda 7 engine. Anybody with
+ * access to the engine can start a process which VanillaBP knows, and give it a business
+ * key of their own choosing. A timer start event does not stop the own start API of the
+ * engine. And a conditional start can even be evaluated with a business key.
  * <p>
- * These tests hold the promise VanillaBP makes about such a workflow: the application
+ * These tests hold the promise which VanillaBP makes about such a workflow: the application
  * names it, and nobody else. A start which brings no name reaches the
- * <code>@WorkflowStartedByBpms</code> method, and the name that method gives becomes the
- * instance's business key. A start which brings a name no workflow aggregate carries is
- * refused. A process without such a method refuses the start and says which method to
- * write. All of it is decision 28 in the repository's DECISIONS.md, which supersedes
- * decision 24.
+ * <code>@WorkflowStartedByBpms</code> method. The name which that method gives becomes the
+ * business key of the instance. A start which brings a name that no workflow aggregate
+ * carries is refused. A process without such a method refuses the start and says which
+ * method to write. All of it is decision 28 in the repository's DECISIONS.md, which
+ * supersedes decision 24.
  */
 @SpringBootTest(classes = TestApplication.class, properties = {
-    // own database: contexts are cached and live in parallel - a foreign engine
-    // (and job executor) on the same H2 database would compete for this test's jobs
+    // own database. Contexts are cached and live in parallel. A foreign engine and its job
+    // executor on the same H2 database would compete for the jobs of this test.
     "spring.datasource.url=jdbc:h2:mem:c7-foreign-start-it;DB_CLOSE_DELAY=-1"
 })
 @ExtendWith(SuppressOutputExtension.class)
 @SuppressOutputExtension.SuppressBackgroundOutput
-// closed when the class is done: this IT has a database (and therefore a context) of its
-// own, and an engine outliving its test keeps its job executor running against a database
-// the next classes work on
+// closed when the class is done. This IT has a database of its own, and so a context of its
+// own. An engine which outlives its test keeps its job executor running against a database
+// which the next classes work on.
 @DirtiesContext
 public class Camunda7ForeignStartIT {
 
   /**
-   * The Camunda tenant the workflow module is deployed to under
-   * {@code name-clash-avoidance: by-adapter}, which every start from outside has to name.
+   * The Camunda tenant which the workflow module is deployed to under
+   * {@code name-clash-avoidance: by-adapter}. Every start from outside has to name it.
    */
   private static final String TENANT = "c7-it";
 
@@ -92,9 +92,9 @@ public class Camunda7ForeignStartIT {
   }
 
   /**
-   * The message of a start the engine refused, with what its cause said appended: the
-   * engine wraps what a listener threw, and which of the two carries the text depends on
-   * the command.
+   * The message of a start which the engine refused, with what its cause said appended. The
+   * engine wraps what a listener threw, and the command decides which of the two carries
+   * the text.
    */
   private String messageOf(
       final Throwable refused) {
@@ -130,8 +130,8 @@ public class Camunda7ForeignStartIT {
         .filter(aggregate -> aggregate.getId().startsWith("timer-"))
         .findFirst()
         .orElseThrow();
-    // the name the application gave is what the engine holds now, so the task following
-    // the start event finds the workflow and it runs on
+    // the engine now holds the name which the application gave. So the task after the start
+    // event finds the workflow, and it runs on.
     awaitUntil(
         () -> "recordForeignTimerStart".equals(
             timerRepository
@@ -200,8 +200,8 @@ public class Camunda7ForeignStartIT {
         .filter(aggregate -> aggregate.getId().startsWith("signal-ForeignStartSignal-"))
         .findFirst()
         .orElseThrow();
-    // the signal name reaches the application PLAIN, although the model was deployed
-    // with scoped identifiers
+    // the signal name reaches the application PLAIN, although the model was deployed with
+    // scoped identifiers
     awaitUntil(
         () -> "recordForeignSignalStart".equals(
             signalRepository
@@ -297,8 +297,8 @@ public class Camunda7ForeignStartIT {
   @DisplayName("A second delivery of the same start builds no second aggregate")
   public void aSecondDeliveryBuildsNoSecondAggregate() throws Exception {
 
-    // the first delivery brings no name, so the application names the workflow and this
-    // adapter writes that name into the instance's business key
+    // the first delivery brings no name. So the application names the workflow, and this
+    // adapter writes that name into the business key of the instance.
     final var untouched = timerRepository
         .findAll()
         .stream()
@@ -318,8 +318,8 @@ public class Camunda7ForeignStartIT {
         .filter(id -> id.startsWith("timer-") && !untouched.contains(id))
         .findFirst()
         .orElseThrow();
-    // the first workflow runs to its end before anything is written, because its task
-    // writes the aggregate as well and a half-finished workflow would race this test
+    // the first workflow runs to its end before anything is written. Its task writes the
+    // aggregate as well, and a half-finished workflow would race this test.
     awaitUntil(
         () -> "recordForeignTimerStart".equals(
             timerRepository
@@ -331,7 +331,7 @@ public class Camunda7ForeignStartIT {
 
     // business data written between the two deliveries. A second aggregate built over this
     // one would take it with it, and nothing would say so. The mark of the task is cleared
-    // in the same breath, so the second delivery's own workflow is recognizable
+    // at the same time, so the own workflow of the second delivery can be recognized.
     transactionTemplate.executeWithoutResult(status -> {
       final var aggregate = timerRepository.findById(named).orElseThrow();
       aggregate.setStartedBy("changed meanwhile");
@@ -341,8 +341,8 @@ public class Camunda7ForeignStartIT {
 
     // what a second delivery of that very listener hands the core: the instance already
     // carries the name of a workflow aggregate which exists. The engine hands a start job
-    // out again whenever the transaction of the first one did not commit, and the
-    // application has to survive that
+    // out again whenever the transaction of the first one did not commit. The application
+    // has to survive that.
     runtimeService
         .createProcessInstanceByKey("ForeignTimerProcess")
         .processDefinitionTenantId(TENANT)
@@ -373,8 +373,9 @@ public class Camunda7ForeignStartIT {
 
     final var before = numericIdRepository.count();
 
-    // the id of this aggregate is a number the persistence layer assigns, so a text key
-    // can never be one of them - which makes it a name no workflow aggregate carries
+    // the id of this aggregate is a number which the persistence layer assigns. So a text
+    // key can never be one of them, and that makes it a name which no workflow aggregate
+    // carries.
     final var refused = assertThrows(
         RuntimeException.class,
         () -> runtimeService
@@ -409,7 +410,7 @@ public class Camunda7ForeignStartIT {
     final var before = plainRepository.count();
 
     // a plain start event, so the application booted without a @WorkflowStartedByBpms
-    // method. Starting it past VanillaBP is what the method would have been for
+    // method. Starting it past VanillaBP is what the method would have been for.
     final var refused = assertThrows(
         RuntimeException.class,
         () -> runtimeService
@@ -441,8 +442,8 @@ public class Camunda7ForeignStartIT {
 
     plainRepository.deleteAll();
 
-    // the same process the test above was refused on: the listener sits on its plain
-    // start event as well, and the name the application gave is what tells the two apart
+    // the same process which the test above was refused on. The listener sits on its plain
+    // start event as well. The name which the application gave tells the two apart.
     plainWorkflowService.startTheWorkflow("started-plainly");
 
     awaitUntil(

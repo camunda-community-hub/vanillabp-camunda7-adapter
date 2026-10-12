@@ -15,50 +15,49 @@ import org.camunda.bpm.engine.variable.Variables;
 import org.camunda.bpm.engine.variable.value.ObjectValue;
 
 /**
- * What a serialization format does to a value on the way through the engine, MEASURED
- * rather than looked up.
+ * What a serialization format does to a value on the way through the engine. It is
+ * MEASURED, not looked up.
  * <p>
- * A value the engine has no variable type for keeps its class in an object variable, and
- * what an expression reads back is then the serializer's answer rather than the
- * application's value. Which types a format carries unchanged is a property of a
- * dataformat VanillaBP does not own: an application may register a JSON dataformat which
- * keeps the scale of a decimal, and a warning about something which works is worse than a
- * missing one. So nothing here is claimed from a list. A sample of the type is written
- * and read through the engine's own serializer for the configured format, and what comes
- * back is compared to what went in.
+ * A value the engine has no variable type for keeps its class in an object variable. An
+ * expression then reads back the serializer's answer, not the application's value. Which
+ * types a format carries unchanged depends on a dataformat VanillaBP does not own. An
+ * application may register a JSON dataformat which keeps the scale of a decimal. And a
+ * warning about something which works is worse than a missing one. So nothing here is
+ * claimed from a list. A sample of the type is written and read through the engine's own
+ * serializer for the configured format. Then what comes back is compared to what went in.
  * <p>
  * The comparison reads the class and the TEXT, not <code>equals</code> and not
- * <code>compareTo</code>: <code>1E+3</code> comes back as <code>1000.0</code> under JSON,
- * which compares equal and is not the same value to a reader or to a renderer.
+ * <code>compareTo</code>. Under JSON, <code>1E+3</code> comes back as <code>1000.0</code>.
+ * The two compare equal, but to a reader or a renderer they are not the same value.
  * <p>
- * A sample has to be the awkward one, otherwise the measurement says nothing:
+ * A sample has to be the awkward one, otherwise the measurement says nothing.
  * <code>BigDecimal.ONE</code> survives every format, <code>120.50</code> does not. Only
- * types this class can build such a sample of are answered at all; for anything else, and
- * for a format no serializer is registered for, the answer is empty and the caller says
+ * types this class can build such a sample of get an answer at all. For anything else, and
+ * for a format without a registered serializer, the answer is empty and the caller says
  * nothing. A format without its dataformat is loud on its own: the engine refuses the
  * first push with "Cannot find serializer for value".
  * <p>
  * The measurement runs inside an engine COMMAND, because that is where the engine
- * serializes a variable: writing one asks the engine for the charset its dataformat
- * writes with, and refuses to answer outside a command.
+ * serializes a variable. Writing a variable asks the engine for the charset its dataformat
+ * writes with. The engine refuses to answer outside a command.
  * <p>
- * Serializing the same sample once per deployed process would repeat the same work
- * twenty times on a boot with twenty processes, so an answer is remembered per format,
- * per type and per placement. What is NOT remembered is the message: that names the
- * process and the attribute, and is the caller's business.
+ * Serializing the same sample once per deployed process would repeat the same work twenty
+ * times on a boot with twenty processes. So an answer is remembered per format, per type and
+ * per placement. The message is NOT remembered. It names the process and the attribute, and
+ * that is the caller's business.
  */
 public class Camunda7SerializationRoundTrip {
 
   /**
    * The key the nested sample travels under. A nested value reaches the engine inside the
-   * map the sync model built, so that is how it is measured.
+   * map the sync model built. So it is measured that way.
    */
   private static final String SAMPLE_MEMBER = "value";
 
   /**
-   * One sample per type, each chosen because it is the value which notices: a decimal
-   * with a scale, an integer above 2^53 where a double stops being exact, and a float
-   * whose double form reads differently.
+   * One sample per type. Each one is the value which notices a change: a decimal with a
+   * scale, an integer above 2^53 where a double stops being exact, and a float whose double
+   * form reads differently.
    */
   private static final Map<Class<?>, Object> SAMPLES = Map
       .of(
@@ -90,7 +89,7 @@ public class Camunda7SerializationRoundTrip {
   }
 
   /**
-   * Measures what a value becomes on its way into the engine and back, which is the only
+   * Measures what a value becomes on its way into the engine and back. That is the only
    * honest way to say whether a model will read what the application wrote.
    *
    * @param configuration The engine configuration whose serializers are measured - the
@@ -155,10 +154,10 @@ public class Camunda7SerializationRoundTrip {
   /**
    * Writes the sample and reads it again, through the serializer the engine would use.
    * <p>
-   * A failure here is an answer nobody can act on, so it is silence: the probe borrows a
-   * serializer it does not own, and neither a dataformat which refuses the sample nor a
-   * format nothing is registered for must cost a message about a model which may well be
-   * fine.
+   * A failure here is an answer nobody can act on, so it stays silent. The probe borrows a
+   * serializer it does not own. A dataformat which refuses the sample must not cause a
+   * message about a model which may well be fine. Neither must a format with nothing
+   * registered for it.
    *
    * @param serializationFormat The configured format
    * @param sample The value which notices
@@ -171,8 +170,8 @@ public class Camunda7SerializationRoundTrip {
       final boolean nested) {
 
     try {
-      // inside a COMMAND, because that is where the engine serializes a variable: writing
-      // one asks the engine for the charset of its dataformat and refuses to answer
+      // inside a COMMAND, because that is where the engine serializes a variable. Writing
+      // one asks the engine for the charset of its dataformat. The engine refuses to answer
       // without an active command context
       return configuration
           .getCommandExecutorTxRequired()
@@ -202,9 +201,9 @@ public class Camunda7SerializationRoundTrip {
 
     final Object written;
     if (nested) {
-      // a nested value reaches the engine inside the map the sync model built, and
-      // nothing in that map records what its members were - which is why the same type
-      // answers differently one level down
+      // a nested value reaches the engine inside the map the sync model built. Nothing in
+      // that map records what its members were. That is why the same type answers
+      // differently one level down
       final var members = new LinkedHashMap<String, Object>();
       members.put(SAMPLE_MEMBER, sample);
       written = members;

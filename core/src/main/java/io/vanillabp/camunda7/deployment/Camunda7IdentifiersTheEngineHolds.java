@@ -17,55 +17,54 @@ import lombok.extern.slf4j.Slf4j;
 
 /**
  * Which identifiers of a workflow module this engine held before the deployment of this
- * boot - asked once per workflow module, right after the deployment returned.
+ * boot. It is asked once per workflow module, right after the deployment returned.
  *
  * <h2>What the engine can be asked</h2>
  *
- * A BPMN process id and a DMN decision id are keys of the engine's repository, so both are
- * queryable: <code>processDefinitionKeyIn</code> answers for every process of a module in
- * one statement, while a decision has no such batch filter and is asked for one by one. A
+ * A BPMN process id and a DMN decision id are keys of the engine's repository, so both can
+ * be queried. <code>processDefinitionKeyIn</code> answers for every process of a module in
+ * one statement. A decision has no such batch filter, so decisions are asked one by one. A
  * message name, a signal name, an error code and an escalation code are not kept in any
- * index, they live in the models, and reading every model the engine holds is the growth
- * decision 10 in the repository's DECISIONS.md rules out for a start. So those kinds are not
- * asked about here and nothing is said about them either.
+ * index. They live in the models. Reading every model the engine holds would be the growth
+ * which decision 10 in the repository's DECISIONS.md rules out for a start. So these kinds
+ * are not asked about here, and nothing is said about them either.
  * <p>
- * The query names no suspension state. A suspended definition still owns its key, which is
- * the rule decision 12 in the repository's DECISIONS.md states for the whole adapter. It
- * names no version either: our own deployment creates the NEWEST version of a key another
- * deployment may have held for years, so asking for the latest version would find nothing
- * but ourselves.
+ * The query names no suspension state. A suspended definition still owns its key. Decision
+ * 12 in the repository's DECISIONS.md states this rule for the whole adapter. The query
+ * names no version either. Our own deployment creates the NEWEST version of a key, which
+ * another deployment may have held for years. So asking for the latest version would find
+ * nothing but ourselves.
  *
  * <h2>How a foreign holder is told from our own history</h2>
  *
- * The Camunda DEPLOYMENT is what the engine can be asked about, and the part of its stamp which
- * carries here is the NAME: every VanillaBP generation deploys a workflow module under the
- * module's own id, version 1 included, which wrote the application name into the source where
- * this adapter writes the adapter type and id. So a deployment named after the workflow module
- * being deployed is this application's own earlier work, including everything version 1 left
- * behind, and it says nothing. Reading the source instead would report every definition of an
- * upgraded application on its first start.
+ * The engine can be asked about the Camunda DEPLOYMENT. The part of its stamp which counts
+ * here is the NAME. Every VanillaBP generation deploys a workflow module under the module's
+ * own id, version 1 included. Version 1 wrote the application name into the source, where
+ * this adapter writes the adapter type and id. So a deployment named after the workflow
+ * module being deployed is this application's own earlier work. This includes everything
+ * version 1 left behind, and nothing is said about it. Reading the source instead would
+ * report every definition of an upgraded application on its first start.
  * <p>
- * What carries a different name is reported, and the source then says how sure the adapter can
- * be. A source naming a Camunda 7 adapter of VanillaBP means another adapter id or another
- * workflow module deployed it, and either may be this very application, which is what a
- * migration between two engines looks like, so the finding says that it cannot be told apart.
- * Any other source was written by something else entirely, a modelling tool or an application
- * which deploys its models itself.
+ * A deployment with a different name is reported. Its source then says how sure the adapter
+ * can be. A source which names a Camunda 7 adapter of VanillaBP means that another adapter
+ * id or another workflow module deployed it. Either may be this very application, which is
+ * what a migration between two engines looks like. So the finding says that it cannot tell
+ * them apart. Any other source was written by something else entirely: a modelling tool, or
+ * an application which deploys its models itself.
  * <p>
- * A second application which deploys a workflow module of the same id is invisible here, and
- * nothing in the engine's deployment table could tell it apart: no column names an
- * application. That is the limit of the answer and it is written down rather than worked
- * around, because the alternative is a warning about this application's own history on every
- * boot.
+ * A second application which deploys a workflow module of the same id is invisible here.
+ * Nothing in the engine's deployment table could tell it apart, because no column names an
+ * application. That is the limit of the answer. It is written down here, not worked around.
+ * The alternative would be a warning about this application's own history on every boot.
  *
  * <h2>Why nothing here can fail a boot</h2>
  *
- * A finding is a warning which the core words, because whoever holds the name may be an
- * application which is running correctly (see decision 17 in the repository's DECISIONS.md).
- * Every query is wrapped the way {@link Camunda7TenantCheck} wraps its own: a failure is logged
- * at debug and nothing else.
- * Where the question about our own deployments cannot be answered, nothing is reported at
- * all - a finding nobody can attribute would name this application's own history.
+ * A finding is a warning which the core words. Whoever holds the name may be an application
+ * which runs correctly (see decision 17 in the repository's DECISIONS.md). Every query is
+ * wrapped the way {@link Camunda7TenantCheck} wraps its own: a failure is logged at debug,
+ * and nothing else happens.
+ * If the question about our own deployments cannot be answered, nothing is reported at all.
+ * A finding which nobody can attribute would name this application's own history.
  */
 @Slf4j
 public final class Camunda7IdentifiersTheEngineHolds {
@@ -74,8 +73,8 @@ public final class Camunda7IdentifiersTheEngineHolds {
   }
 
   /**
-   * Asks the engine which of the given identifiers it already holds and reports what came
-   * back to the core, which words the warning.
+   * Asks the engine which of the given identifiers it already holds. It reports the answer
+   * to the core, which words the warning.
    *
    * @param adapterId The adapter ID
    * @param workflowModuleId The workflow module being deployed
@@ -139,8 +138,8 @@ public final class Camunda7IdentifiersTheEngineHolds {
   }
 
   /**
-   * The deployments this engine holds under the name of the workflow module being deployed -
-   * this application's own history, whichever VanillaBP version wrote it.
+   * The deployments this engine holds under the name of the workflow module being deployed.
+   * This is the application's own history, whichever VanillaBP version wrote it.
    *
    * @param workflowModuleId The workflow module being deployed
    * @param tenantId The tenant this adapter deploys into, <code>null</code> for none
@@ -167,12 +166,12 @@ public final class Camunda7IdentifiersTheEngineHolds {
   }
 
   /**
-   * Every version the engine holds of the module's process definition keys - one statement
-   * for the whole module, since a process definition key takes a batch filter.
+   * Every version the engine holds of the module's process definition keys. This takes one
+   * statement for the whole module, because a process definition key takes a batch filter.
    * <p>
-   * The rows grow with the number of deployments which changed a model, which is the growth
-   * decision 10 in the repository's DECISIONS.md accepts, and this one list replaces the
-   * query per process the question would cost otherwise.
+   * The rows grow with the number of deployments which changed a model. Decision 10 in the
+   * repository's DECISIONS.md accepts this growth. Otherwise the question would cost one
+   * query per process, and this one list replaces them.
    */
   private static Collection<? extends ResourceDefinition> processDefinitionsOf(
       final Map<String, String> processIdsByKey,
@@ -206,11 +205,11 @@ public final class Camunda7IdentifiersTheEngineHolds {
 
   /**
    * Every version the engine holds of ONE decision definition key. A decision query has no
-   * batch filter for its key, and the alternative of one
-   * {@code decisionDefinitionKeyLike} per module would only work where the mode prefixes
-   * the ids and would ask a different question in the other two modes. How many decisions a
-   * module brings is a property of the application rather than of its history, so one
-   * statement each is a number which does not grow while the application runs.
+   * batch filter for its key. One {@code decisionDefinitionKeyLike} per module would only
+   * work where the mode prefixes the ids. In the other two modes it would ask a different
+   * question. How many decisions a module brings depends on the application, not on its
+   * history. So one statement per decision is a number which does not grow while the
+   * application runs.
    */
   private static Collection<? extends ResourceDefinition> decisionDefinitionsOf(
       final String decisionDefinitionKey,
@@ -278,8 +277,8 @@ public final class Camunda7IdentifiersTheEngineHolds {
   }
 
   /**
-   * What the engine says about the deployment behind a definition, asked once per
-   * deployment: several versions of several processes usually come from the same one.
+   * What the engine says about the deployment behind a definition. It is asked once per
+   * deployment, because several versions of several processes usually come from the same one.
    */
   private static final class HolderDescriptions {
 
@@ -323,8 +322,8 @@ public final class Camunda7IdentifiersTheEngineHolds {
             .deploymentId(deploymentId)
             .singleResult();
         if (deployment == null) {
-          // the deployment was removed between the two queries: there is nobody left to
-          // name, and a finding nobody can attribute is worse than none
+          // the deployment was removed between the two queries. There is nobody left to
+          // name, and a finding which nobody can attribute is worse than none
           return java.util.Optional.empty();
         }
         return java.util.Optional.of(holderOf(deployment));
@@ -342,8 +341,8 @@ public final class Camunda7IdentifiersTheEngineHolds {
     }
 
     /**
-     * The sentence the core puts behind "is already held by", plus how sure this adapter
-     * is that the holder is somebody else.
+     * The sentence which the core puts behind "is already held by". It also says how sure
+     * this adapter is that the holder is somebody else.
      */
     private Holder holderOf(
         final Deployment deployment) {
@@ -367,9 +366,9 @@ public final class Camunda7IdentifiersTheEngineHolds {
                   + ", which a VanillaBP Camunda 7 adapter deployed under another name"
               : heldBy
                   + ", which nothing of this workflow module deployed",
-          // a source naming a Camunda 7 adapter of VanillaBP may be this very application:
-          // another adapter id is what a migration between two engines looks like, and
-          // another workflow module of the application writes its own name as well
+          // a source which names a Camunda 7 adapter of VanillaBP may be this very
+          // application. Another adapter id is what a migration between two engines looks
+          // like. And another workflow module of the application writes its own name, too
           !deployedByAVanillaBpAdapter);
 
     }

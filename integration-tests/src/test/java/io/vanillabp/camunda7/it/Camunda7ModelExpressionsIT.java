@@ -12,14 +12,14 @@ import io.vanillabp.integration.test.utils.SuppressOutputExtension;
 
 /**
  * What the core is told about the expressions of a model, read from the boot log of a real
- * engine. The adapter finds them, the core judges them, and this is the seam between the
- * two: every expression of the model arrives with the element it sits in, the place inside
- * that element and the text JUEL evaluates.
+ * engine. The adapter finds the expressions, and the core judges them. This test is the
+ * seam between the two. Every expression of the model arrives with the element it sits in,
+ * the place inside that element, and the text which JUEL evaluates.
  * <p>
- * The models are the expression suite, whose expressions sit in every place Camunda 7 lets
- * one sit. {@code Camunda7ExpressionIdentifiersTest} reads the collection on its own and
- * {@code ExpressionsInTheModelTest} of the platform reads the wording of the two messages,
- * so what is left for this class is the question neither of them can answer: does a real
+ * The models are the expression suite. Its expressions sit in every place where Camunda 7
+ * lets one sit. {@code Camunda7ExpressionIdentifiersTest} reads the collection on its own.
+ * {@code ExpressionsInTheModelTest} of the platform reads the wording of the two messages.
+ * So this class is left with the question which neither of them can answer: does a real
  * deployment of a real model reach the check at all?
  */
 @ExtendWith(SuppressOutputExtension.class)
@@ -58,8 +58,8 @@ public class Camunda7ModelExpressionsIT {
 
     final var log = bootLog(output);
 
-    // a condition of a conditional event, a timer, a cardinality and a collection: four
-    // of the places, each read out of a different part of the BPMN
+    // a condition of a conditional event, a timer, a cardinality and a collection. These
+    // are four of the places, and each is read out of a different part of the BPMN.
     Assertions
         .assertTrue(
             log.contains("'${order.getTotal() > 100}' at 'EX_P01' (the condition of a conditional event)"),
@@ -112,9 +112,9 @@ public class Camunda7ModelExpressionsIT {
             log.contains("'${order.internalCode == 'IC-9'}' at 'EX_P02'"),
             () -> "expected the computation but got:\n"
                 + log);
-    // the count is what tells a developer how far their model is. One of the fourteen
-    // expressions of 'ExprPlacements' is the name of a variable, the timer of 'EX_P07',
-    // and that one is counted here and named nowhere
+    // the count tells a developer how far their model is. One of the fourteen expressions
+    // of 'ExprPlacements' is the name of a variable: the timer of 'EX_P07'. That one is
+    // counted here and named nowhere.
     Assertions
         .assertTrue(
             log.contains("1 of the 14 expressions of this process name a variable and nothing else."),

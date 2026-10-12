@@ -21,11 +21,11 @@ import io.vanillabp.spi.process.ProcessService;
 import jakarta.inject.Inject;
 
 /**
- * Discovery/boot smoke test of the Camunda 7 adapter on Quarkus: the
- * embedded plain engine boots on the shared Agroal datasource (schema created via
- * the JTA schema-ops interceptor - Agroal has no deferred enlistment), the runtime
+ * Discovery and boot smoke test of the Camunda 7 adapter on Quarkus. The embedded plain
+ * engine boots on the shared Agroal datasource. Its schema is created through the JTA
+ * schema-ops interceptor, because Agroal has no deferred enlistment. The runtime
  * deployment pipeline deploys the workflow module's BPMN with the module id as the
- * Camunda tenant id, and the per-adapter-id beans exist. No Docker, no network.
+ * Camunda tenant id. And the beans per adapter id exist. No Docker, no network.
  */
 @ExtendWith(SuppressOutputExtension.class)
 @SuppressOutputExtension.SuppressBackgroundOutput
@@ -65,8 +65,8 @@ public class Camunda7AdapterDiscoveryTest {
 
     Assertions.assertNotNull(processService);
 
-    // one engine per adapter id, named after the id, schema created (querying
-    // works), job executor started by the deployment pipeline
+    // one engine per adapter id, named after the id. The schema is created (querying
+    // works), and the deployment pipeline started the job executor
     final var engine = engineRegistry.engineFor("c7");
     Assertions.assertEquals("vanillabp-camunda7-c7", engine.getProcessEngine().getName());
     Assertions.assertFalse(engine.usesSeparateDataSource());

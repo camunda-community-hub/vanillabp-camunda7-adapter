@@ -45,10 +45,10 @@ public class Camunda7TransactionTest {
           .addAsResource("application.yaml")
           .addAsResource("c7-test/processes/test-process.bpmn", "c7-test/processes/test-process.bpmn")
           .addAsResource("workflow-module-descriptor/workflow-module", "META-INF/workflow-module"))
-      // an own database: the module's shared H2 URL (DB_CLOSE_DELAY=-1) carries the
-      // outbox table as well, so aggregate ids of other test classes would collide
-      // with these - and an outbox entry of the same idempotency key is deduplicated
-      // away, which means the workflow is never started
+      // a database of its own. The module's shared H2 URL (DB_CLOSE_DELAY=-1) carries
+      // the outbox table as well. So aggregate ids of other test classes would collide
+      // with these. And an outbox entry with the same idempotency key is dropped as a
+      // duplicate, so the workflow is never started
       .overrideRuntimeConfigKey("quarkus.datasource.jdbc.url", "jdbc:h2:mem:c7-transaction-test;DB_CLOSE_DELAY=-1");
 
   @Inject
@@ -80,15 +80,15 @@ public class Camunda7TransactionTest {
   @Test
   public void startHappensAfterTheCallersTransactionCommitted() throws Exception {
 
-    // pause job processing so started instances stay observable (the trivial
-    // ${true} service task would complete them asynchronously)
+    // pause job processing, so started instances stay observable. The trivial
+    // ${true} service task would complete them asynchronously
     final var engine = engineRegistry.engineFor("c7");
     engine.stopWorkflowProcessing(MODULE_ID);
     try {
 
-      // The instance is NOT created within the caller's transaction any
-      // more - it is created right after the commit, by the phase-two outbox, so an
-      // operation which loses a concurrency conflict can be repeated
+      // the instance is NOT created within the caller's transaction any more. The
+      // phase-two outbox creates it right after the commit. So an operation which
+      // loses a concurrency conflict can be repeated
       userTransaction.begin();
       final TestAggregate committedAggregate;
       try {
@@ -113,7 +113,7 @@ public class Camunda7TransactionTest {
       }
 
       // rolled-back start: aggregate AND outbox entry are gone, so no instance is
-      // ever created - the guarantee the two-phase pattern exists for
+      // ever created. The two-phase pattern exists for this guarantee
       userTransaction.begin();
       final var rolledBackAggregate = workflowService.startWorkflow("rollback-test");
       final var rolledBackId = rolledBackAggregate.getId();

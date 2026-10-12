@@ -116,8 +116,8 @@ instead of `consequently`, `has` instead of `possesses`. A technical term stays 
 time it turns up, and write an abbreviation out once. If a sentence trips you up when you read it
 aloud, rewrite it.
 
-This holds for every English text here, the javadoc, the commit message and the pull request
-included, and for the [wiki](https://github.com/camunda-community-hub/vanillabp-camunda7-adapter/wiki)
+This holds for every English text here, the javadoc and comments in the main code and in the
+tests, the commit message and the pull request included, and for the [wiki](https://github.com/camunda-community-hub/vanillabp-camunda7-adapter/wiki)
 as well. The section `How we write` in [`AGENTS.md`](./AGENTS.md) shows a few sentences before and
 after. Nothing a program reads is renamed for the sake of language: type and method names,
 configuration keys and artifact coordinates stay as they are, because code in other repositories

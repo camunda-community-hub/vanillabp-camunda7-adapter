@@ -9,12 +9,12 @@ import io.vanillabp.integration.adapter.spi.workflowstart.BpmsInitiatedStartSpec
 import io.vanillabp.integration.adapter.spi.workflowtask.BpmnTaskSpec;
 
 /**
- * A reading of held models which finds nothing in any of them - for the tests about the
- * catalog itself, where the question is which versions it reports and how often it asks
- * the engine, not what a model contains.
+ * A reading of held models which finds nothing in any of them. It is for the tests about
+ * the catalog itself. There the question is which versions the catalog reports and how often
+ * it asks the engine, not what a model contains.
  * <p>
- * It is a reading rather than none, because a catalog without one answers "cannot say"
- * and would never read a model at all.
+ * It is a reading and not none. A catalog without a reading answers "cannot say" and would
+ * never read a model at all.
  */
 public class HeldModelsAnsweringNothing implements Camunda7ProcessVersions.HeldModelReading {
 

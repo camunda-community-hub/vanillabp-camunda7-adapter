@@ -10,13 +10,13 @@ import org.slf4j.LoggerFactory;
 import io.vanillabp.camunda7.deployment.Camunda7WorkflowProcessingLifecycle;
 
 /**
- * Reference-counted lifecycle of an engine's {@link JobExecutor} - shared by the
- * platform modules (Spring Boot, Quarkus): the executor is ENGINE-global while the
- * deployment pipeline notifies start/stop PER workflow module, so the started
- * modules are counted - the executor starts with the first module, stops when the
- * LAST started module stops (stopping on the first module's stop would starve the
- * remaining modules) and unconditionally on {@link #shutdown()}, before the engine
- * closes.
+ * The lifecycle of an engine's {@link JobExecutor}, with a reference count. Both
+ * platform modules (Spring Boot, Quarkus) use it. The executor belongs to the whole
+ * ENGINE. But the deployment pipeline reports start and stop PER workflow module. So
+ * the started modules are counted. The executor starts with the first module. It stops
+ * when the LAST started module stops, because a stop with the first module would
+ * starve the other modules. It also stops on {@link #shutdown()}, always, before the
+ * engine closes.
  */
 public class Camunda7JobExecutorLifecycle implements Camunda7WorkflowProcessingLifecycle {
 
@@ -27,14 +27,14 @@ public class Camunda7JobExecutorLifecycle implements Camunda7WorkflowProcessingL
   private final JobExecutor jobExecutor;
 
   /**
-   * The workflow modules whose processing was started and not yet stopped - the
-   * reference count deciding when the engine-global job executor stops.
+   * The workflow modules whose processing was started and not yet stopped. This is the
+   * reference count which decides when the engine-global job executor stops.
    */
   private final Set<String> startedWorkflowModules = new HashSet<>();
 
   /**
    * Counts the workflow modules which started processing. The job executor belongs to the
-   * engine and the modules come and go one by one, so it is started with the first and
+   * engine, and the modules come and go one by one. So it is started with the first and
    * stopped with the last.
    *
    * @param adapterId The adapter id whose engine this executor belongs to, for the log
@@ -87,8 +87,8 @@ public class Camunda7JobExecutorLifecycle implements Camunda7WorkflowProcessingL
   }
 
   /**
-   * Stops the executor unconditionally (graceful shutdown, before the engine
-   * closes). Safe to call more than once.
+   * Stops the executor in any case (graceful shutdown, before the engine closes). It
+   * is safe to call more than once.
    */
   public synchronized void shutdown() {
 

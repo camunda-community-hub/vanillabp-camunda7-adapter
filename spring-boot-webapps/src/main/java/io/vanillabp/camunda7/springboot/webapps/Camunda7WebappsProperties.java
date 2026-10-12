@@ -5,15 +5,16 @@ import java.util.Map;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
- * This module's OVERLAY of the shared <code>vanillabp.*</code> configuration tree: the
+ * This module's OVERLAY of the shared <code>vanillabp.*</code> configuration tree. The
  * webapps are configured per adapter id, at
  * <code>vanillabp.adapters.&lt;id&gt;.webapps.*</code>, like every other setting of an
- * adapter instance. A second {@code @ConfigurationProperties} class over the same prefix
- * coexists with the platform's binding of the core model and with the adapter's engine
- * overlay; keys unknown to a view are ignored by the JavaBean binding.
+ * adapter instance. So this is a second {@code @ConfigurationProperties} class over the
+ * same prefix. It lives next to the platform's binding of the core model and next to the
+ * adapter's engine overlay. The JavaBean binding ignores the keys which one view does not
+ * know.
  * <p>
- * The adapter-id set is NEVER derived from this map. It comes from the engines VanillaBP
- * actually built, and this overlay is a per-known-id lookup only.
+ * The set of adapter ids NEVER comes from this map. It comes from the engines VanillaBP
+ * actually built. This overlay only looks up the settings of an id that is known.
  */
 @ConfigurationProperties("vanillabp")
 public class Camunda7WebappsProperties {
@@ -108,16 +109,16 @@ public class Camunda7WebappsProperties {
     }
 
     /**
-     * Whether Cockpit, Tasklist and Admin serve this engine. On by default: an
-     * application which added this module wants the webapps, and switching them off per
-     * adapter id is the exception (e.g. an engine that only exists for a migration).
+     * Whether Cockpit, Tasklist and Admin serve this engine. It is on by default. An
+     * application which added this module wants the webapps. Switching them off for one
+     * adapter id is the exception, e.g. for an engine that only exists for a migration.
      */
     private boolean enabled = true;
 
     /**
      * The administrator to create on startup, if any. Without it this module creates no
-     * user, and the webapps show their setup wizard - which is what an application
-     * managing its own users wants.
+     * user, and the webapps show their setup wizard. An application which manages its own
+     * users wants exactly that.
      */
     private AdminUser adminUser;
 

@@ -9,18 +9,17 @@ import lombok.Getter;
 
 /**
  * The adapter-specific processing context (the {@code PC} type parameter of
- * {@link io.vanillabp.integration.adapter.spi.AdapterDeploymentService}). One instance
- * is accumulated across all BPMN files of a workflow module during the deployment
- * pipeline and finally handed to
+ * {@link io.vanillabp.integration.adapter.spi.AdapterDeploymentService}). The deployment
+ * pipeline fills one instance with all BPMN files of a workflow module. At the end it
+ * hands the instance to
  * {@link io.vanillabp.camunda7.deployment.Camunda7DeploymentService#deployResources(String, Camunda7ProcessingContext)}.
  * <p>
- * It collects the parsed BPMN models and the module's decision tables, to be deployed as
- * a single Camunda 7 deployment. The module's name-clash-avoidance mode decides whether
- * that deployment goes into a tenant named after the workflow module. Models are keyed by
- * their BPMN file name so that a file containing several
- * executable processes contributes its model only once (the deployment pipeline calls
- * {@code prepareBpmn} once per executable process, all sharing the same file-level model
- * instance).
+ * It collects the parsed BPMN models and the module's decision tables. They are deployed
+ * as one single Camunda 7 deployment. The module's name-clash-avoidance mode decides
+ * whether that deployment goes into a tenant named after the workflow module. Models are
+ * keyed by their BPMN file name. So a file with several executable processes adds its
+ * model only once. The pipeline calls {@code prepareBpmn} once per executable process,
+ * and all these calls share the same model of the file.
  */
 @Getter
 public class Camunda7ProcessingContext {
@@ -29,8 +28,8 @@ public class Camunda7ProcessingContext {
 
   /**
    * The BPMN models to be deployed, keyed by their file name. A {@link LinkedHashMap}
-   * keeps the deployment order deterministic (helpful for reproducible deployments and
-   * logging).
+   * keeps the order of the deployment the same on every run. This helps to reproduce a
+   * deployment and to read the log.
    */
   private final Map<String, BpmnModelInstance> resourcesByFilename = new LinkedHashMap<>();
 
@@ -49,9 +48,9 @@ public class Camunda7ProcessingContext {
 
   /**
    * The PLAIN BPMN process ids of the module's executable processes, collected in
-   * {@code prepareBpmn} - the input of the collision check (two processes must
-   * not end up under the same prefixed identifier, see decision 3 in the
-   * repository's DECISIONS.md).
+   * {@code prepareBpmn}. They are the input of the collision check: two processes must
+   * not end up under the same prefixed identifier (see decision 3 in the repository's
+   * DECISIONS.md).
    */
   private final java.util.List<String> deployedProcessIds = new java.util.LinkedList<>();
 
@@ -86,9 +85,9 @@ public class Camunda7ProcessingContext {
 
   /**
    * The decision tables to be deployed with the module's processes, keyed by their file
-   * name. Bytes rather than a model: nothing here has to understand a decision, and the
-   * one thing which is rewritten - the decision id, where the module is scoped by
-   * prefixes - was rewritten while the file was read.
+   * name. They are kept as bytes, not as a model, because nothing here has to understand
+   * a decision. Only one thing is rewritten: the decision id, where the module is scoped
+   * by prefixes. This already happened while the file was read.
    */
   private final Map<String, byte[]> decisionsByFilename = new LinkedHashMap<>();
 
@@ -96,7 +95,7 @@ public class Camunda7ProcessingContext {
    * Remembers the given decision table for deployment.
    *
    * @param filename The DMN file name (used as the deployment resource name, so it keeps
-   *          its extension - Camunda 7 reads the resource type from it)
+   *          its extension, because Camunda 7 reads the resource type from it)
    * @param dmn The file
    */
   public void addDecision(
@@ -108,11 +107,11 @@ public class Camunda7ProcessingContext {
   }
 
   /**
-   * The PLAIN identifiers the module's models declare which the workflow module scopes -
-   * message names, signal names, error codes, escalation codes and the ids of the decisions
-   * it brings. Collected while the files are read, which is where the adapter holds them
-   * anyway, and handed to the core once the module is deployed so that two modules ending
-   * up under one name are named.
+   * The PLAIN identifiers which the module's models declare and the workflow module
+   * scopes: message names, signal names, error codes, escalation codes and the ids of the
+   * decisions it brings. The adapter collects them while it reads the files, because it
+   * holds them there anyway. Once the module is deployed, they go to the core. So the core
+   * can name two modules which end up under one name.
    */
   private final java.util.Set<io.vanillabp.integration.adapter.spi.NameClashAvoidanceSupport.ModelIdentifier> declaredIdentifiers = new java.util.LinkedHashSet<>();
 
@@ -130,14 +129,15 @@ public class Camunda7ProcessingContext {
 
   /**
    * The PLAIN decision ids of the module's decision tables, in the order the files were
-   * read - what the engine is asked about, and part of what the models declare.
+   * read. The engine is asked about these ids, and they are part of what the models
+   * declare.
    */
   private final java.util.Set<String> decisionIds = new java.util.LinkedHashSet<>();
 
   /**
    * Records the decisions one DMN file of this workflow module declares. A decision id is one
-   * of the identifiers the workflow module scopes, so it joins what the models declare as
-   * well.
+   * of the identifiers the workflow module scopes. So it is also added to what the models
+   * declare.
    *
    * @param plainDecisionIds The decision ids as the application knows them
    */
@@ -155,17 +155,18 @@ public class Camunda7ProcessingContext {
   }
 
   /**
-   * The listeners of this module's models which somebody modelled, collected while the
-   * models are read - the list the startup report names one by one, see
+   * The listeners which somebody modelled in this module's models, collected while the
+   * models are read. The startup report names them one by one, see
    * {@link io.vanillabp.camunda7.wiring.Camunda7Listeners}.
    */
   @Getter
   private final java.util.List<io.vanillabp.camunda7.wiring.Camunda7Listeners.ModelledListener> modelledListeners = new java.util.LinkedList<>();
 
   /**
-   * Per BPMN process of this module which serves its modelled listeners, the property key
-   * which said so. Kept per process because the key resolves per workflow as well as per
-   * module, and the report has to name the line a reader can find in their own configuration.
+   * For each BPMN process of this module which serves its modelled listeners, the
+   * property key which said so. It is kept per process, because the key resolves per
+   * workflow as well as per module. The report has to name the line which a reader can
+   * find in their own configuration.
    */
   @Getter
   private final Map<String, String> listenersAllowedBy = new LinkedHashMap<>();
@@ -198,8 +199,8 @@ public class Camunda7ProcessingContext {
 
   /**
    * Whether there is anything to deploy. A module which brings no executable process is
-   * legitimate - it may carry nothing but decision tables - and the deployment is skipped
-   * rather than refused.
+   * legitimate. It may carry nothing but decision tables. The deployment is then skipped,
+   * not refused.
    *
    * @return Whether no BPMN models were accumulated (e.g. a workflow module without any
    *         executable BPMN process).

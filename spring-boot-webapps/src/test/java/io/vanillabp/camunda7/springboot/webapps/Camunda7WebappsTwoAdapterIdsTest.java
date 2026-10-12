@@ -20,13 +20,12 @@ import org.springframework.web.client.RestClient;
 import io.vanillabp.integration.test.utils.SuppressOutputExtension;
 
 /**
- * Two <code>camunda7</code> adapter ids are two engines - the side-by-side setup of a
- * migration. Both of them show up in the web applications, which offer them in their
- * engine switcher.
+ * Two <code>camunda7</code> adapter ids are two engines. This is the side-by-side setup of
+ * a migration. Both engines show up in the web applications, in their engine switcher.
  *
  * <p>
  * The second id runs on a datasource of its own, which the application provides as a
- * bean: setting up datasources is the application's business, VanillaBP only refers to
+ * bean. Setting up datasources is the application's business. VanillaBP only refers to
  * one by name.
  * </p>
  */

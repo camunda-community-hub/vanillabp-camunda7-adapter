@@ -13,26 +13,26 @@ import jakarta.persistence.MappedSuperclass;
 import jakarta.persistence.Transient;
 
 /**
- * The data every aggregate of these expression tests carries. The state is stored FLAT,
- * in columns of the entity, and the nested object graph the expressions navigate is built
- * from it on demand ({@link #getOrder()}). That keeps the graph independent of what JPA
- * can map, and it survives a reload - which the migration fallback of the EL resolver
- * needs, because it loads the aggregate by its business key.
+ * The data which every aggregate of these expression tests carries. The state is stored
+ * FLAT, in columns of the entity. The nested object graph which the expressions navigate is
+ * built from it on demand ({@link #getOrder()}). That keeps the graph independent of what
+ * JPA can map. And it survives a reload, which the migration fallback of the EL resolver
+ * needs, because the fallback loads the aggregate by its business key.
  * <p>
- * What is shared and what is not: the only annotations on this class are
- * {@code @NoSyncWithBPMS}, so the sync model treats it as opt-out - everything is shared
- * except {@link #getHiddenOrder()}, which is the name the EL resolver still answers from
- * the LIVE object because the engine holds no variable of it.
+ * What is shared and what is not? The only annotations on this class are
+ * {@code @NoSyncWithBPMS}, so the sync model treats it as opt-out. Everything is shared except
+ * {@link #getHiddenOrder()}. The EL resolver still answers that name from the LIVE object,
+ * because the engine holds no variable of it.
  * <p>
- * The flat state has no public getters on purpose. The sync model reads readable
- * JavaBean properties, so a private field without a getter is invisible to it and the
- * variables the engine gets are exactly the ones these tests are about.
+ * The flat state has no public getters on purpose. The sync model reads readable JavaBean
+ * properties, so it cannot see a private field without a getter. So the variables the
+ * engine gets are exactly the ones these tests are about.
  * <p>
- * Dates, a decimal, an enum and a list are among them, and none of those means the same
- * in every expression language. The four processes of these tests therefore declare
- * every value they share ({@code declared-aggregate-values: '*'} in the test
- * application's configuration), because what is measured here is where an expression may
- * stand and what it reads, not what a type does on its way to the engine.
+ * Dates, a decimal, an enum and a list are among them. None of those means the same in
+ * every expression language. So the four processes of these tests declare every value they
+ * share ({@code declared-aggregate-values: '*'} in the configuration of the test
+ * application). What is measured here is where an expression may stand and what it reads.
+ * It is not what a type does on its way to the engine.
  */
 @MappedSuperclass
 public abstract class ExprData {
@@ -59,7 +59,7 @@ public abstract class ExprData {
   String internalCode;
 
   /**
-   * The items as "name:price" pairs separated by commas - a collection without a
+   * The items as "name:price" pairs, separated by commas. It is a collection without a
    * collection table.
    */
   String itemsCsv;
@@ -84,9 +84,9 @@ public abstract class ExprData {
   }
 
   /**
-   * A top-level {@link BigDecimal}: an object variable of its own, while the same value
-   * inside {@link #getOrder()} travels as a member of the flattened order. Both reach the
-   * serializer, and what each of them comes back as is what the two worlds measure.
+   * A top-level {@link BigDecimal}. It is an object variable of its own, while the same
+   * value inside {@link #getOrder()} travels as a member of the flattened order. Both reach
+   * the serializer. The two worlds measure what each of them comes back as.
    */
   public BigDecimal getTotal() {
 
@@ -95,7 +95,7 @@ public abstract class ExprData {
   }
 
   /**
-   * A top-level enum: the sync model shares its name.
+   * A top-level enum. The sync model shares its name.
    */
   public ExprStatus getTopStatus() {
 
@@ -116,10 +116,10 @@ public abstract class ExprData {
   }
 
   /**
-   * The same object graph under a name the aggregate does NOT share. The engine has no
-   * variable of it, so the migration fallback of {@code Camunda7TaskELResolver} answers
-   * it from the live aggregate - which is what keeps the whole version-1 grammar alive
-   * until the fallback is removed.
+   * The same object graph under a name which the aggregate does NOT share. The engine has
+   * no variable of it, so the migration fallback of {@code Camunda7TaskELResolver} answers
+   * it from the live aggregate. That keeps the whole version-1 grammar alive until the
+   * fallback is removed.
    */
   @Transient
   @NoSyncWithBPMS

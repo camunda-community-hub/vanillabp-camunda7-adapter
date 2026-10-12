@@ -9,10 +9,10 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import io.vanillabp.integration.test.utils.SuppressOutputExtension;
 
 /**
- * The core waits for a workflow to become findable only where the adapter
- * asks for it. Camunda 7 answers awareness probes from the very database and
- * transaction which created the instance, so it asks for nothing - a workflow this
- * engine does not know does not exist, and saying so has to stay immediate.
+ * The core waits for a workflow to become findable only where the adapter asks for it.
+ * Camunda 7 answers awareness probes from the same database and transaction which created
+ * the instance. So it asks for nothing. A workflow this engine does not know does not
+ * exist, and saying so has to stay immediate.
  */
 @ExtendWith(SuppressOutputExtension.class)
 public class Camunda7WorkflowVisibilityTest {

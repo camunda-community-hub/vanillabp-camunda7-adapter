@@ -33,8 +33,8 @@ public class OldProcessVersionsAggregate {
   private String servedBy;
 
   /**
-   * The id of the task which exists in version 1 only - it stays open, which keeps a
-   * workflow of version 1 running while the next boot deploys version 2.
+   * The id of the task which exists in version 1 only. It stays open, so a workflow of
+   * version 1 keeps running while the next boot deploys version 2.
    */
   private String openTaskId;
 

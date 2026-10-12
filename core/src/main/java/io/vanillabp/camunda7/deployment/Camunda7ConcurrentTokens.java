@@ -24,10 +24,11 @@ import io.vanillabp.integration.adapter.spi.workflowtask.CompensationSpec;
 /**
  * Finds the elements of a BPMN process which can put a SECOND token into a running
  * workflow. The core is told about them during wiring and decides what it
- * means: two tokens are two branches writing the same workflow aggregate, and an
- * aggregate without a version attribute loses one of the two writes without any error.
+ * means. Two tokens are two branches which write the same workflow aggregate. An
+ * aggregate without a version attribute then loses one of the two writes without any
+ * error.
  * <p>
- * What is looked for - each one verified against this engine rather than taken from a
+ * This is what is looked for. Each one was checked against this engine, not taken from a
  * list:
  * <ul>
  * <li>a boundary event which does NOT cancel its activity, so its branch runs next to
@@ -79,20 +80,19 @@ public class Camunda7ConcurrentTokens {
    * The compensation throw events of the given BPMN process which start MORE THAN ONE
    * handler, each with the handlers it starts.
    * <p>
-   * Compensation is a second token drawn differently: from the throw event the workflow holds
-   * a token per handler, and every one of those handlers is an ordinary workflow task writing
-   * the same workflow aggregate.
+   * Compensation is a second token which is drawn in another way. From the throw event on,
+   * the workflow holds one token per handler. Every one of those handlers is an ordinary
+   * workflow task which writes the same workflow aggregate.
    * <p>
-   * This engine starts the handlers one after the other rather than next to each other,
+   * This engine starts the handlers one after the other, not next to each other. This was
    * measured on 7.24 by {@code Camunda7CompensationTokensTest}. The report is made anyway.
-   * The question this check asks is whether the process can hold more than one token, and
-   * both compensating executions exist from the moment the throw event runs. A handler which
-   * WAITS, a user task among them, also keeps its token while the next handler is started,
-   * and two such handlers are completed by the application in two transactions which may
-   * overlap.
+   * This check asks whether the process can hold more than one token. Both compensating
+   * executions exist from the moment the throw event runs. A handler which WAITS, for
+   * example a user task, keeps its token while the next handler is started. The
+   * application completes two such handlers in two transactions, and these may overlap.
    * <p>
    * A throw event which names ONE activity compensates that activity's handler and nothing
-   * else. Such an event is read here and dropped by the caller.
+   * else. Such an event is read here, and the caller drops it.
    *
    * @param model The BPMN model
    * @param bpmnProcessId The process' ID as the model knows it (the SCOPED ID)
@@ -165,8 +165,8 @@ public class Camunda7ConcurrentTokens {
 
   /**
    * The compensation handler an association points at, starting from the compensation
-   * boundary event. Only an activity marked as one which compensates counts: an association
-   * may reach a text annotation as well, and that is documentation rather than a handler.
+   * boundary event. Only an activity marked for compensation counts. An association may
+   * also reach a text annotation, and that is documentation, not a handler.
    */
   private static Activity handlerAttachedTo(
       final BpmnModelInstance model,
@@ -189,9 +189,9 @@ public class Camunda7ConcurrentTokens {
    * The scope a compensation throw event which names no activity compensates: the subprocess
    * around it, or the process.
    * <p>
-   * An EVENT subprocess is walked through rather than taken as the scope. Such a subprocess
-   * handles what happened in the scope AROUND it, so a throw event inside it undoes the
-   * activities of that scope and not the ones of the handler it sits in.
+   * An EVENT subprocess is not taken as the scope; the walk goes on past it. Such a
+   * subprocess handles what happened in the scope AROUND it. So a throw event inside it
+   * undoes the activities of that outer scope, not the ones of the handler it sits in.
    */
   private static ModelElementInstance compensationScopeOf(
       final FlowElement throwEvent) {

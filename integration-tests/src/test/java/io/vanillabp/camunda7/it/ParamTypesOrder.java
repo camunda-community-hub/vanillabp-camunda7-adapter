@@ -4,8 +4,8 @@ import java.math.BigDecimal;
 
 /**
  * The nested value of the parameter-type cases. Its members travel inside one object
- * variable, so what they come back as is the serialization format's answer rather than
- * the aggregate's.
+ * variable. So the serialization format decides what they come back as, not the
+ * aggregate.
  */
 public class ParamTypesOrder {
 

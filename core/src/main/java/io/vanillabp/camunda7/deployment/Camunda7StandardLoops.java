@@ -12,16 +12,16 @@ import org.camunda.bpm.model.bpmn.instance.Activity;
  * about them.
  * <p>
  * A modeller draws <code>standardLoopCharacteristics</code> to repeat one activity while a
- * condition holds. Camunda 7 does not implement it: the engine deploys the model, runs the
- * activity once and moves on, and it writes no line about it (see
- * {@code Camunda7StandardLoopTest}). So a model this boot deploys is refused where the
- * application claims its process. A process nobody claims is not looked at: it is somebody
- * else's model (see decision 43 of {@code DECISIONS.md}). A version the engine
- * already holds is reported where workflows still run on it, because nobody can change that
- * model any more.
+ * condition holds. Camunda 7 does not implement it. The engine deploys the model, runs the
+ * activity once and moves on. It writes no line about it (see
+ * {@code Camunda7StandardLoopTest}). So a model which this boot deploys is refused, if the
+ * application claims its process. A process which nobody claims is not looked at, because
+ * it is somebody else's model (see decision 43 of {@code DECISIONS.md}). A version which
+ * the engine already holds is reported if workflows still run on it. Nobody can change
+ * that model any more.
  * <p>
- * The model API of the engine has no type for the marker. It keeps the element in the XML all
- * the same, which is where it is looked for.
+ * The model API of the engine has no type for the marker. But it keeps the element in the
+ * XML, so it is looked for there.
  */
 public final class Camunda7StandardLoops {
 
@@ -30,7 +30,7 @@ public final class Camunda7StandardLoops {
 
   /**
    * What the engine does with a standard loop, and the two forms which do repeat an activity.
-   * Shared by the refusal and the warning, so both say the same.
+   * The refusal and the warning share it, so both say the same.
    */
   private static final String WHAT_THE_ENGINE_DOES = """
       Camunda 7 does not run a standard loop: it runs the activity once, the workflow moves on, \

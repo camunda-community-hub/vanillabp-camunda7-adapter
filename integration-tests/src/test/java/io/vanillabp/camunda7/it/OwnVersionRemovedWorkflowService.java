@@ -10,11 +10,11 @@ import io.vanillabp.spi.service.WorkflowTask;
 
 /**
  * The application AFTER the upgrade, which removed the methods of version 1. A workflow
- * still running on version 1 must not reach a method version 2 names at the same element:
- * it ends in an incident which names what is missing.
+ * which still runs on version 1 must not reach a method which version 2 names at the same
+ * element. Instead it ends in an incident, which names what is missing.
  * <p>
- * A bean only under the profile of its own generation: the generations declare the same
- * process and must never boot together.
+ * It is a bean only under the profile of its own generation. The generations declare the
+ * same process and must never boot together.
  */
 @Service
 @Profile("own-version-removed")

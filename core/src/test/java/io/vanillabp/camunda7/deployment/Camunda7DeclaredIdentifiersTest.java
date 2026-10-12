@@ -26,12 +26,12 @@ import io.vanillabp.integration.adapter.spi.NameClashAvoidanceSupport.ScopedIden
 import io.vanillabp.integration.test.utils.SuppressOutputExtension;
 
 /**
- * Which identifiers this adapter reads out of a model, for the two questions about the
- * workflow modules of ONE application: what the models of this deployment declare, and what
- * a version the engine still holds declares.
+ * Which identifiers this adapter reads out of a model. They answer two questions about the
+ * workflow modules of ONE application: what do the models of this deployment declare, and
+ * what does a version the engine still holds declare?
  * <p>
- * Both are answered from a model the adapter walks anyway, so neither costs a query, and
- * both answer with the PLAIN names because the core composes the scoped forms.
+ * Both are answered from a model which the adapter walks anyway, so neither costs a query.
+ * Both answer with the PLAIN names, because the core builds the scoped forms.
  */
 @ExtendWith(SuppressOutputExtension.class)
 public class Camunda7DeclaredIdentifiersTest {

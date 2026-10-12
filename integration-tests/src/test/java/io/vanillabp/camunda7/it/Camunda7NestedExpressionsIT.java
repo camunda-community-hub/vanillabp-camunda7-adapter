@@ -8,13 +8,13 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.annotation.DirtiesContext;
 
 /**
- * The nested expressions in the world the other integration tests of this module run in:
- * no serialization format configured, so the engine falls back to Java serialization and
- * a nested value keeps the class the aggregate gave it.
+ * The nested expressions in the world which the other integration tests of this module run
+ * in. No serialization format is configured. So the engine falls back to Java
+ * serialization, and a nested value keeps the class which the aggregate gave it.
  */
 @SpringBootTest(classes = TestApplication.class, properties = {
-    // a database of its own: Spring caches every test context, and an engine which
-    // outlives its class would poll the database the next classes work on
+    // a database of its own. Spring caches every test context, and an engine which outlives
+    // its class would poll the database of the next classes.
     "spring.datasource.url=jdbc:h2:mem:c7-nested-expressions-it;DB_CLOSE_DELAY=-1", "vanillabp.workflow-modules.c7-it.adapters.c7.resources-location=classpath*:c7-it/expressions"
 })
 @DirtiesContext
@@ -37,8 +37,8 @@ public class Camunda7NestedExpressionsIT extends AbstractNestedExpressionsIT {
   @Override
   protected void assertWhatTheNestedNumberAnswersToScale() {
 
-    // Java serialization hands the BigDecimal back as it was, so the version-1 grammar
-    // still reaches its methods here
+    // Java serialization hands the BigDecimal back as it was. So the version-1 grammar
+    // still reaches its methods here.
     assertEquals(Boolean.TRUE, valueOf("${order.total.scale() > 0}"));
 
   }
@@ -53,8 +53,8 @@ public class Camunda7NestedExpressionsIT extends AbstractNestedExpressionsIT {
   @Override
   protected String theTextOfTheTopLevelBigDecimal() {
 
-    // Java serialization writes the value the aggregate holds and reads it back
-    // unchanged, so a model rendering it reads what version 1 rendered
+    // Java serialization writes the value which the aggregate holds and reads it back
+    // unchanged. So a model which renders it reads what version 1 rendered.
     return "120.50";
 
   }

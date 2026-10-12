@@ -9,7 +9,7 @@ import io.vanillabp.spi.service.WorkflowService;
 import io.vanillabp.spi.service.WorkflowTask;
 
 /**
- * The workflow service of the signal integration test: the workflow waits at an
+ * The workflow service of the signal integration test. The workflow waits at an
  * intermediate signal catch event, and a broadcast lets it continue.
  */
 @Service

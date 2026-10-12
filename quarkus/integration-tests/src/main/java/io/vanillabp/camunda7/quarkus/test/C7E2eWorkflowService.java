@@ -14,13 +14,13 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 
 /**
- * The workflow service of the Quarkus end-to-end application: one
- * <code>&#64;WorkflowTask</code> method per outcome and per binding variation, serving
- * the same BPMN models the Spring Boot integration tests use.
+ * The workflow service of the Quarkus end-to-end application. It has one
+ * <code>&#64;WorkflowTask</code> method per outcome and per binding variation. It serves
+ * the same BPMN models which the Spring Boot integration tests use.
  * <p>
- * That both platforms run the identical set of documented features is deliberate. The
- * adapter's platform-neutral core being correct says nothing about a platform's glue
- * ever calling it, and coverage is measured per platform for exactly that reason.
+ * Both platforms run the identical set of documented features, on purpose. A correct
+ * platform-neutral core says nothing about whether a platform's glue ever calls it. That
+ * is exactly why coverage is measured per platform.
  */
 @ApplicationScoped
 @WorkflowService(
@@ -149,8 +149,8 @@ public class C7E2eWorkflowService {
   public void errorTask(
       final C7E2eAggregate aggregate) {
 
-    // the mutation has to be COMMITTED although the handler throws - a
-    // TaskException is a BPMN error, not a rollback
+    // the change has to be COMMITTED although the handler throws. A TaskException
+    // is a BPMN error, not a rollback
     aggregate.appendResult("error-raised");
     throw new TaskException("PaymentFailed", "PAYMENT_FAILED");
 
@@ -168,8 +168,8 @@ public class C7E2eWorkflowService {
   public void alwaysFails(
       final C7E2eAggregate aggregate) {
 
-    // must NEVER become visible: a technical exception rolls back the job
-    // transaction including this mutation
+    // must NEVER become visible. A technical exception rolls back the job
+    // transaction, and this change with it
     aggregate.appendResult("must-never-be-visible");
     throw new IllegalStateException("boom-quarkus-e2e");
 
@@ -209,7 +209,7 @@ public class C7E2eWorkflowService {
       @TaskId final String taskId,
       @TaskEvent final TaskEvent.Event event) {
 
-    // subscribed to ALL events (the default): CREATED parks the task, CANCELED is
+    // subscribed to ALL events (the default). CREATED parks the task. CANCELED is
     // delivered when the activity is canceled
     if (event == TaskEvent.Event.CREATED) {
       aggregate.setTaskId(taskId);
@@ -286,9 +286,9 @@ public class C7E2eWorkflowService {
   }
 
   /**
-   * Calls a bean carrying a transaction annotation of the application. The handler
-   * itself has none, so the startup check cannot see it and the runtime check has to
-   * catch the rollback-only transaction.
+   * Calls a bean with a transaction annotation of the application. The handler itself has
+   * none. So the startup check cannot see it, and the runtime check has to catch the
+   * rollback-only transaction.
    *
    * @param aggregate The workflow aggregate
    */
@@ -313,8 +313,8 @@ public class C7E2eWorkflowService {
   }
 
   /**
-   * Which method serves the task is decided by the version of the deployed
-   * process definition - this one by its number.
+   * The version of the deployed process definition decides which method serves the task.
+   * This one is chosen by the version number.
    *
    * @param aggregate The workflow aggregate
    */
@@ -327,8 +327,8 @@ public class C7E2eWorkflowService {
   }
 
   /**
-   * This one by the <code>camunda:versionTag</code> of the second version,
-   * which is deployed while the application runs - the way another node of a rolling
+   * This one is chosen by the <code>camunda:versionTag</code> of the second version. That
+   * version is deployed while the application runs, the way another node of a rolling
    * deployment does it.
    *
    * @param aggregate The workflow aggregate

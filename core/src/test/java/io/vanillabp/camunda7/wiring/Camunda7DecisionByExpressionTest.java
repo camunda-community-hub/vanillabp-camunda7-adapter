@@ -23,9 +23,9 @@ import io.vanillabp.integration.test.utils.SuppressOutputExtension;
  * What a running engine does with a business rule task which names its decision in an
  * expression, under {@code use-prefix} and without it.
  * <p>
- * The decision this module deploys carries the prefix, and only the model says which
- * decision a run picks. Both sides go through the very functions the deployment uses, so
- * what the engine resolves here is what an application gets.
+ * The decision this module deploys carries the prefix. Only the model says which decision a
+ * run picks. Both sides go through the same functions the deployment uses. So what the
+ * engine resolves here is what an application gets.
  */
 @ExtendWith(SuppressOutputExtension.class)
 public class Camunda7DecisionByExpressionTest {
@@ -82,16 +82,16 @@ public class Camunda7DecisionByExpressionTest {
     configuration
         .setJdbcUrl("jdbc:h2:mem:decision-by-expression-%s;DB_CLOSE_DELAY=-1".formatted(System.nanoTime()));
     configuration.setJobExecutorActivate(false);
-    // the engine refuses to parse a model without one, and a test needs no cleanup policy
+    // the engine refuses to parse a model without one. A test needs no cleanup policy
     configuration.setHistoryTimeToLive("P30D");
-    // the parse listener of this adapter, because it is what makes a business rule task run
-    // in a job of its own: the decision is looked up there and not while the workflow starts.
-    // No task of this model is served by the application, so the registry stays empty
+    // the parse listener of this adapter. It makes a business rule task run in a job of its
+    // own, so the decision is looked up there and not while the workflow starts. The
+    // application serves no task of this model, so the registry stays empty
     final var taskRegistry = new Camunda7TaskRegistry();
     final var invoker = mock(io.vanillabp.integration.adapter.spi.workflowtask.WorkflowTaskInvoker.class);
     configuration
         .setCustomPostBPMNParseListeners(
-            // a list the engine appends its own listeners to, so an immutable one breaks it
+            // the engine appends its own listeners to this list, so an immutable one breaks
             new java.util.ArrayList<>(
                 java.util.List
                     .of(
@@ -111,8 +111,8 @@ public class Camunda7DecisionByExpressionTest {
   }
 
   /**
-   * Deploys the model and the decision the way the adapter does, scoping both through the
-   * core, and runs the process up to its end.
+   * Deploys the model and the decision the way the adapter does, with both scoped through
+   * the core. Then runs the process up to its end.
    *
    * @param mode The name-clash avoidance the workflow module runs in
    * @return The value the business rule task wrote, read from the history
@@ -138,8 +138,8 @@ public class Camunda7DecisionByExpressionTest {
         .addString("credit-rating.dmn", new String(decision, StandardCharsets.UTF_8))
         .deploy();
 
-    // the model is deployed under the scoped process id, while the decision the run picks is
-    // named the way the application knows it: the variable carries the plain id
+    // the model is deployed under the scoped process id. But the decision the run picks is
+    // named the way the application knows it, so the variable carries the plain id
     final var instance = engine
         .getRuntimeService()
         .startProcessInstanceByKey(
@@ -158,8 +158,8 @@ public class Camunda7DecisionByExpressionTest {
   }
 
   /**
-   * Does what the job executor would do, one job at a time, so a job which fails says so
-   * here instead of being retried in a thread of its own.
+   * Does what the job executor would do, one job at a time. So a job which fails says so
+   * here, and is not retried in a thread of its own.
    */
   private void runEveryJobUntilTheWorkflowEnds() {
 
@@ -187,11 +187,12 @@ public class Camunda7DecisionByExpressionTest {
   @DisplayName("Under use-prefix the engine finds it too, because the prefix is in front of the expression")
   public void underUsePrefixTheDecisionIsFoundAsWell() {
 
-    // the attribute reaches the engine as 'loan-approval__${whichDecision}', and Camunda 7
-    // evaluates it as one expression: the text in front stays text and the prefixed id of
-    // whatever the expression yields is looked up. Leaving the expression alone made the job
-    // of this task fail with "no decision definition deployed with key 'creditRating' and
-    // tenant-id 'null'", which the engine turns into an incident once the retries are used up
+    // the attribute reaches the engine as 'loan-approval__${whichDecision}'. Camunda 7
+    // evaluates it as one expression. The text in front stays text, and the engine looks up
+    // the prefixed id of whatever the expression yields. Leaving the expression alone made
+    // the job of this task fail with "no decision definition deployed with key 'creditRating'
+    // and tenant-id 'null'". The engine turns that into an incident once the retries are
+    // used up
     assertEquals(
         "A",
         whatTheDecisionYielded(NameClashAvoidance.USE_PREFIX),

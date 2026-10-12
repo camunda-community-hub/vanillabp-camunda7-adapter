@@ -14,23 +14,23 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import io.vanillabp.integration.test.utils.SuppressOutputExtension;
 
 /**
- * What Camunda 7 does with a standard loop, measured rather than read off a table.
+ * What Camunda 7 does with a standard loop. It is measured here, not read off a table.
  * <p>
  * A modeller draws <code>standardLoopCharacteristics</code> to repeat ONE activity while a
- * condition holds. The BPMN analysis behind graphic 5.1 said Camunda 7 implements it. It does
- * not: the string appears in <code>camunda-engine</code> only in the BPMN schema file the jar
- * ships, in no class of it, and <code>BpmnParse</code> reads
- * <code>multiInstanceLoopCharacteristics</code> alone. The run below says the same from the
- * outside - the model deploys, the activity runs exactly ONCE and the workflow ends, with a
- * loop condition of <code>${true}</code> and a loop maximum of 3, and the engine writes not
- * one line above DEBUG about any of it.
+ * condition holds. An earlier BPMN analysis said Camunda 7 implements it. It does not. In
+ * <code>camunda-engine</code> the string appears only in the BPMN schema file the jar ships,
+ * in no class. And <code>BpmnParse</code> reads <code>multiInstanceLoopCharacteristics</code>
+ * alone. The run below shows the same from the outside. The loop condition is
+ * <code>${true}</code> and the loop maximum is 3. Still the model deploys, the activity runs
+ * exactly ONCE and the workflow ends. The engine writes not one line above DEBUG about any of
+ * it.
  * <p>
- * So the marker is silently ignored on both Camunda engines, measured on 7.24 here and on
+ * So both Camunda engines silently ignore the marker. This was measured on 7.24 here, and on
  * 8.8.39, 8.9.21 and 8.10.0-rc1 in the Camunda 8 adapter. A model which counts on it does its
- * work once and moves on, which is the kind of deviation somebody finds in production. This is
- * why the adapter refuses such a model while deploying it, see
+ * work once and moves on. Somebody finds such a deviation in production. That is why the
+ * adapter refuses such a model while deploying it, see
  * {@code Camunda7StandardLoopRefusalTest}. The test here runs the bare engine, without the
- * adapter, so it keeps measuring what the refusal is about.
+ * adapter. So it keeps measuring what the refusal is about.
  */
 @ExtendWith(SuppressOutputExtension.class)
 public class Camunda7StandardLoopTest {
@@ -51,15 +51,15 @@ public class Camunda7StandardLoopTest {
     configuration.setProcessEngineName("standard-loop-facts");
     configuration.setHistoryTimeToLive("P1D");
     final var processEngine = configuration.buildProcessEngine();
-    // what the engine said about it, so the silence is measured rather than assumed
+    // what the engine said about it, so the silence is measured and not assumed
     final var logWatcher = new ch.qos.logback.core.read.ListAppender<ch.qos.logback.classic.spi.ILoggingEvent>();
     logWatcher.start();
     final var rootLogger = (ch.qos.logback.classic.Logger) org.slf4j.LoggerFactory
         .getLogger(org.slf4j.Logger.ROOT_LOGGER_NAME);
     rootLogger.addAppender(logWatcher);
     try {
-      // nothing is refused: the engine deploys the model although it implements no standard
-      // loop, which is why a modeller hears nothing about the marker
+      // nothing is refused. The engine deploys the model although it implements no standard
+      // loop. So a modeller hears nothing about the marker
       final var deployment = processEngine
           .getRepositoryService()
           .createDeployment()

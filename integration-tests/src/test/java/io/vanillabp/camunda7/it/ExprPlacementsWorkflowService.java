@@ -7,9 +7,10 @@ import io.vanillabp.spi.service.BpmnProcess;
 import io.vanillabp.spi.service.WorkflowService;
 
 /**
- * Starts <code>ExprPlacements</code>, which runs a chosen subset through the other sites a Camunda 7 model puts an expression into. The process has no
- * workflow task of its own: everything it does is decide, wait or iterate, so nothing
- * has to be wired and a failing expression is the only thing that can go wrong.
+ * Starts <code>ExprPlacements</code>. The process runs a chosen subset through the other
+ * places where a Camunda 7 model puts an expression. The process has no workflow task of
+ * its own. All it does is decide, wait or iterate. So nothing has to be wired, and a
+ * failing expression is the only thing that can go wrong.
  */
 @Service
 @WorkflowService(

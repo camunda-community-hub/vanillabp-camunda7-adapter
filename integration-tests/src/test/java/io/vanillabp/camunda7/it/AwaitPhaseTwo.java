@@ -6,14 +6,13 @@ import java.util.concurrent.Callable;
 import java.util.function.BooleanSupplier;
 
 /**
- * An operation which progresses a workflow runs AFTER the caller's transaction
- * committed, dispatched by the phase-two outbox (see decision 2 in the repository's
- * DECISIONS.md). A test which called
- * VanillaBP therefore has to wait for the engine to catch up instead of reading its
- * state in the next line.
+ * An operation which moves a workflow forward runs AFTER the transaction of the caller has
+ * committed. The phase-two outbox dispatches it (see decision 2 in the repository's
+ * DECISIONS.md). So a test which called VanillaBP has to wait for the engine to catch up.
+ * It cannot read the state of the engine in the next line.
  * <p>
- * The waiting is deliberately kept here and not hidden in a base class: a test says
- * where it waits, so what is asynchronous stays visible.
+ * The waiting is kept here on purpose, and not hidden in a base class. A test says where it
+ * waits, so what is asynchronous stays visible.
  */
 final class AwaitPhaseTwo {
 
@@ -48,8 +47,8 @@ final class AwaitPhaseTwo {
   }
 
   /**
-   * Waits until a value is there, i.e. until the call neither returns
-   * <code>null</code> nor throws.
+   * Waits until a value is there. That is, until the call neither returns <code>null</code>
+   * nor throws.
    *
    * @param <T> The value's type
    * @param supplier What is asked repeatedly

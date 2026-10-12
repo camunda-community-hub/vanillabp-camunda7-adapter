@@ -23,10 +23,10 @@ import io.vanillabp.integration.test.utils.SuppressOutputExtension;
 import io.vanillabp.spi.process.WorkflowElementType;
 
 /**
- * Unit tests of the Camunda 7 viewer/history API's degraded paths - the ones a
- * real engine does not reach in the integration tests: an engine running with
- * history level {@code none}, a workflow unknown to this engine, a history
- * context of a FOREIGN workflow and the activity-type mapping.
+ * Unit tests of the degraded paths of the Camunda 7 viewer and history API. A real engine
+ * does not reach these paths in the integration tests: an engine running with history level
+ * {@code none}, a workflow unknown to this engine, a history context of a FOREIGN workflow,
+ * and the activity-type mapping.
  */
 @ExtendWith(SuppressOutputExtension.class)
 public class Camunda7WorkflowViewerTest {
@@ -38,10 +38,10 @@ public class Camunda7WorkflowViewerTest {
   private final RuntimeService runtimeService = mock(RuntimeService.class, RETURNS_DEEP_STUBS);
 
   /**
-   * The engine's query builders are fluent AND generic - {@code RETURNS_SELF}
-   * (not deep stubs, whose type inference fails on the generic {@code Query}
-   * methods) makes every filter call return the mock itself, so only the
-   * terminal {@code list()}/{@code singleResult()} needs stubbing.
+   * The engine's query builders are fluent AND generic. {@code RETURNS_SELF} makes every
+   * filter call return the mock itself. So only the terminal
+   * {@code list()}/{@code singleResult()} needs stubbing. Deep stubs do not work here,
+   * because their type inference fails on the generic {@code Query} methods.
    */
   private final org.camunda.bpm.engine.history.HistoricProcessInstanceQuery historicInstanceQuery = mock(
       org.camunda.bpm.engine.history.HistoricProcessInstanceQuery.class, RETURNS_SELF);
@@ -73,8 +73,8 @@ public class Camunda7WorkflowViewerTest {
   }
 
   /**
-   * No historic instance for the aggregate - the engine either runs with history
-   * level {@code none} or the history was cleaned up.
+   * No historic instance for the aggregate. Either the engine runs with history level
+   * {@code none}, or the history was cleaned up.
    */
   private void withoutHistory() {
 
@@ -87,8 +87,8 @@ public class Camunda7WorkflowViewerTest {
   public void aModuleWithoutTenantIsQueriedWithoutTenant() {
 
     // a workflow module reached with 'name-clash-avoidance: none' (or 'use-prefix') has no
-    // tenant at all. Passing null to tenantIdIn does not mean "any tenant" - the engine
-    // throws NullValueException('tenantIds contains null value'), which used to make every
+    // tenant at all. Passing null to tenantIdIn does not mean "any tenant". The engine
+    // throws NullValueException('tenantIds contains null value'). That used to make every
     // viewer call of a default-configured application fail.
     withoutHistory();
     when(instanceQuery.singleResult()).thenReturn(null);
@@ -194,7 +194,7 @@ public class Camunda7WorkflowViewerTest {
 
     assertEquals(WorkflowElementType.UNKNOWN, Camunda7WorkflowViewer.elementTypeOf(null));
     assertEquals(WorkflowElementType.UNKNOWN, Camunda7WorkflowViewer.elementTypeOf("somethingNew"));
-    // events - Camunda names them fine-grained, the SPI groups them
+    // events. Camunda names them in fine detail, the SPI groups them
     assertEquals(WorkflowElementType.START_EVENT, Camunda7WorkflowViewer.elementTypeOf("startEvent"));
     assertEquals(WorkflowElementType.START_EVENT, Camunda7WorkflowViewer.elementTypeOf("messageStartEvent"));
     assertEquals(WorkflowElementType.END_EVENT, Camunda7WorkflowViewer.elementTypeOf("noneEndEvent"));

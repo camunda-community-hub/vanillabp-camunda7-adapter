@@ -22,39 +22,40 @@ import jakarta.inject.Singleton;
 import jakarta.transaction.TransactionManager;
 
 /**
- * Produces the {@link Camunda7QuarkusEngineRegistry}: ONE embedded engine per
- * configured {@code camunda7} adapter id, built EAGERLY at startup (the
- * {@link Camunda7StartupObserver} forces this producer on {@code StartupEvent}) so
- * configuration defects surface at boot with guiding messages:
+ * Produces the {@link Camunda7QuarkusEngineRegistry}: ONE embedded engine per configured
+ * {@code camunda7} adapter id. The engines are built EAGERLY at startup, because the
+ * {@link Camunda7StartupObserver} forces this producer on {@code StartupEvent}. So
+ * configuration defects show up at boot, with guiding messages:
  * <ul>
- *   <li>each id's engine runs on the application's default Agroal datasource or -
- *       via <code>vanillabp.adapters.&lt;id&gt;.data-source-name</code> - on a
- *       declared NAMED datasource (<code>quarkus.datasource.&lt;name&gt;.*</code>);
- *       an unknown name fails the boot listing the declared names;</li>
+ *   <li>each id's engine runs on the application's default Agroal datasource. Or it runs
+ *       on a declared NAMED datasource (<code>quarkus.datasource.&lt;name&gt;.*</code>),
+ *       set in <code>vanillabp.adapters.&lt;id&gt;.data-source-name</code>. An unknown
+ *       name fails the boot and lists the declared names.</li>
  *   <li>two embedded engines on one schema are the same engine state - more than
  *       one {@code camunda7} id resolving to the SAME datasource fails the boot
  *       naming the <code>data-source-name</code> remedy.</li>
  * </ul>
- * The adapter-id set comes from the platform's core properties (adapter ids of type
- * {@code camunda7}); the overlay map ({@link VanillaBpCamunda7Properties}) is a
- * per-known-id lookup only. The registry is closed on application shutdown via the
- * {@link #close(Camunda7QuarkusEngineRegistry) disposer}.
+ * The set of adapter ids comes from the platform's core properties: the adapter ids of
+ * type {@code camunda7}. The overlay map ({@link VanillaBpCamunda7Properties}) only looks
+ * up the settings of an id that is known. The
+ * {@link #close(Camunda7QuarkusEngineRegistry) disposer} closes the registry when the
+ * application shuts down.
  */
 @ApplicationScoped
 public class Camunda7EngineProducer {
 
   /**
-   * Quarkus builds the bean to call the producers below. It keeps no state: what they
-   * return are beans of their own and live as long as the application does.
+   * Quarkus builds the bean to call the producers below. It keeps no state. What they
+   * return are beans of their own, and they live as long as the application does.
    */
   public Camunda7EngineProducer() {
 
   }
 
   /**
-   * Builds one engine per configured adapter id, at startup rather than on first use: a
-   * datasource nobody declared or a schema the engine cannot work with is a configuration
-   * defect, and it belongs in the boot log and not in the first workflow.
+   * Builds one engine per configured adapter id, at startup and not on first use. A
+   * datasource nobody declared, or a schema the engine cannot work with, is a
+   * configuration defect. It belongs in the boot log, not in the first workflow.
    *
    * @param properties The platform's own configuration, which is where the adapter ids
    *          come from
@@ -148,8 +149,8 @@ public class Camunda7EngineProducer {
     keys.serializationFormat().ifPresent(properties::setSerializationFormat);
     keys.sleepUntilSomethingIsDue().ifPresent(properties::setSleepUntilSomethingIsDue);
     keys.dbMetricsReporting().ifPresent(properties::setDbMetricsReporting);
-    // the named plugin sections travel onto the platform-neutral model, so the core builds
-    // and configures them the same way on both platforms
+    // the named plugin sections are copied onto the platform-neutral model. So the core
+    // builds and configures them the same way on both platforms
     properties
         .setEnginePlugins(
             keys
@@ -180,23 +181,22 @@ public class Camunda7EngineProducer {
   }
 
   /**
-   * Resolves the Agroal datasource the adapter id's engine runs on: the
-   * application's default datasource, or - if <code>data-source-name</code> is
-   * configured - the named datasource declared under
-   * <code>quarkus.datasource.&lt;name&gt;.*</code>. Missing datasources fail with
-   * a guiding message.
+   * Resolves the Agroal datasource the adapter id's engine runs on. That is the
+   * application's default datasource. If <code>data-source-name</code> is configured, it
+   * is the named datasource declared under <code>quarkus.datasource.&lt;name&gt;.*</code>.
+   * A missing datasource fails with a guiding message.
    */
   private static AgroalDataSource resolveDataSource(
       final Instance<AgroalDataSource> dataSources,
       final String adapterId,
       final String dataSourceName) {
 
-    // the explicit @Default literal is required: with named datasources present, an
-    // unqualified select() on the @Any instance would be ambiguous
-    // several datasources declared: which one the engine runs on is not VanillaBP's
-    // guess - not even the default datasource decides it, because an
-    // embedded engine writes its ACT_* tables into whatever database it gets. The
-    // default datasource is named explicitly by the reserved value 'default'.
+    // the explicit @Default literal is required. With named datasources present, an
+    // unqualified select() on the @Any instance would be ambiguous.
+    // several datasources declared: VanillaBP does not guess which one the engine runs
+    // on. Not even the default datasource decides it, because an embedded engine writes
+    // its ACT_* tables into whatever database it gets. The reserved value 'default'
+    // names the default datasource explicitly.
     if (dataSourceName == null) {
       final var declaredDataSources = declaredDataSourceNames(dataSources);
       if (declaredDataSources.size() > 1) {
@@ -240,8 +240,8 @@ public class Camunda7EngineProducer {
   }
 
   /**
-   * The names of all declared Agroal datasources (for guiding messages) -
-   * <code>&lt;default&gt;</code> for the unnamed application datasource.
+   * The names of all declared Agroal datasources, for guiding messages. The unnamed
+   * application datasource is listed as <code>&lt;default&gt;</code>.
    */
   private static List<String> declaredDataSourceNames(
       final Instance<AgroalDataSource> dataSources) {

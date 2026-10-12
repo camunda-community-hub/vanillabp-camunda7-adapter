@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" id="Definitions_CallByExpressionChild" targetNamespace="http://bpmn.io/schema/bpmn">
-  <!-- the called process of CallByExpressionCaller: it works on the aggregate of its
+  <!-- the called process of CallByExpressionCaller. It works on the aggregate of its
        caller, so its task is handed that aggregate and writes into it. -->
   <bpmn:process id="CallByExpressionChild" isExecutable="true">
     <bpmn:startEvent id="CBEC_Start">

@@ -9,8 +9,8 @@ import lombok.Getter;
 import lombok.Setter;
 
 /**
- * The aggregate of the call-activity test: the called process works on it as well,
- * which is what the business key has to carry into the child.
+ * The aggregate of the call-activity test. The called process works on it as well. So the
+ * business key has to carry it into the child.
  */
 @Entity
 @Table(name = "C7_CALLACTIVITY_AGGREGATE")

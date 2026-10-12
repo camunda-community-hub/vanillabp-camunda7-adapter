@@ -2,8 +2,8 @@ package io.vanillabp.camunda7.quarkus;
 
 /**
  * What a boot which refused said, as one string. Which layer wraps a refusal differs per
- * platform and per check - the engine producer wraps what the engine holder threw, the
- * deployment pipeline wraps what a model check threw - so a test reading one particular
+ * platform and per check. The engine producer wraps what the engine holder threw. The
+ * deployment pipeline wraps what a model check threw. So a test which reads one particular
  * cause reads the wrong one sooner or later.
  */
 final class Camunda7BootFailure {

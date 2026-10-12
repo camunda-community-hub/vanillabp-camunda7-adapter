@@ -14,10 +14,10 @@ import io.vanillabp.camunda7.quarkus.sample.TestWorkflowService;
 import io.vanillabp.integration.test.utils.SuppressOutputExtension;
 
 /**
- * Startup validation on Quarkus (26c style, mirroring the Spring Boot module): two
- * embedded engines on one schema are the same engine state - two {@code camunda7}
- * adapter ids WITHOUT distinct datasources must fail the boot with a guiding message
- * naming the <code>data-source-name</code> remedy.
+ * Startup validation on Quarkus, like in the Spring Boot module. Two embedded engines on
+ * one schema share the same engine state. So two {@code camunda7} adapter ids WITHOUT
+ * distinct datasources must fail the boot. The guiding message names the
+ * <code>data-source-name</code> remedy.
  */
 @ExtendWith(SuppressOutputExtension.class)
 public class Camunda7SameDataSourceValidationTest {

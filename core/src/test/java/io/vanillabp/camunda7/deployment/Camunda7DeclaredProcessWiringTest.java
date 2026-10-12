@@ -21,14 +21,14 @@ import io.vanillabp.integration.test.utils.CapturedOutput;
 import io.vanillabp.integration.test.utils.SuppressOutputExtension;
 
 /**
- * What this adapter wires for a BPMN process id the application DECLARES without deploying
- * a model under it - the old id of a renamed process, whose workflows keep running in the
- * engine.
+ * What this adapter wires for a BPMN process id which the application DECLARES without
+ * deploying a model under it. That is the old id of a renamed process, whose workflows keep
+ * running in the engine.
  * <p>
- * The models come out of the engine's repository, and this is where the two things that
- * costs are measured. The way a task is wired travels with the model, so a
- * <code>camunda:delegateExpression</code> stays one and does not become an expression; and
- * a model the extraction refuses does not end the boot, because nobody can change a model
+ * The models come out of the engine's repository. That costs two things, and they are
+ * measured here. First, the way a task is wired comes with the model. So a
+ * <code>camunda:delegateExpression</code> stays one and does not become an expression.
+ * Second, a model the extraction refuses does not end the boot. Nobody can change a model
  * which was deployed years ago. {@code Camunda7RenamedProcessIT} asks the same of a running
  * engine.
  */
@@ -53,8 +53,8 @@ public class Camunda7DeclaredProcessWiringTest {
       """;
 
   /**
-   * A model wired by an external task, which this adapter refuses - what a model deployed
-   * by another tool, or by a VanillaBP version which accepted more, can look like.
+   * A model with an external task, which this adapter refuses. A model deployed by another
+   * tool, or by a VanillaBP version which accepted more, can look like this.
    */
   private static final String A_MODEL_THIS_ADAPTER_REFUSES = """
       <?xml version="1.0" encoding="UTF-8"?>
@@ -135,7 +135,7 @@ public class Camunda7DeclaredProcessWiringTest {
         new Camunda7TaskRegistry(),
         Map.of("1", A_MODEL_WITH_BOTH_KINDS_OF_TASK),
         endHandlersFor(OLD_ID));
-    // the wire between the platform module and the engine is missing, which is the only
+    // the wire between the platform module and the engine is missing. That is the only
     // way an end goes unreported on Camunda 7
     service.setEngineDeliversWorkflowEnded(false);
 
@@ -163,8 +163,8 @@ public class Camunda7DeclaredProcessWiringTest {
 
     service.startWorkflowProcessing(MODULE, new Camunda7ProcessingContext(MODULE));
 
-    // the view of this test, not of the class: the test above prints the sentence this
-    // one says is absent, so read over the whole class the assertion would hold only as
+    // the view of this test, not of the class. The test above prints the sentence which
+    // this one says is absent. Read over the whole class, the assertion would hold only as
     // long as that test happens to run later
     final var logged = output.getAllOfThisTest();
     assertFalse(
@@ -176,7 +176,7 @@ public class Camunda7DeclaredProcessWiringTest {
   }
 
   /**
-   * A core which knows an end handler for the given BPMN process, reduced to the question
+   * A core which knows an end handler for the given BPMN process, cut down to the question
    * the deployment asks it.
    */
   private static io.vanillabp.integration.adapter.spi.workflowend.WorkflowEndedInvoker endHandlersFor(

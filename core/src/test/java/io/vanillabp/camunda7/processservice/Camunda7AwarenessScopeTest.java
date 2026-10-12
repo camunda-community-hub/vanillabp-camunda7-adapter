@@ -16,25 +16,23 @@ import io.vanillabp.integration.adapter.spi.WorkflowAwareness;
 import io.vanillabp.integration.test.utils.SuppressOutputExtension;
 
 /**
- * The awareness probes of this adapter answer for the scope they are
- * ASKED about, which is what the election contract of {@code MigratableProcessService}
- * demands.
+ * The awareness probes of this adapter answer for the scope they are ASKED about. The
+ * election contract of {@code MigratableProcessService} demands that.
  * <p>
- * A Camunda 7 business key is the workflow-aggregate id, and an engine may hold
- * processes this adapter never wired: models of another application sharing the
- * database, or definitions left by a version of this application which knew other
- * workflow modules. Answering {@code ACTIVE} for one of those claims a workflow this
- * adapter cannot serve, and in a migration it wins the election against the BPMS which
- * really holds it.
+ * A Camunda 7 business key is the workflow-aggregate id. An engine may hold processes which
+ * this adapter never wired: models of another application sharing the database, or
+ * definitions left by a version of this application which knew other workflow modules.
+ * Answering {@code ACTIVE} for one of those claims a workflow this adapter cannot serve. In
+ * a migration, that answer wins the election against the BPMS which really holds it.
  * <p>
- * What the adapter compares is what the wiring registered: the process definition keys
- * of its workflow modules, and the tenant each module runs in. The engine here is a real
- * one, in memory, because the queries doing the comparison are the subject.
+ * The adapter compares with what the wiring registered: the process definition keys of its
+ * workflow modules, and the tenant each module runs in. The engine here is a real one, in
+ * memory, because the queries doing the comparison are the subject.
  * <p>
- * Comparing what the adapter has DEPLOYED is not enough: two workflow modules of one
- * adapter would both be its own scope, and a foreign-module instance with the same
- * aggregate id would still be claimed. The probe is therefore told which workflow module
- * and which BPMN processes are meant, and that case is the third test below.
+ * Comparing with what the adapter has DEPLOYED is not enough. Two workflow modules of one
+ * adapter would both be its own scope. And a foreign-module instance with the same aggregate
+ * id would still be claimed. So the probe is told which workflow module and which BPMN
+ * processes are meant, and that case is the third test below.
  */
 @ExtendWith(SuppressOutputExtension.class)
 public class Camunda7AwarenessScopeTest {
@@ -46,9 +44,9 @@ public class Camunda7AwarenessScopeTest {
   private static final String MODULE = "own-module";
 
   /**
-   * Without a name-clash-avoidance support the adapter behaves like {@code by-adapter},
-   * its version-1 mode: the workflow module id IS the Camunda tenant. That is what makes
-   * the tenant half of the scope observable here without stubbing the core's scoping.
+   * Without a name-clash-avoidance support the adapter behaves like {@code by-adapter}, its
+   * version-1 mode: the workflow module id IS the Camunda tenant. So the tenant half of the
+   * scope can be observed here without stubbing the core's scoping.
    */
   private static final String OWN_TENANT = MODULE;
 
@@ -58,9 +56,9 @@ public class Camunda7AwarenessScopeTest {
   private static final String FOREIGN_TENANT = "someone-else";
 
   /**
-   * A second process of the same {@code @WorkflowService} ({@code secondaryBpmnProcesses}):
-   * it runs on the same workflow aggregate, so an instance of it is a legitimate answer as
-   * long as the scope names it.
+   * A second process of the same {@code @WorkflowService} ({@code secondaryBpmnProcesses}).
+   * It runs on the same workflow aggregate. So an instance of it is a valid answer, as long
+   * as the scope names it.
    */
   private static final String SECONDARY_PROCESS = "SecondaryProcess";
 
@@ -78,7 +76,7 @@ public class Camunda7AwarenessScopeTest {
 
   /**
    * Another workflow module of the SAME adapter id, with a process of its own. Without a
-   * name-clash-avoidance support the module id is the tenant, so this is what a second
+   * name-clash-avoidance support the module id is the tenant. So this is what a second
    * module looks like to the engine.
    */
   private static final String OTHER_MODULE = "other-module";
@@ -116,14 +114,14 @@ public class Camunda7AwarenessScopeTest {
         .setJdbcUrl("jdbc:h2:mem:awareness-scope-%s;DB_CLOSE_DELAY=-1".formatted(System.nanoTime()));
     configuration.setJobExecutorActivate(false);
     configuration.setHistory("full");
-    // the engine refuses to parse a model without one, and a test needs no cleanup policy
+    // the engine refuses to parse a model without one. A test needs no cleanup policy
     configuration.setHistoryTimeToLive("P30D");
     engine = configuration.buildProcessEngine();
     deploy(OWN_TENANT, OWN_PROCESS, FOREIGN_PROCESS, SECONDARY_PROCESS);
     // another workflow module of the same adapter id
     deploy(OTHER_MODULE, OTHER_MODULE_PROCESS);
-    // the same process key in the tenant of somebody else - what the scope has to tell
-    // apart although the definition key is identical
+    // the same process key in the tenant of somebody else. The scope has to tell the two
+    // apart, although the definition key is identical
     deploy(FOREIGN_TENANT, OWN_PROCESS);
     processService = new Camunda7ProcessService<>(
         "c7", engine.getRuntimeService(), engine.getTaskService(), engine.getRepositoryService(), engine
@@ -307,8 +305,8 @@ public class Camunda7AwarenessScopeTest {
   @DisplayName("A workflow of ANOTHER workflow module of this adapter is not claimed")
   public void anotherModuleOfTheSameAdapterIsNotClaimed() {
 
-    // both modules belong to this adapter id, and only the scope of the CALL says
-    // which one is meant
+    // both modules belong to this adapter id. Only the scope of the CALL says which one
+    // is meant
     start(OTHER_MODULE_PROCESS, OTHER_MODULE);
 
     assertEquals(
@@ -330,8 +328,8 @@ public class Camunda7AwarenessScopeTest {
   @DisplayName("A secondary process of the same workflow service is part of the scope")
   public void aSecondaryProcessIsClaimed() {
 
-    // a @WorkflowService may declare secondaryBpmnProcesses: they run on the same
-    // workflow aggregate, so the scope names them and an instance of one is an answer
+    // a @WorkflowService may declare secondaryBpmnProcesses. They run on the same
+    // workflow aggregate. So the scope names them, and an instance of one is an answer
     start(SECONDARY_PROCESS);
 
     assertEquals(
@@ -364,14 +362,14 @@ public class Camunda7AwarenessScopeTest {
   }
 
   /**
-   * The same question for the WRITE behind {@code aggregateChanged}, which the
-   * probes' fix had missed. It is the worse half of the defect - a probe answering for a
-   * foreign workflow reports something wrong, a write into one ADVANCES it, because a
-   * variable write is what makes Camunda 7 re-evaluate conditional events.
+   * The same question for the WRITE behind {@code aggregateChanged}. The fix of the probes
+   * had missed it. It is the worse half of the defect. A probe answering for a foreign
+   * workflow reports something wrong. A write into a foreign workflow ADVANCES it, because a
+   * variable write makes Camunda 7 evaluate conditional events again.
    * <p>
-   * The aggregate shares nothing here (no sync model in this service), so what the push
-   * writes is the technical marker. That is deliberate: it is the case which reaches a
-   * foreign instance even when the two applications have not a single field in common.
+   * The aggregate shares nothing here (no sync model in this service). So the push writes
+   * the technical marker. That is on purpose. It is the case which reaches a foreign instance
+   * even when the two applications have not a single field in common.
    */
   private void push(
       final String workflowModuleId,
@@ -445,8 +443,9 @@ public class Camunda7AwarenessScopeTest {
     final var foreign = start(OWN_PROCESS, FOREIGN_TENANT);
     finish(own);
 
-    // phase two is at-least-once, so this is the redelivery of a push whose workflow has
-    // meanwhile ended: nothing to write, and above all nothing to write ELSEWHERE
+    // phase two is at-least-once. So this is the redelivery of a push whose workflow has
+    // ended in the meantime. There is nothing to write, and above all nothing to write
+    // ELSEWHERE
     push(MODULE, OWN_PROCESS, null);
 
     assertFalse(
@@ -459,9 +458,9 @@ public class Camunda7AwarenessScopeTest {
   @DisplayName("In a migration the push goes into the workflow of its own adapter id")
   public void aPushInAMigrationStaysWithItsAdapterId() {
 
-    // two adapter ids on one engine, which is what a migration between two Camunda 7
-    // installations of one database looks like: the second id runs the same workflow
-    // module under a tenant of its own, and both count aggregate ids alike
+    // two adapter ids on one engine. A migration between two Camunda 7 installations of
+    // one database looks like this. The second id runs the same workflow module under a
+    // tenant of its own, and both count aggregate ids alike
     final var foreignAdapterTenant = "c7-prefixed";
     deploy(foreignAdapterTenant, OWN_PROCESS);
     final var own = start(OWN_PROCESS);

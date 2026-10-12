@@ -23,27 +23,28 @@ import io.vanillabp.integration.test.utils.SuppressOutputExtension;
 import io.vanillabp.integration.test.utils.delivery.TaskDeliveryLogReader;
 
 /**
- * End-to-end test of {@code @WorkflowTask} processing on a real embedded Camunda 7
- * engine (H2, shared datasource/transaction manager with the JPA aggregate
- * persistence):
+ * End-to-end test of {@code @WorkflowTask} processing on a real embedded Camunda 7 engine.
+ * The engine runs on H2 and shares the datasource and the transaction manager with the JPA
+ * aggregate persistence:
  * <ul>
- * <li>happy path: service task executes the handler, aggregate mutation persisted,
- * task completed, process ends - incl. a gateway condition reading an aggregate
- * attribute through VanillaBP's EL resolver;</li>
- * <li>{@code TaskException}: error-boundary routing WITH committed aggregate
- * changes (the V1 contract);</li>
- * <li>technical exception: job transaction rolled back (aggregate unchanged), job
- * retried (retry counter decremented);</li>
- * <li>{@code @TaskId}: the task stays open, the job executor does not redeliver;</li>
- * <li>multi-instance: collection from an aggregate attribute, index/total/element
- * bound;</li>
- * <li>async-before/after forced onto service tasks by the parse listener (asserted
- * on the parsed process definition).</li>
+ * <li>Happy path: the service task runs the handler, the change of the aggregate is saved,
+ * the task is completed, and the process ends. This includes a gateway condition which
+ * reads an aggregate attribute through the EL resolver of VanillaBP.</li>
+ * <li>{@code TaskException}: routing through the error boundary, WITH the changes of the
+ * aggregate committed (the V1 contract).</li>
+ * <li>Technical exception: the job transaction is rolled back, so the aggregate is
+ * unchanged. The job is retried, and its retry counter goes down.</li>
+ * <li>{@code @TaskId}: the task stays open, and the job executor does not deliver it
+ * again.</li>
+ * <li>Multi-instance: the collection comes from an aggregate attribute, and index, total
+ * and element are bound.</li>
+ * <li>The parse listener forces async-before and async-after onto service tasks. This is
+ * asserted on the parsed process definition.</li>
  * </ul>
  */
 @SpringBootTest(classes = TestApplication.class, properties = {
-    // a database of its own: the phase-two outbox of a test class Spring keeps
-    // cached would otherwise dispatch the entries of the next one
+    // a database of its own. Otherwise the phase-two outbox of a test class which Spring
+    // keeps cached would dispatch the entries of the next one.
     "spring.datasource.url=jdbc:h2:mem:c7-task-processing-it;DB_CLOSE_DELAY=-1"
 })
 @ExtendWith(SuppressOutputExtension.class)
@@ -54,9 +55,9 @@ public class Camunda7TaskProcessingIT {
   private static final String MODULE_ID = "c7-it";
 
   /**
-   * What a probe is asked about: this test's workflow module and the BPMN
-   * processes its {@code @WorkflowService} serves. The probes answer for that scope and
-   * for nothing else, so a test calling them directly has to name it the way the platform
+   * What a probe is asked about: the workflow module of this test and the BPMN processes
+   * which its {@code @WorkflowService} serves. The probes answer for that scope and for
+   * nothing else. So a test which calls them directly has to name it the way the platform
    * would.
    */
   private static final io.vanillabp.integration.adapter.spi.WorkflowScope SCOPE = new io.vanillabp.integration.adapter.spi.WorkflowScope(
@@ -118,9 +119,9 @@ public class Camunda7TaskProcessingIT {
   }
 
   /**
-   * Starts the process reading the decision table, with the value the decision asks
-   * about as a process variable: what the aggregate contributes to the BPMS is the sync
-   * model's business and has tests of its own.
+   * Starts the process which reads the decision table. The value which the decision asks
+   * about is set as a process variable. What the aggregate contributes to the BPMS is the
+   * business of the sync model, which has tests of its own.
    *
    * @param approved What the decision decides on
    * @return The aggregate's id
@@ -144,7 +145,7 @@ public class Camunda7TaskProcessingIT {
   }
 
   /**
-   * How long the engine is watched after a rolled-back operation, before what did not
+   * How long the engine is watched after a rolled-back operation. After that, what did not
    * happen counts as something which never will.
    * <p>
    * Half a second, against the moment a committed operation takes: this engine shares the
@@ -152,9 +153,9 @@ public class Camunda7TaskProcessingIT {
    * transaction returns, and an asynchronous continuation is handed to a job executor
    * which is told about it at the same commit.
    * <p>
-   * A guard and not a budget anybody has to be faster than: what is asserted afterwards is
-   * that the instance is where it was, and a machine which leaves this JVM without a turn
-   * only makes the silence longer.
+   * This is a guard, not a time limit anybody has to beat. The test asserts afterwards that
+   * the instance is where it was. A machine which gives this JVM no turn only makes the
+   * silence longer.
    */
   private static final long UNTIL_A_COMPLETION_WOULD_HAVE_ARRIVED = 500;
 
@@ -174,8 +175,8 @@ public class Camunda7TaskProcessingIT {
   }
 
   /**
-   * The instance is created by the phase-two outbox AFTER the commit, so
-   * the lookup waits for it instead of reading a moment too early.
+   * The phase-two outbox creates the instance AFTER the commit. So the lookup waits for it,
+   * instead of reading a moment too early.
    *
    * @param aggregateId The aggregate's id (the business key)
    * @return The process instance's id
@@ -195,8 +196,8 @@ public class Camunda7TaskProcessingIT {
   }
 
   /**
-   * Asked against the HISTORY: a workflow which does not run may also be one the
-   * outbox has not started yet, and that is a state every test passes through.
+   * Asked against the HISTORY. A workflow which does not run may also be one which the
+   * outbox has not started yet, and every test passes through that state.
    *
    * @param aggregateId The aggregate's id (the business key)
    * @return Whether the workflow ran and ended
@@ -221,7 +222,7 @@ public class Camunda7TaskProcessingIT {
     awaitUntil(() -> processEnded(approvedId), "approved TaskProcess to end");
     assertEquals("happy|approved", repository.findById(approvedId).orElseThrow().getResults());
 
-    // approved=false: the gateway's default flow skips 'afterApproval'
+    // approved=false: the default flow of the gateway skips 'afterApproval'
     final var rejectedId = startSecondaryProcess("TaskProcess", false, null);
     awaitUntil(() -> processEnded(rejectedId), "rejected TaskProcess to end");
     assertEquals("happy", repository.findById(rejectedId).orElseThrow().getResults());
@@ -235,7 +236,7 @@ public class Camunda7TaskProcessingIT {
     final var aggregateId = startSecondaryProcess("ErrorProcess", true, null);
     awaitUntil(() -> processEnded(aggregateId), "ErrorProcess to end via the error boundary");
 
-    // both the mutation of the THROWING handler and the boundary path are visible
+    // both the change of the THROWING handler and the boundary path are visible
     assertEquals("error-raised|handled", repository.findById(aggregateId).orElseThrow().getResults());
 
   }
@@ -248,7 +249,7 @@ public class Camunda7TaskProcessingIT {
 
     final var instanceId = instanceIdOf(aggregateId);
 
-    // the job executor retries the failing job - wait for a decremented retry count
+    // the job executor retries the failing job, so the test waits for a lower retry count
     awaitUntil(
         () -> processEngine.getManagementService()
             .createJobQuery()
@@ -265,7 +266,7 @@ public class Camunda7TaskProcessingIT {
     assertNotNull(job, "the failing job stays (task not completed)");
     assertTrue(job.getRetries() < 3, "retries decremented");
 
-    // the handler's mutation was rolled back with the job transaction
+    // the change of the handler was rolled back with the job transaction
     assertNull(repository.findById(aggregateId).orElseThrow().getResults());
 
   }
@@ -274,9 +275,9 @@ public class Camunda7TaskProcessingIT {
   @DisplayName("A transaction annotation in the handler's call chain fails the job with VanillaBP's message")
   public void nestedTransactionAnnotationIsReportedAtTheEngine() throws Exception {
 
-    // the handler carries no annotation itself (that would fail the boot), it calls a
-    // bean that does - and the engine shares the transaction the
-    // bean's interceptor marks rollback-only
+    // the handler carries no annotation itself, because that would fail the boot. It calls
+    // a bean which does. And the engine shares the transaction which the interceptor of the
+    // bean marks rollback-only.
     final var aggregateId = startSecondaryProcess("RollbackOnlyProcess", true, null);
 
     final var instanceId = instanceIdOf(aggregateId);
@@ -297,14 +298,14 @@ public class Camunda7TaskProcessingIT {
         .processInstanceId(instanceId)
         .singleResult()
         .getExceptionMessage();
-    // the message names the task, the process and the workflow module, so the
-    // developer reading an incident does not have to guess where it came from
+    // the message names the task, the process and the workflow module. So the developer who
+    // reads an incident does not have to guess where it came from.
     assertTrue(failure.contains("nestedTransaction"), failure);
     assertTrue(failure.contains("RollbackOnlyProcess"), failure);
     assertTrue(failure.contains(MODULE_ID), failure);
 
-    // and the workflow did NOT take the error path: nothing was committed, which is
-    // exactly the data loss the check makes visible
+    // and the workflow did NOT take the error path. Nothing was committed, and that is
+    // exactly the data loss which the check makes visible.
     assertNull(repository.findById(aggregateId).orElseThrow().getResults());
 
   }
@@ -315,12 +316,13 @@ public class Camunda7TaskProcessingIT {
 
     final var aggregateId = startSecondaryProcess("AsyncProcess", true, null);
 
-    // the handler ran (aggregate committed) ...
+    // the handler ran, and the aggregate was committed ...
     awaitUntil(
         () -> repository.findById(aggregateId).orElseThrow().getTaskId() != null,
         "the async handler to run and commit the task id");
 
-    // ... but the task stays open: instance alive, execution parked at the task
+    // ... but the task stays open: the instance is alive, and the execution is parked at
+    // the task
     final var instance = runtimeService
         .createProcessInstanceQuery()
         .processInstanceBusinessKey(String.valueOf(aggregateId))
@@ -329,8 +331,8 @@ public class Camunda7TaskProcessingIT {
     final var activeActivities = runtimeService.getActiveActivityIds(instance.getId());
     assertEquals(List.of("AP_Task"), activeActivities, "execution parked at the async task");
 
-    // no job remains - the job executor does NOT redeliver an open async task
-    // (give a potential redelivery a moment to appear before asserting)
+    // no job remains, because the job executor does NOT deliver an open async task again. A
+    // possible redelivery gets a moment to appear before the assertion.
     Thread.sleep(500);
     assertEquals(
         0,
@@ -358,8 +360,8 @@ public class Camunda7TaskProcessingIT {
       workflowService.completeAsyncTask(aggregate, aggregate.getTaskId());
     });
 
-    // the signal leaves the activity; async-after parks a job - the process ends
-    // through the job executor
+    // the signal leaves the activity, and async-after parks a job. The process ends through
+    // the job executor.
     awaitUntil(() -> processEnded(aggregateId), "AsyncProcess to end after completeTask");
     assertEquals("async-open|completing", repository.findById(aggregateId).orElseThrow().getResults());
 
@@ -417,7 +419,7 @@ public class Camunda7TaskProcessingIT {
         runtimeService.getActiveActivityIds(instanceId),
         "the task has to stay open after the rollback");
 
-    // the retried completion converges
+    // the retried completion gets there
     transactionTemplate.executeWithoutResult(status -> {
       final var aggregate = repository.findById(aggregateId).orElseThrow();
       workflowService.completeAsyncTask(aggregate, taskId);
@@ -439,11 +441,11 @@ public class Camunda7TaskProcessingIT {
           workflowService.completeAsyncTask(aggregate, "no-such-task");
         }));
 
-    // the probe of a task is an engine question with an exact answer, so nothing is
-    // gained by asking again - and this runs in the caller's transaction (decision 27
-    // of the platform's DECISIONS.md). The exception is the whole promise: an embedded
-    // engine reports no visibility window, so there is no window a caller could sit out,
-    // and how long the call took would say more about the machine than about the code
+    // the probe of a task is an engine question with an exact answer, so nothing is gained
+    // by asking again. And this runs in the transaction of the caller (decision 27 of the
+    // platform's DECISIONS.md). The exception is the whole promise. An embedded engine
+    // reports no visibility window, so there is no window a caller could wait out. And how
+    // long the call took would say more about the machine than about the code.
     assertTrue(
         exception.getMessage().contains("no-such-task"),
         "expected the unknown task to be named but got: "
@@ -461,8 +463,8 @@ public class Camunda7TaskProcessingIT {
         "the async handler to run (CREATED event) and commit the task id");
     assertEquals("event-created", repository.findById(aggregateId).orElseThrow().getResults());
 
-    // canceling the whole instance cancels the parked activity - the END listener
-    // delivers CANCELED to the subscribing handler within the same transaction
+    // canceling the whole instance cancels the parked activity. The END listener delivers
+    // CANCELED to the subscribing handler within the same transaction.
     final var instanceId = instanceIdOf(aggregateId);
     transactionTemplate.executeWithoutResult(status -> runtimeService
         .deleteProcessInstance(instanceId, "async-task test cancellation"));
@@ -490,7 +492,7 @@ public class Camunda7TaskProcessingIT {
     final var c7ProcessService = (io.vanillabp.camunda7.processservice.Camunda7ProcessService<TaskTestAggregate>) applicationContext
         .getBean("Camunda7_ProcessService_c7");
 
-    // ACTIVE: execution exists and the business key matches
+    // ACTIVE: the execution exists, and the business key matches
     assertEquals(
         io.vanillabp.integration.adapter.spi.WorkflowAwareness.ACTIVE,
         c7ProcessService.awarenessOfTask(SCOPE, aggregateId, taskId));
@@ -498,17 +500,18 @@ public class Camunda7TaskProcessingIT {
     assertEquals(
         io.vanillabp.integration.adapter.spi.WorkflowAwareness.UNKNOWN_TO_BPMS,
         c7ProcessService.awarenessOfTask(SCOPE, aggregateId, "999999999"));
-    // UNKNOWN: execution exists but belongs to ANOTHER workflow aggregate
+    // UNKNOWN: the execution exists, but it belongs to ANOTHER workflow aggregate
     assertEquals(
         io.vanillabp.integration.adapter.spi.WorkflowAwareness.UNKNOWN_TO_BPMS,
         c7ProcessService.awarenessOfTask(SCOPE, -1L, taskId));
 
-    // phase two tolerates a gone task (stale outbox entry - warned no-op)
+    // phase two tolerates a task which is gone (a stale outbox entry). It warns and does
+    // nothing.
     transactionTemplate.executeWithoutResult(status -> {
       goneTask(c7ProcessService, io.vanillabp.integration.spi.PhaseOperation.COMPLETE_TASK, "AsyncProcess",
           aggregateId);
       goneTask(c7ProcessService, io.vanillabp.integration.spi.PhaseOperation.CANCEL_TASK, "AsyncProcess", aggregateId);
-      // user-task variants behave identically
+      // the user-task variants behave the same
       goneTask(c7ProcessService, io.vanillabp.integration.spi.PhaseOperation.COMPLETE_USER_TASK, "UserTaskProcess",
           aggregateId);
       goneTask(c7ProcessService, io.vanillabp.integration.spi.PhaseOperation.CANCEL_USER_TASK, "UserTaskProcess",
@@ -520,8 +523,8 @@ public class Camunda7TaskProcessingIT {
         io.vanillabp.integration.adapter.spi.WorkflowAwareness.UNKNOWN_TO_BPMS,
         c7ProcessService.awarenessOfUserTask(SCOPE, aggregateId, "999999999"));
 
-    // correlation phase-two tolerance: no waiting subscription and an
-    // already-started instance are warned no-ops, never errors
+    // phase two of a correlation tolerates a missing waiting subscription and an instance
+    // which was already started. It warns and does nothing, and it never fails.
     transactionTemplate.executeWithoutResult(status -> {
       PhaseOperations
           .phaseTwo(
@@ -547,7 +550,7 @@ public class Camunda7TaskProcessingIT {
         io.vanillabp.integration.adapter.spi.WorkflowAwareness.UNKNOWN_TO_BPMS,
         c7ProcessService.awarenessOfWorkflow(SCOPE, null, -1L));
 
-    // cleanup: complete the still-open task
+    // cleanup: complete the task which is still open
     transactionTemplate.executeWithoutResult(status -> {
       final var aggregate = repository.findById(aggregateId).orElseThrow();
       workflowService.completeAsyncTask(aggregate, taskId);
@@ -661,7 +664,7 @@ public class Camunda7TaskProcessingIT {
           return (results != null) && results.contains("usertask-cancel-handled");
         },
         "the error boundary to route to the handling task");
-    // handleBpmnError deletes the task - the DELETE listener delivered CANCELED
+    // handleBpmnError deletes the task, and the DELETE listener delivered CANCELED
     assertTrue(
         repository.findById(aggregateId).orElseThrow().getResults().contains("usertask-canceled"),
         "expected the CANCELED notification but got: "
@@ -722,7 +725,7 @@ public class Camunda7TaskProcessingIT {
             .count(),
         "and the user task the rolled-back transaction completed is still open");
 
-    // the retried completion converges
+    // the retried completion gets there
     transactionTemplate.executeWithoutResult(status -> {
       final var aggregate = repository.findById(aggregateId).orElseThrow();
       workflowService.completeUserTask(aggregate, taskId);
@@ -735,9 +738,9 @@ public class Camunda7TaskProcessingIT {
   @DisplayName("A user task WITHOUT a handler, marked implemented-externally, boots and completes through the SPI")
   public void userTaskWithoutHandlerIsOptional() throws Exception {
 
-    // SilentUserTaskProcess' user task has NO @WorkflowTask handler - the configuration
-    // marks it with implemented-externally, so the wiring validation lets it pass and the
-    // task is processed through the SPI like any externally managed task
+    // the user task of SilentUserTaskProcess has NO @WorkflowTask handler. The
+    // configuration marks it with implemented-externally. So the wiring validation lets it
+    // pass, and the task is processed through the SPI like any task managed outside.
     final var aggregateId = startSecondaryProcess("SilentUserTaskProcess", true, null);
 
     final var taskId = new java.util.concurrent.atomic.AtomicReference<String>();
@@ -805,15 +808,15 @@ public class Camunda7TaskProcessingIT {
             .count() > 0,
         "the instance to wait at the message catch event");
 
-    // V1 convention: the local variable '<bpmnProcessId>-<messageName>' at the
-    // subscription's execution holds the expected correlation id
+    // V1 convention: the local variable '<bpmnProcessId>-<messageName>' at the execution of
+    // the subscription holds the expected correlation id
     final var execution = runtimeService
         .createExecutionQuery()
         .messageEventSubscriptionName("PaymentReceived")
         .processInstanceBusinessKey(String.valueOf(aggregateId))
         .singleResult();
-    // NOTE: the variable-name convention uses the PRIMARY BPMN process id of the
-    // process service (V1 semantics) - here 'TaskProcess', not 'MessageProcess'
+    // NOTE: the convention for the variable name uses the PRIMARY BPMN process id of the
+    // process service (V1 semantics). Here that is 'TaskProcess', not 'MessageProcess'.
     transactionTemplate.executeWithoutResult(status -> runtimeService
         .setVariableLocal(
             execution.getId(),
@@ -821,9 +824,9 @@ public class Camunda7TaskProcessingIT {
                 .correlationIdVariableName("TaskProcess", "PaymentReceived"),
             "payment-42"));
 
-    // a mismatching correlation id does not correlate - and the adapter's phase one
-    // says so where the application called it, instead of
-    // letting the correlation fail behind the commit
+    // a correlation id which does not match does not correlate. And phase one of the
+    // adapter says so where the application called it, instead of letting the correlation
+    // fail behind the commit.
     final var mismatch = assertThrows(
         IllegalStateException.class,
         () -> transactionTemplate.executeWithoutResult(status -> {
@@ -874,7 +877,7 @@ public class Camunda7TaskProcessingIT {
             .count(),
         "and the instance still waits at the message catch event");
 
-    // retried correlation converges
+    // the retried correlation gets there
     transactionTemplate.executeWithoutResult(status -> {
       final var aggregate = repository.findById(aggregateId).orElseThrow();
       workflowService.correlate(aggregate, "PaymentReceived");
@@ -897,8 +900,9 @@ public class Camunda7TaskProcessingIT {
 
     awaitUntil(() -> processEnded(aggregateId), "TaskProcess to end");
 
-    // the start by message left the id of its instance behind, like every other start, and
-    // one row only: the message started the process of the workflow service which asked
+    // the start by message left the id of its instance behind, like every other start. And
+    // it left one row only, because the message started the process of the workflow service
+    // which asked.
     final var instance = processEngine
         .getHistoryService()
         .createHistoricProcessInstanceQuery()
@@ -924,9 +928,8 @@ public class Camunda7TaskProcessingIT {
   }
 
   /**
-   * This adapter reports the messages which start each process, so VanillaBP refuses a
-   * message of another process where the application asks for it, before anything is
-   * saved.
+   * This adapter reports the messages which start each process. So VanillaBP refuses a
+   * message of another process where the application asks for it, before anything is saved.
    */
   @Test
   @DisplayName("startWorkflowByMessage refuses a message which starts another process")
@@ -962,8 +965,8 @@ public class Camunda7TaskProcessingIT {
   }
 
   /**
-   * The correlation itself names the process definition, so a message of another process
-   * starts nothing even where VanillaBP did not check it before phase one. Both phases are
+   * The correlation itself names the process definition. So a message of another process
+   * starts nothing, even where VanillaBP did not check it before phase one. Both phases are
    * asked directly here, the way they would run for a process whose messages this adapter
    * could not report.
    */
@@ -1037,9 +1040,10 @@ public class Camunda7TaskProcessingIT {
   }
 
   /**
-   * Phase two of a start by message names the instance the message created, and a start which
-   * finds its workflow running already names nothing. What phase two reported is listened to
-   * directly, apart from any row the listener on the start event writes.
+   * Phase two of a start by message names the instance which the message created. A start
+   * which finds its workflow running already names nothing. The test listens directly to
+   * what phase two reported, apart from any row which the listener on the start event
+   * writes.
    */
   @Test
   @DisplayName("Phase two of a start by message reports the process instance the message created")
@@ -1073,7 +1077,8 @@ public class Camunda7TaskProcessingIT {
           .singleResult();
     });
 
-    // the version comes with the id, in the form a task of the same workflow reports it
+    // the version comes with the id, in the form in which a task of the same workflow
+    // reports it
     final var version = processEngine
         .getRepositoryService()
         .getProcessDefinition(instance.getProcessDefinitionId())
@@ -1113,9 +1118,9 @@ public class Camunda7TaskProcessingIT {
         "a0/3|b1/3|c2/3",
         repository.findById(aggregateId).orElseThrow().getResults());
 
-    // every element of the multi-instance activity is its OWN activation, which is what
-    // keeps the correlations of three siblings from sharing an idempotency key. Camunda
-    // 7 reports no delivery id at all and answers this question all the same
+    // every element of the multi-instance activity is its OWN activation. That keeps the
+    // correlations of three siblings from sharing an idempotency key. Camunda 7 reports no
+    // delivery id at all, and it answers this question all the same.
     final var activations = List.copyOf(TaskTestWorkflowService.ACTIVATIONS);
     assertEquals(3, activations.size(), "one activation per element: "
         + activations);
@@ -1138,7 +1143,7 @@ public class Camunda7TaskProcessingIT {
 
     final var configuration = (ProcessEngineConfigurationImpl) processEngine
         .getProcessEngineConfiguration();
-    // deployment-cache access needs an engine command context
+    // access to the deployment cache needs an engine command context
     final var processDefinition = configuration
         .getCommandExecutorTxRequired()
         .execute(commandContext -> configuration
@@ -1152,8 +1157,8 @@ public class Camunda7TaskProcessingIT {
   }
 
   /**
-   * Dispatches phase two of a task operation for a task which is not there any more -
-   * the stale outbox entry every adapter has to tolerate.
+   * Dispatches phase two of a task operation for a task which is not there any more. Every
+   * adapter has to tolerate such a stale outbox entry.
    */
   private static void goneTask(
       final io.vanillabp.integration.adapter.spi.MigratableProcessService<TaskTestAggregate> adapter,
@@ -1180,19 +1185,19 @@ public class Camunda7TaskProcessingIT {
   @DisplayName("A business rule task evaluates the module's decision table, and the result reaches the handler")
   public void aDecisionTableOfTheModuleIsDeployedAndEvaluated() throws Exception {
 
-    // the decision table sits next to the BPMN files of this module, so the boot
-    // deployed it with them - nothing here deploys anything
+    // the decision table sits next to the BPMN files of this module, so the boot deployed
+    // it with them. Nothing here deploys anything.
     final var approvedId = startBusinessRuleProcess(true);
     awaitUntil(() -> processEnded(approvedId), "the approved BusinessRuleProcess to end");
     assertEquals("rating=GOOD", repository.findById(approvedId).orElseThrow().getResults());
 
-    // the other rule of the same table, so it really is the decision deciding and not
-    // a constant somewhere
+    // the other rule of the same table. So it really is the decision which decides, and not
+    // a constant somewhere.
     final var deniedId = startBusinessRuleProcess(false);
     awaitUntil(() -> processEnded(deniedId), "the denied BusinessRuleProcess to end");
     assertEquals("rating=POOR", repository.findById(deniedId).orElseThrow().getResults());
 
-    // and the engine holds it as a decision definition of this module's tenant
+    // and the engine holds it as a decision definition of the tenant of this module
     final var decision = processEngine
         .getRepositoryService()
         .createDecisionDefinitionQuery()

@@ -19,13 +19,13 @@ import jakarta.transaction.UserTransaction;
 
 /**
  * A BPMN execution listener somebody modelled, served by a {@code @WorkflowTask} method on
- * Quarkus. The Spring Boot half of the feature had a test from the start; this is the half
- * which ran nowhere, so nothing said whether the adapter's EL resolver hands the engine a
- * listener on this platform at all.
+ * Quarkus. The Spring Boot half of the feature had a test from the start. This half ran
+ * nowhere. So nothing said whether the adapter's EL resolver hands the engine a listener on
+ * this platform at all.
  * <p>
- * Both forms are on one end event, because they take different routes through the resolver:
- * a {@code camunda:expression} is evaluated and the handler runs while it is, a
- * {@code camunda:delegateExpression} has to yield a listener object which the engine then
+ * Both forms are on one end event, because they take different routes through the
+ * resolver. A {@code camunda:expression} is evaluated, and the handler runs while it is. A
+ * {@code camunda:delegateExpression} has to give a listener object, which the engine then
  * notifies. Each sets a flag of its own, so a half-working resolver cannot look complete.
  * <p>
  * The feature is off until an application asks for it, which is the second test here: the
@@ -49,8 +49,8 @@ public class Camunda7ModelledListenerTest {
           .addAsResource("workflow-module-descriptor/workflow-module", "META-INF/workflow-module"));
 
   /**
-   * How long the workflow may take. Generous: what is asserted is never a moment, and a
-   * build machine running other builds is allowed to be slow.
+   * How long the workflow may take. It is generous, because no assertion is about a moment.
+   * And a build machine which runs other builds may be slow.
    */
   private static final long PATIENCE = 15000;
 
@@ -79,8 +79,8 @@ public class Camunda7ModelledListenerTest {
       throw e;
     }
 
-    // the workflow is created after the commit, so its end is the signal rather than the
-    // instance ever having existed
+    // the workflow is created after the commit. So its end is the signal, not the fact
+    // that the instance ever existed
     final var deadline = System.currentTimeMillis() + PATIENCE;
     var aggregate = reload(aggregateId);
     while (!aggregate.isTheEndWasDone()) {

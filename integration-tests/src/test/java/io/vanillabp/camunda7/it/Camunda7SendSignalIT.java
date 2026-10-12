@@ -26,15 +26,15 @@ import io.vanillabp.integration.test.utils.SuppressOutputExtension;
  * exactly what makes that guarantee possible.
  */
 @SpringBootTest(classes = TestApplication.class, properties = {
-    // own database: contexts are cached and live in parallel - a foreign engine
-    // (and job executor) on the same H2 database would compete for this test's jobs
+    // own database. Contexts are cached and live in parallel. A foreign engine and its job
+    // executor on the same H2 database would compete for the jobs of this test.
     "spring.datasource.url=jdbc:h2:mem:c7-signal-it;DB_CLOSE_DELAY=-1"
 })
 @ExtendWith(SuppressOutputExtension.class)
 @SuppressOutputExtension.SuppressBackgroundOutput
-// closed when the class is done: this IT has a database (and therefore a context) of its
-// own, Spring would keep every context until the JVM exits, and an engine outliving its
-// test keeps its job executor running against a database the next classes work on
+// closed when the class is done. This IT has a database of its own, and so a context of its
+// own. Spring would keep every context until the JVM exits. An engine which outlives its
+// test keeps its job executor running against a database which the next classes work on.
 @DirtiesContext
 public class Camunda7SendSignalIT {
 
@@ -97,10 +97,10 @@ public class Camunda7SendSignalIT {
     final var first = startAndAwaitWaiting();
     final var second = startAndAwaitWaiting();
 
-    // the application passes the PLAIN signal name - scoping is VanillaBP's business
+    // the application passes the PLAIN signal name. Scoping is the business of VanillaBP.
     transactionTemplate.executeWithoutResult(status -> workflowService.broadcast("OrderReceived"));
 
-    // a signal is a broadcast: BOTH workflows continue
+    // a signal is a broadcast, so BOTH workflows continue
     for (final var aggregateId : java.util.List.of(first, second)) {
       awaitUntil(
           () -> "recordSignal".equals(
@@ -127,8 +127,8 @@ public class Camunda7SendSignalIT {
         }));
     assertEquals("test rollback", exception.getMessage());
 
-    // the broadcast is scheduled in the outbox, which rolls back with the caller's
-    // transaction: the workflow still waits and its task never ran
+    // the broadcast is scheduled in the outbox, which rolls back with the transaction of
+    // the caller. So the workflow still waits, and its task never ran.
     Thread.sleep(1500);
     assertNull(
         repository

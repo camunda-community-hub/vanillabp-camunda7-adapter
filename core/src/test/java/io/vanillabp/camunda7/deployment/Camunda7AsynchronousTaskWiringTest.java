@@ -25,13 +25,13 @@ import io.vanillabp.integration.adapter.spi.workflowtask.WorkflowTaskWiring;
 import io.vanillabp.integration.test.utils.SuppressOutputExtension;
 
 /**
- * What a boot says about a task which has to stay open although the model completes it when
+ * What a boot says about a task which has to stay open, although the model completes it when
  * the expression returns.
  * <p>
  * The question behind every case is which key the adapter asks the core with. A method names
- * its task by the task definition or by the element id, the wiring validation matches on
- * either, and so this check has to ask both. A listener is the exception and has a case of its
- * own: it is served by its task definition alone.
+ * its task by the task definition or by the element id. The wiring validation matches on
+ * either, so this check has to ask both. A listener is the exception and has a case of its
+ * own. It is served by its task definition alone.
  */
 @ExtendWith(SuppressOutputExtension.class)
 public class Camunda7AsynchronousTaskWiringTest {
@@ -112,10 +112,9 @@ public class Camunda7AsynchronousTaskWiringTest {
   }
 
   /**
-   * The core of an application whose <code>@TaskId</code> method is wired by the given names -
-   * one of them where the method names its task definition, the other where it names the
-   * element. Everything else answers no, which is what a method without the parameter looks
-   * like.
+   * The core of an application whose <code>@TaskId</code> method is wired by the given names.
+   * One of them is used where the method names its task definition, the other where it names
+   * the element. Everything else answers no. That is how a method without the parameter looks.
    */
   private static WorkflowTaskWiring aCoreKeepingTasksOpenFor(
       final String... wiringNames) {
@@ -128,8 +127,8 @@ public class Camunda7AsynchronousTaskWiringTest {
   }
 
   /**
-   * The core of an application which has a method for the listener's task definition, which is
-   * what makes a modelled listener this adapter's business at all.
+   * The core of an application which has a method for the listener's task definition. Only
+   * such a method makes a modelled listener this adapter's business at all.
    */
   private static WorkflowTaskInvoker aCoreServingTheListener() {
 

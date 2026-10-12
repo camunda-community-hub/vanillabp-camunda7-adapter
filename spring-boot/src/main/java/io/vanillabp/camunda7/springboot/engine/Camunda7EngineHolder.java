@@ -24,33 +24,32 @@ import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 
 /**
- * Owns ONE embedded Camunda 7 engine per configured adapter id (engine name
- * <code>vanillabp-camunda7-&lt;id&gt;</code>) including its complete lifecycle:
+ * Owns ONE embedded Camunda 7 engine per configured adapter id, with its complete
+ * lifecycle. The engine is named <code>vanillabp-camunda7-&lt;id&gt;</code>.
  * <ul>
  *   <li><b>Datasource:</b> by default the engine shares the application's
- *       {@link DataSource} and {@link PlatformTransactionManager} - the whole point
- *       of the embedded adapter (engine state commits/rolls back with the business
- *       data). With <code>vanillabp.adapters.&lt;id&gt;.data-source-name</code>
- *       configured, the engine runs on the application-provided {@link DataSource}
- *       BEAN of that name instead (setting up datasources is deliberately NOT
- *       VanillaBP's concern - the adapter never builds its own pool; required for
- *       engine-side-by-side migrations, where two embedded engines must never share
- *       one schema). Engine commands on such a named datasource run on an
- *       adapter-internal {@link DataSourceTransactionManager} - they do not join
- *       the caller's transaction, see the two-phase notes on
+ *       {@link DataSource} and {@link PlatformTransactionManager}. That is the whole
+ *       point of the embedded adapter: engine state commits or rolls back together with
+ *       the business data. If <code>vanillabp.adapters.&lt;id&gt;.data-source-name</code>
+ *       is configured, the engine runs on the {@link DataSource} BEAN of that name
+ *       instead, which the application provides. Setting up datasources is NOT
+ *       VanillaBP's job, on purpose. The adapter never builds its own pool. A named
+ *       datasource is needed when two engines run side by side for a migration, because
+ *       two embedded engines must never share one schema. Engine commands on such a
+ *       named datasource run on a {@link DataSourceTransactionManager} of the adapter's
+ *       own. They do not join the caller's transaction. See the two-phase notes on
  *       {@code Camunda7ProcessService}.</li>
- *   <li><b>Job executor:</b> an idiomatic {@link SpringJobExecutor} backed by a
- *       dedicated {@link ThreadPoolTaskExecutor} (thread-name prefix contains the
- *       adapter id) instead of the engine-default {@code DefaultJobExecutor} with
- *       its raw unmanaged threads. Activation is DEFERRED: the engine is built with
- *       {@code jobExecutorActivate=false}; the deployment pipeline's
+ *   <li><b>Job executor:</b> the usual Spring way, a {@link SpringJobExecutor} on a
+ *       {@link ThreadPoolTaskExecutor} of its own. The thread names contain the adapter
+ *       id. The engine's default, the {@code DefaultJobExecutor}, would run raw,
+ *       unmanaged threads. Activation is DEFERRED. The engine is built with
+ *       {@code jobExecutorActivate=false}. The deployment pipeline's
  *       {@code startWorkflowProcessing} starts the executor once the first workflow
- *       module starts (reference-counted per module by the shared
- *       {@link Camunda7JobExecutorLifecycle}) - and it stops unconditionally on
- *       {@link #close()}, before the engine closes. Where
- *       <code>sleep-until-something-is-due</code> is configured it is a
- *       {@link Camunda7SleepingSpringJobExecutor} instead, whose acquisition waits for the
- *       next due date rather than polling.</li>
+ *       module starts. The shared {@link Camunda7JobExecutorLifecycle} counts the
+ *       modules. The executor always stops on {@link #close()}, before the engine
+ *       closes. Where <code>sleep-until-something-is-due</code> is configured, it is a
+ *       {@link Camunda7SleepingSpringJobExecutor} instead. Its acquisition waits for the
+ *       next due date and does not poll.</li>
  * </ul>
  */
 @Slf4j
@@ -61,8 +60,8 @@ public class Camunda7EngineHolder implements Camunda7WorkflowProcessingLifecycle
   private final String adapterId;
 
   /**
-   * The task connectables of this engine, registered by the deployment service
-   * during wireBpmn and looked up by the engine's EL resolver.
+   * The task connectables of this engine. The deployment service registers them during
+   * wireBpmn, and the engine's EL resolver looks them up.
    */
   @Getter
   private final Camunda7TaskRegistry taskRegistry = new Camunda7TaskRegistry();
@@ -76,10 +75,10 @@ public class Camunda7EngineHolder implements Camunda7WorkflowProcessingLifecycle
   private final PlatformTransactionManager applicationTransactionManager;
 
   /**
-   * Required by {@code SpringProcessEngineConfiguration} (Spring-bean resolution in
-   * scripting/expressions) and for resolving a named datasource bean - injected via
-   * {@link ApplicationContextAware}; the engine is built in
-   * {@link #afterPropertiesSet()} once the context is available.
+   * {@code SpringProcessEngineConfiguration} needs it to resolve Spring beans in scripts
+   * and expressions. A named datasource bean is resolved through it, too. It is injected
+   * through {@link ApplicationContextAware}. The engine is built in
+   * {@link #afterPropertiesSet()}, once the context is available.
    */
   private ApplicationContext applicationContext;
 
@@ -88,8 +87,8 @@ public class Camunda7EngineHolder implements Camunda7WorkflowProcessingLifecycle
   private SpringJobExecutor jobExecutor;
 
   /**
-   * The reference-counted executor lifecycle shared with the Quarkus module (the
-   * executor is engine-global while start/stop is notified per workflow module).
+   * The executor lifecycle which counts references, shared with the Quarkus module. The
+   * executor belongs to the whole engine, while start and stop arrive per workflow module.
    */
   private Camunda7JobExecutorLifecycle jobExecutorLifecycle;
 
@@ -98,24 +97,24 @@ public class Camunda7EngineHolder implements Camunda7WorkflowProcessingLifecycle
   private volatile boolean closed = false;
 
   /**
-   * The core's entry point for workflows the engine starts on its own (timer, signal
-   * or conditional start events). May be <code>null</code> - the engine then attaches
-   * no start listener, and such processes never obtain a workflow aggregate.
+   * The core's entry point for workflows the engine starts on its own (timer, signal or
+   * conditional start events). May be <code>null</code>. Then the engine attaches no start
+   * listener, and such processes never get a workflow aggregate.
    */
   private io.vanillabp.integration.adapter.spi.workflowstart.BpmsInitiatedStartInvoker bpmsInitiatedStartInvoker;
 
   /**
-   * The core's entry point for workflows which ended. May be
-   * <code>null</code> - the engine then attaches no end listener.
+   * The core's entry point for workflows which ended. May be <code>null</code>. Then the
+   * engine attaches no end listener.
    */
   private final io.vanillabp.integration.adapter.spi.workflowend.WorkflowEndedInvoker workflowEndedInvoker;
 
   /**
-   * There is deliberately only ONE constructor, and it takes every invoker the core
-   * offers - the same rule as on Quarkus. A convenience constructor (or a setter
-   * called later) leaves an invoker at <code>null</code>, which switches a feature
-   * off silently: the engine attaches no end listener, the application boots without
-   * a warning and a <code>&#64;WorkflowEnded</code> method is never called.
+   * There is only ONE constructor, on purpose, and it takes every invoker the core offers.
+   * The same rule holds on Quarkus. A convenience constructor, or a setter called later,
+   * leaves an invoker at <code>null</code>. That switches a feature off without a word. The
+   * engine attaches no end listener, the application boots without a warning, and a
+   * <code>&#64;WorkflowEnded</code> method is never called.
    * <p>
    * The engine itself is built in {@link #afterPropertiesSet()}.
    *
@@ -154,8 +153,8 @@ public class Camunda7EngineHolder implements Camunda7WorkflowProcessingLifecycle
   }
 
   /**
-   * Builds the listener attached to every start event of a process - <code>null</code>
-   * where the core's entry point was not handed over (tests).
+   * Builds the listener attached to every start event of a process. It is
+   * <code>null</code> where the core's entry point was not handed over (tests).
    *
    * @return The factory or <code>null</code>
    */
@@ -170,10 +169,10 @@ public class Camunda7EngineHolder implements Camunda7WorkflowProcessingLifecycle
   }
 
   /**
-   * Whether this engine reports the end of a workflow, which it does when the core
-   * handed over its invoker. False means every <code>&#64;WorkflowEnded</code> method
-   * of a process deployed here stays silent - the deployment service says so instead
-   * of leaving the application waiting.
+   * Whether this engine reports the end of a workflow. It does when the core handed over
+   * its invoker. False means that every <code>&#64;WorkflowEnded</code> method of a process
+   * deployed here stays silent. The deployment service says so, so the application is
+   * not left waiting.
    *
    * @return Whether the end listener was attached
    */
@@ -222,9 +221,9 @@ public class Camunda7EngineHolder implements Camunda7WorkflowProcessingLifecycle
     final PlatformTransactionManager transactionManager;
     if (properties.usesSeparateDataSource()) {
       dataSource = resolveNamedDataSource();
-      // engine commands on the named datasource run on an adapter-internal
-      // transaction manager - they cannot join the caller's transaction (which is
-      // why such adapter ids start workflows two-phase)
+      // engine commands on the named datasource run on a transaction manager of the
+      // adapter's own. They cannot join the caller's transaction. That is why such
+      // adapter ids start workflows in two phases
       transactionManager = new DataSourceTransactionManager(dataSource);
       log.info(
           "Camunda7[{}]: using the application-provided datasource bean '{}' - the engine does not "
@@ -236,14 +235,13 @@ public class Camunda7EngineHolder implements Camunda7WorkflowProcessingLifecycle
       transactionManager = applicationTransactionManager;
     }
 
-    // An adapter id running on a table prefix needs its tables to exist -
-    // Camunda's schema management ignores the prefix and would create a set of
-    // unprefixed ACT_* tables here. Asked BEFORE the engine is built, so those tables
-    // are never written
+    // an adapter id which runs on a table prefix needs its tables to exist. Camunda's
+    // schema management ignores the prefix and would create a set of unprefixed ACT_*
+    // tables here. We ask BEFORE the engine is built, so those tables are never written
     io.vanillabp.camunda7.engine.Camunda7TablePrefixSchema.validate(adapterId, properties, dataSource);
 
-    // idiomatic job executor: SpringJobExecutor on a managed thread pool instead of
-    // the engine-default DefaultJobExecutor (raw threads, activated at engine build)
+    // the usual Spring job executor: SpringJobExecutor on a managed thread pool. The
+    // engine's default DefaultJobExecutor runs raw threads and starts with the engine
     this.taskExecutor = new ThreadPoolTaskExecutor();
     this.taskExecutor.setThreadNamePrefix("vanillabp-camunda7-%s-jobs-".formatted(adapterId));
     this.taskExecutor.setCorePoolSize(3);
@@ -251,7 +249,7 @@ public class Camunda7EngineHolder implements Camunda7WorkflowProcessingLifecycle
     this.taskExecutor.setQueueCapacity(10);
     this.taskExecutor.initialize();
     // an adapter id which may let its engine sleep needs the acquisition loop which asks
-    // for the next due date, and that loop is installed by the executor itself
+    // for the next due date. The executor itself installs that loop
     this.jobExecutor = properties.sleepsUntilSomethingIsDue()
         ? new Camunda7SleepingSpringJobExecutor(adapterId)
         : new SpringJobExecutor();
@@ -260,8 +258,9 @@ public class Camunda7EngineHolder implements Camunda7WorkflowProcessingLifecycle
     final var configuration = new SpringProcessEngineConfiguration();
     configuration.setApplicationContext(applicationContext);
     // VanillaBP task wiring: top-level EL names resolve @WorkflowTask methods and
-    // workflow-aggregate attributes (Spring beans stay resolvable); the parse
-    // listener aligns transaction boundaries with remote BPMS (async before/after)
+    // workflow-aggregate attributes, and Spring beans stay resolvable. The parse
+    // listener sets transaction boundaries like a remote BPMS has them (async
+    // before/after)
     configuration.setExpressionManager(new Camunda7SpringExpressionManager(
         applicationContext, taskRegistry, workflowTaskInvoker));
     final var parseListener = new io.vanillabp.camunda7.wiring.Camunda7AsyncBpmnParseListener(
@@ -281,32 +280,33 @@ public class Camunda7EngineHolder implements Camunda7WorkflowProcessingLifecycle
     configuration.setTransactionManager(transactionManager);
     configuration.setDatabaseSchemaUpdate(properties.getDatabaseSchemaUpdate());
     configuration.setJobExecutor(this.jobExecutor);
-    // activation is deferred to startWorkflowProcessing (see class comment)
+    // activation waits for startWorkflowProcessing (see class comment)
     configuration.setJobExecutorActivate(false);
     // Camunda 7.24 rejects deployments of processes without a history-time-to-live.
-    // Provide an engine-wide default so BPMN models need not declare it individually
-    // (a process may still override it via camunda:historyTimeToLive).
+    // A default for the whole engine means that BPMN models need not declare it one by
+    // one. A process may still override it through camunda:historyTimeToLive.
     configuration.setHistoryTimeToLive(properties.getHistoryTimeToLive());
-    // Nested values shared by a workflow aggregate become object variables, and
-    // the format they are stored in is the application's choice - configured once at the
+    // nested values shared by a workflow aggregate become object variables. The
+    // application chooses the format they are stored in. It is configured once at the
     // adapter and applied to the engine here, so nobody has to touch the engine
     // configuration for it. A workflow or a workflow module may override the format for
     // the variables VanillaBP writes itself
     if ((properties.getSerializationFormat() != null) && !properties.getSerializationFormat().isBlank()) {
       configuration.setDefaultSerializationFormat(properties.getSerializationFormat());
     }
-    // an own table prefix makes two adapter ids distinct engines on ONE datasource
-    // (the side-by-side migration setup on a single database). The tables
-    // of the prefix exist - Camunda7TablePrefixSchema asked about that above
+    // a table prefix of its own makes two adapter ids distinct engines on ONE
+    // datasource. That is the side-by-side migration setup on a single database. The
+    // tables of the prefix exist, because Camunda7TablePrefixSchema checked that above
     if ((properties.getTablePrefix() != null) && !properties.getTablePrefix().isBlank()) {
       configuration.setDatabaseTablePrefix(properties.getTablePrefix());
     }
 
-    // The engine plugins - the way a serialization dataformat (camunda-xstream,
-    // SPIN) reaches an embedded engine. Two ways in: configured per adapter id
-    // ('vanillabp.adapters.<id>.engine-plugins', properties applied by Camunda itself), or
-    // contributed as a bean, which suits a plugin configuring itself from the
-    // application's properties and applies to every engine this adapter builds
+    // the engine plugins. This is how a serialization dataformat (camunda-xstream, SPIN)
+    // reaches an embedded engine. There are two ways in. One is the configuration per
+    // adapter id ('vanillabp.adapters.<id>.engine-plugins'), whose properties Camunda
+    // applies itself. The other is a bean. That suits a plugin which configures itself
+    // from the application's properties, and it applies to every engine this adapter
+    // builds
     final var plugins = new java.util.LinkedList<org.camunda.bpm.engine.impl.cfg.ProcessEnginePlugin>(
         io.vanillabp.camunda7.engine.Camunda7EnginePlugins
             .of(adapterId, properties.getEnginePlugins()));
@@ -330,9 +330,9 @@ public class Camunda7EngineHolder implements Camunda7WorkflowProcessingLifecycle
               .toList());
     }
 
-    // What an idle engine is allowed to stop doing: waiting for the next due date instead
-    // of polling, waking on a commit, and leaving the metrics reporter's timer alone.
-    // Applied for every adapter id, because the metrics reporter is a setting of its own
+    // what an idle engine may stop doing: it waits for the next due date and does not
+    // poll, it wakes on a commit, and it leaves the metrics reporter's timer alone. This
+    // is applied for every adapter id, because the metrics reporter is a setting of its own
     io.vanillabp.camunda7.engine.Camunda7JobExecutorSleep.applyTo(adapterId, configuration, properties);
 
     // what an extension contributes to THIS engine: parse listeners before or after
@@ -352,11 +352,10 @@ public class Camunda7EngineHolder implements Camunda7WorkflowProcessingLifecycle
   }
 
   /**
-   * Resolves the application-provided {@link DataSource} bean referenced by
-   * <code>data-source-name</code> - with a GUIDING failure listing the available
-   * datasource beans (setting up datasources is the application's concern, so a
-   * missing bean is a configuration defect the developer has to learn about with
-   * the remedy named).
+   * Resolves the {@link DataSource} bean which <code>data-source-name</code> names. If it
+   * is missing, it fails with a GUIDING message which lists the datasource beans there
+   * are. Setting up datasources is the application's job. So a missing bean is a
+   * configuration defect, and the developer has to learn about it with the remedy named.
    */
   private DataSource resolveNamedDataSource() {
 
@@ -449,8 +448,8 @@ public class Camunda7EngineHolder implements Camunda7WorkflowProcessingLifecycle
 
   /**
    * Whether this engine has a datasource of its own. On the application's default
-   * datasource an engine command joins the caller's transaction, which is the guarantee an
-   * embedded engine is chosen for; on a named one it cannot.
+   * datasource an engine command joins the caller's transaction. That guarantee is why
+   * people choose an embedded engine. On a named datasource it cannot join.
    *
    * @return Whether this adapter id's engine runs on a named datasource (see class
    *         comment)
@@ -489,9 +488,9 @@ public class Camunda7EngineHolder implements Camunda7WorkflowProcessingLifecycle
   }
 
   /**
-   * Shutdown ordering: job executor stop &rarr; engine close &rarr; thread pool
-   * shutdown (the datasource itself is application-provided and NOT closed by the
-   * adapter). Safe to call more than once.
+   * Shutdown order: job executor stop &rarr; engine close &rarr; thread pool shutdown.
+   * The application provides the datasource, so the adapter does NOT close it. Safe to
+   * call more than once.
    */
   @Override
   public synchronized void close() {

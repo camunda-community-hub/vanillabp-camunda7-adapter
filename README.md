@@ -687,7 +687,7 @@ away from the `@WorkflowTask` method, and the method never runs. Putting Vanilla
 way out. A task wired by its element id answers every name evaluated at its element, so an input
 mapping `${amount}` there would run the handler instead of reading the variable.
 
-The start ends instead (`Camunda7NamesHidingATask`, see `DECISIONS.pending/966.md`). It checks the
+The start ends instead (`Camunda7NamesHidingATask`, see decision 46 in `DECISIONS.md`). It checks the
 task definitions of every task and listener which the engine reaches through an expression, user
 tasks excluded. A task definition fails the start if a Spring bean has its name, or if the
 workflow aggregate shares an attribute of its name with the engine. Which attributes are shared

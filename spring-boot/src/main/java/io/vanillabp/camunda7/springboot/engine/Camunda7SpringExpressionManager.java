@@ -24,7 +24,7 @@ public class Camunda7SpringExpressionManager extends SpringExpressionManager {
   /**
    * Adds this adapter's resolver behind the one which resolves Spring beans. So a bean
    * answers a name before a task does, and the start refuses a task definition which a
-   * bean would hide (see {@code DECISIONS.pending/966.md} in the repository).
+   * bean would hide (see decision 46 in the repository's {@code DECISIONS.md}).
    *
    * @param applicationContext The application's context, which is where every name this
    *          adapter does not claim is resolved

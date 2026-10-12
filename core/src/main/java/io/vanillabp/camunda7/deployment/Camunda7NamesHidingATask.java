@@ -21,7 +21,7 @@ import io.vanillabp.camunda7.wiring.Camunda7TaskConnectable;
  * Putting the resolver first is no way out. A task wired by its element id answers every
  * name which is evaluated at its element. An input mapping <code>${amount}</code> there would
  * then run the handler instead of reading the variable. So the start is refused instead, see
- * {@code DECISIONS.pending/966.md} in the repository.
+ * decision 46 in the repository's {@code DECISIONS.md}.
  * <p>
  * What the start cannot see is a process variable which the application sets by hand while a
  * workflow runs. Only the names known at the start are checked: the beans, and the

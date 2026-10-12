@@ -19,8 +19,8 @@ import io.vanillabp.integration.adapter.spi.workflowtask.WorkflowTaskOutcome;
  * {@link Camunda7WorkflowTaskBehavior}, so a <code>&#64;TaskId</code> task can stay open.
  * The engine asks this resolver LAST. A process variable, and on Spring Boot a bean, has
  * answered a name before this resolver sees it. That is why the start refuses a task
- * definition which a bean or a shared attribute would hide (see {@code DECISIONS.pending/966.md}
- * in the repository). Every name this resolver does not claim stays unresolved.
+ * definition which a bean or a shared attribute would hide (see decision 46 in the repository's
+ * {@code DECISIONS.md}). Every name this resolver does not claim stays unresolved.
  * <p>
  * <b>Attributes of the workflow aggregate are a MIGRATION FALLBACK here</b>, and it will be
  * removed. Reading the aggregate live made a model which reads <code>${riskAcceptable}</code>

@@ -20,7 +20,7 @@ public class Camunda7TaskExpressionManager extends JuelExpressionManager {
 
   /**
    * Adds this adapter's resolver behind the engine's own ones. So a process variable answers
-   * a name before a task does (see {@code DECISIONS.pending/966.md} in the repository). It is for a
+   * a name before a task does (see decision 46 in the repository's {@code DECISIONS.md}). It is for a
    * platform which has no bean-aware expression manager to extend instead.
    *
    * @param taskRegistry What the resolver built here looks a task up in

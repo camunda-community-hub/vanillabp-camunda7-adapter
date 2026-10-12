@@ -866,7 +866,7 @@ public class Camunda7DeploymentService implements AdapterDeploymentService<BpmnM
     // A bean or a shared attribute which has the name of a task definition answers the
     // expression before this adapter is asked. The method would never run, and the
     // workflow would not say why. So the start ends here, before any workflow can run
-    // into it (see DECISIONS.pending/966.md in the repository)
+    // into it (see decision 46 in the repository's DECISIONS.md)
     refuseNamesWhichHideATask(workflowModuleId, bpmnProcessId, connectables);
 
     // A handler reads the item of an iteration out of the variable the model names in

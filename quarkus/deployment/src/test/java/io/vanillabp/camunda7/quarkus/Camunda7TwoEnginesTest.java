@@ -1,6 +1,7 @@
 package io.vanillabp.camunda7.quarkus;
 
 import java.util.List;
+import java.util.Optional;
 
 import org.jboss.shrinkwrap.api.ShrinkWrap;
 import org.jboss.shrinkwrap.api.spec.JavaArchive;
@@ -10,10 +11,12 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import io.quarkus.test.QuarkusExtensionTest;
+import io.vanillabp.camunda7.engine.Camunda7InstanceIdentity;
 import io.vanillabp.camunda7.quarkus.runtime.Camunda7QuarkusEngineRegistry;
 import io.vanillabp.camunda7.quarkus.sample.TestAggregate;
 import io.vanillabp.camunda7.quarkus.sample.TestAggregatePersistence;
 import io.vanillabp.camunda7.quarkus.sample.TestWorkflowService;
+import io.vanillabp.integration.adapter.spi.AdapterDeploymentService;
 import io.vanillabp.integration.adapter.spi.MigratableProcessService;
 import io.vanillabp.integration.test.utils.SuppressOutputExtension;
 import jakarta.inject.Inject;
@@ -64,6 +67,9 @@ public class Camunda7TwoEnginesTest {
   List<MigratableProcessService<Object>> migratableProcessServices;
 
   @Inject
+  List<AdapterDeploymentService<Object, Object>> deploymentServices;
+
+  @Inject
   EntityManager entityManager;
 
   @Inject
@@ -92,6 +98,30 @@ public class Camunda7TwoEnginesTest {
               .count(),
           "process definition deployed to engine '%s'".formatted(engine.getAdapterId()));
     }
+
+  }
+
+  @Test
+  public void theTablesComparedAcrossAdapterTypesComeFromTheConfiguration() {
+
+    // 'c7' names the reserved datasource 'default', which is the same tables as naming none
+    Assertions.assertEquals(
+        Optional.of(new Camunda7InstanceIdentity(null, null).addressedSystem()),
+        deploymentServiceOf("c7").getAddressedSystem());
+    Assertions.assertEquals(
+        Optional.of(new Camunda7InstanceIdentity("c7b", null).addressedSystem()),
+        deploymentServiceOf("c7b").getAddressedSystem());
+
+  }
+
+  private AdapterDeploymentService<Object, Object> deploymentServiceOf(
+      final String adapterId) {
+
+    return deploymentServices
+        .stream()
+        .filter(service -> adapterId.equals(service.getAdapterId()))
+        .findFirst()
+        .orElseThrow();
 
   }
 

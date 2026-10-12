@@ -13,20 +13,20 @@ It does so on top of the Camunda 7 engine (`org.camunda.bpm:camunda-engine`, whi
 `org.camunda.bpm.model:camunda-bpmn-model`). Everything specific to the BPMS (the process engine)
 belongs here. The `spring-boot` module only creates these objects and registers them.
 
-|                                 Type                                 |                                                                 Role                                                                  |
-|----------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------|
-| `Camunda7ProcessingContext`                                          | The `PC` object the deployment pipeline passes along and fills: workflow module id, the resources to deploy and the tasks to wire.    |
-| `Camunda7DeploymentService`                                          | `AdapterDeploymentService<BpmnModelInstance, Camunda7ProcessingContext>`, one per configured adapter id.                              |
-| `Camunda7ProcessService<A>`                                          | `MigratableProcessService<A>`. The runtime of one adapter id, which the core migration adapter hands its calls to.                    |
-| `Camunda7WorkflowViewer`                                             | The viewer and history API on top of `RepositoryService`/`HistoryService` (definitions, BPMN XML, element history).                   |
-| `Camunda7TaskRegistry` + `Camunda7TaskConnectable`                   | What the deployment wiring collected: which `@WorkflowTask` serves which BPMN element.                                                |
-| `Camunda7WorkflowTaskBehavior`                                       | Runs a task through the core's `WorkflowTaskInvoker` and turns the outcome into an action (leave activity / stay open / `BpmnError`). |
-| `Camunda7TaskELResolver` + `Camunda7TaskExpressionManager`           | Let BPMN expressions read the LIVE workflow aggregate, and dispatch `camunda:expression` tasks.                                       |
-| `Camunda7AsyncBpmnParseListener`                                     | Sets `asyncBefore`/`asyncAfter` on service-like tasks, so every task runs in its own transaction.                                     |
-| `Camunda7TaskCancellationListener` + `Camunda7UserTaskEventListener` | Deliver `@TaskEvent` CREATED/CANCELED for service tasks and user tasks.                                                               |
-| `Camunda7JobExecutorLifecycle`                                       | Starts the job executor, which the whole engine shares, with the first workflow module and stops it with the last one.                |
-| `Camunda7InstanceIdentity`                                           | Decides whether two adapter ids of this type can be told apart (by datasource or by `table-prefix`).                                  |
-| `Camunda7TablePrefixSchema`                                          | The startup check for an id which runs on a `table-prefix`. Camunda creates no prefixed tables, so they have to exist already.        |
+|                                 Type                                 |                                                                            Role                                                                             |
+|----------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `Camunda7ProcessingContext`                                          | The `PC` object the deployment pipeline passes along and fills: workflow module id, the resources to deploy and the tasks to wire.                          |
+| `Camunda7DeploymentService`                                          | `AdapterDeploymentService<BpmnModelInstance, Camunda7ProcessingContext>`, one per configured adapter id.                                                    |
+| `Camunda7ProcessService<A>`                                          | `MigratableProcessService<A>`. The runtime of one adapter id, which the core migration adapter hands its calls to.                                          |
+| `Camunda7WorkflowViewer`                                             | The viewer and history API on top of `RepositoryService`/`HistoryService` (definitions, BPMN XML, element history).                                         |
+| `Camunda7TaskRegistry` + `Camunda7TaskConnectable`                   | What the deployment wiring collected: which `@WorkflowTask` serves which BPMN element.                                                                      |
+| `Camunda7WorkflowTaskBehavior`                                       | Runs a task through the core's `WorkflowTaskInvoker` and turns the outcome into an action (leave activity / stay open / `BpmnError`).                       |
+| `Camunda7TaskELResolver` + `Camunda7TaskExpressionManager`           | Let BPMN expressions read the LIVE workflow aggregate, and dispatch `camunda:expression` tasks.                                                             |
+| `Camunda7AsyncBpmnParseListener`                                     | Sets `asyncBefore`/`asyncAfter` on service-like tasks, so every task runs in its own transaction.                                                           |
+| `Camunda7TaskCancellationListener` + `Camunda7UserTaskEventListener` | Deliver `@TaskEvent` CREATED/CANCELED for service tasks and user tasks.                                                                                     |
+| `Camunda7JobExecutorLifecycle`                                       | Starts the job executor, which the whole engine shares, with the first workflow module and stops it with the last one.                                      |
+| `Camunda7InstanceIdentity`                                           | Decides whether two adapter ids of this type can be told apart (by datasource or by `table-prefix`), and builds the key the platform compares across types. |
+| `Camunda7TablePrefixSchema`                                          | The startup check for an id which runs on a `table-prefix`. Camunda creates no prefixed tables, so they have to exist already.                              |
 
 ## Adapter type vs. id
 

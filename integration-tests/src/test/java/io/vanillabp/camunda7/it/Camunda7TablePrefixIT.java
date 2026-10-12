@@ -6,6 +6,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.sql.DriverManager;
 import java.sql.SQLException;
+import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -19,8 +22,10 @@ import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.transaction.support.TransactionTemplate;
 
+import io.vanillabp.camunda7.engine.Camunda7InstanceIdentity;
 import io.vanillabp.camunda7.processservice.Camunda7ProcessService;
 import io.vanillabp.camunda7.springboot.engine.Camunda7EngineHolder;
+import io.vanillabp.integration.adapter.spi.AdapterDeploymentService;
 import io.vanillabp.integration.test.utils.SuppressOutputExtension;
 import io.vanillabp.spi.process.ProcessService;
 
@@ -90,6 +95,9 @@ public class Camunda7TablePrefixIT {
   private Camunda7ProcessService prefixedProcessService;
 
   @Autowired
+  private List<AdapterDeploymentService<?, ?>> deploymentServices;
+
+  @Autowired
   private AggregateRepository aggregateRepository;
 
   @Autowired
@@ -140,6 +148,22 @@ public class Camunda7TablePrefixIT {
     assertTrue(countIn("ACT_RE_PROCDEF") > 0, "the unprefixed engine writes ACT_*");
     assertTrue(countIn(PREFIX
         + "ACT_RE_PROCDEF") > 0, "the prefixed engine writes NEW_ACT_*");
+
+  }
+
+  @Test
+  @DisplayName("The tables the platform compares across adapter types carry the prefix")
+  public void theAddressedSystemCarriesThePrefix() {
+
+    final var tablesByAdapterId = deploymentServices
+        .stream()
+        .collect(
+            Collectors.toMap(AdapterDeploymentService::getAdapterId, AdapterDeploymentService::getAddressedSystem));
+
+    assertEquals(Optional.of(new Camunda7InstanceIdentity(null, null).addressedSystem()), tablesByAdapterId.get("c7"));
+    assertEquals(
+        Optional.of(new Camunda7InstanceIdentity(null, PREFIX).addressedSystem()),
+        tablesByAdapterId.get("c7p"));
 
   }
 

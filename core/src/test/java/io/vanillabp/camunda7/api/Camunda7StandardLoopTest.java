@@ -22,8 +22,8 @@ import io.vanillabp.integration.test.utils.SuppressOutputExtension;
  * in no class. And <code>BpmnParse</code> reads <code>multiInstanceLoopCharacteristics</code>
  * alone. The run below shows the same from the outside. The loop condition is
  * <code>${true}</code> and the loop maximum is 3. Still the model deploys, the activity runs
- * exactly ONCE and the workflow ends. The engine writes not one line above DEBUG about any of
- * it.
+ * exactly ONCE and the workflow ends. The engine writes not one line at WARN or above about any
+ * of it.
  * <p>
  * So both Camunda engines silently ignore the marker. This was measured on 7.24 here, and on
  * 8.8.39, 8.9.21 and 8.10.0-rc1 in the Camunda 8 adapter. A model which counts on it does its

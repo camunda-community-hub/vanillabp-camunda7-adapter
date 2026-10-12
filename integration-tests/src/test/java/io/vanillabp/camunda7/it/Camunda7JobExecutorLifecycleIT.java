@@ -98,7 +98,7 @@ public class Camunda7JobExecutorLifecycleIT {
     final var businessKey = String.valueOf(aggregateId);
 
     // ...and stays pending while the executor is stopped (completing would end the
-    // instance - the trivial ${true} service task is the only wait state)
+    // instance - the ${testTask} service task is the only wait state)
     Thread.sleep(UNTIL_A_RUNNING_EXECUTOR_WOULD_HAVE_TAKEN_THE_JOB);
     assertEquals(
         1,

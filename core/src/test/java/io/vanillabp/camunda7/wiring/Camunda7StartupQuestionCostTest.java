@@ -120,7 +120,7 @@ public class Camunda7StartupQuestionCostTest {
         .thenReturn(definitions);
     // the engine answers with the version it was asked for, whether or not the list above
     // held it. A version deployed by another node after the list was read is exactly the
-    // case the second test is about
+    // case the test aVersionDeployedLaterIsLookedUpOnce is about
     final var askedFor = new int[]{
         1
     };

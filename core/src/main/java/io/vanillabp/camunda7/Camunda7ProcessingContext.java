@@ -199,8 +199,9 @@ public class Camunda7ProcessingContext {
 
   /**
    * Whether there is anything to deploy. A module which brings no executable process is
-   * legitimate. It may carry nothing but decision tables. The deployment is then skipped,
-   * not refused.
+   * legitimate, and the deployment is then skipped, not refused. The core does not even
+   * create a context for such a module, and its decision tables are not deployed. The core
+   * warns about that while the application starts.
    *
    * @return Whether no BPMN models were accumulated (e.g. a workflow module without any
    *         executable BPMN process).

@@ -24,9 +24,10 @@ import io.vanillabp.integration.test.utils.PrintsWhenPassing;
  * reports over many modules. So the gate reads exactly the report which is published, and
  * report and gate can never disagree.
  * <p>
- * The completeness test comes first for a reason. A threshold checked against an
+ * The completeness test is written first for a reason. A threshold checked against an
  * incomplete aggregate fails builds for coverage which exists but is not counted. Nobody
- * can fix that by writing a test.
+ * can fix that by writing a test. JUnit does not promise to run it first, because the class
+ * sets no method order. It fails on its own, so its message is in the report either way.
  * <p>
  * This is the one test class in VanillaBP which prints while it passes. So it is the one
  * without {@code SuppressOutputExtension}. Everywhere else a passing test says nothing,

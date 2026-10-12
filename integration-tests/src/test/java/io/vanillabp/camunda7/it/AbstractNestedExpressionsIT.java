@@ -408,7 +408,7 @@ public abstract class AbstractNestedExpressionsIT {
   // ------------------------------------------------------------------ the other placements
 
   @Test
-  @DisplayName("What a conditional event, a timer and a multi-workflow element do with the same answers")
+  @DisplayName("What a conditional event, a timer and a multi-instance element do with the same answers")
   void whatTheOtherPlacementsDoWithTheSameAnswers(
       final CapturedOutput output) {
 

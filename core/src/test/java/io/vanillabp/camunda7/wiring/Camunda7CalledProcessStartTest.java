@@ -110,8 +110,9 @@ public class Camunda7CalledProcessStartTest {
   }
 
   /**
-   * The listener under a core which answers every start with the workflow aggregate the
-   * BPMS named.
+   * The listener of these tests. It reports to the given core, as the listener of a none
+   * start event, and every process counts as served by this application. What the core
+   * answers is set by {@link #aCoreAnswering(String)}.
    */
   private Camunda7BpmsInitiatedStartListener aListenerOn(
       final Camunda7TaskRegistry registry,

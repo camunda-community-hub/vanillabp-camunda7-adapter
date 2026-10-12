@@ -34,8 +34,8 @@ import io.vanillabp.integration.test.utils.SuppressOutputExtension;
 
 /**
  * What a boot says about the execution listeners somebody modelled: a refusal where nobody
- * asked for them, one framed report where somebody did, and a warning for the forms the
- * engine serves itself.
+ * asked for them, and one framed report where somebody did. The forms the engine serves
+ * itself (a class listener, a listener no method names) are left alone without a word.
  */
 @ExtendWith(SuppressOutputExtension.class)
 @SuppressOutputExtension.SuppressBackgroundOutput
@@ -133,8 +133,9 @@ public class Camunda7ListenersReportTest {
   }
 
   /**
-   * The core of an application which has a <code>@WorkflowTask</code> method for every task
-   * definition a model names, which is what decides whether a listener is served at all.
+   * The core's wiring of an application which claims every process and names the
+   * aggregate id <code>id</code>. Which methods exist is not decided here but by
+   * {@link #aCoreWithMethodsFor(String...)}.
    */
   private static WorkflowTaskWiring aCoreServingEverything() {
 

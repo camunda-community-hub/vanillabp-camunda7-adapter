@@ -25,8 +25,8 @@ import org.camunda.bpm.model.xml.instance.ModelElementInstance;
  * A {@code camunda:class} and a {@code camunda:script} listener are NOT among them. And
  * {@code allow-listeners} is not the way out for either. There is no expression which names a
  * task definition, so no method can be matched. The engine runs such a listener itself. So
- * nothing stalls and nothing is silent - which is why they cost a line of the startup report
- * rather than the boot.
+ * nothing stalls. They are not reported either: decision 20 in the repository's DECISIONS.md
+ * says that such a listener is none of VanillaBP's business.
  * <p>
  * A {@code camunda:taskListener} is not read at all. VanillaBP itself tells the
  * {@code @WorkflowTask} method of a user task about creation and cancellation. It does that
@@ -217,9 +217,8 @@ public final class Camunda7Listeners {
    * startup report. It is kept here because the same sentences belong into the refusal which a
    * boot WITHOUT the property writes. A reader must meet them unchanged in both places.
    * <p>
-   * Word for word what the Camunda 8 adapter says, because the sentences are about VanillaBP
-   * rather than about an engine, and a developer moving a module between the two must not have
-   * to work out whether two wordings mean the same thing.
+   * The Camunda 8 adapter has a text of the same name. The two are not word for word the same,
+   * so a developer who moves a module between the two adapters reads both.
    */
   public static final String WHAT_IT_COSTS = """
       A listener is where a BPMS lets an application in at a moment the BPMS owns, and every \
@@ -303,7 +302,7 @@ public final class Camunda7Listeners {
 
   /**
    * Every execution listener of one process, in document order - the servable ones and the
-   * others alike, because a report has to name both.
+   * others alike. The deployment keeps only the servable ones. Nothing reports the others.
    * <p>
    * It is read off the BPMN and not off a list of element types. So a listener is found
    * wherever a modeller put one. A listener of VanillaBP or of one of its extensions is not

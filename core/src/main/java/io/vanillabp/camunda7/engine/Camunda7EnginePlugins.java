@@ -53,7 +53,8 @@ public final class Camunda7EnginePlugins {
    * Instantiates and configures the plugins of one adapter id.
    *
    * @param adapterId The adapter id, for the guiding messages
-   * @param configuredPlugins Plugin class name to its properties (may be empty)
+   * @param configuredPlugins The section name the application chose to the plugin's class
+   *          and properties (may be empty)
    * @return The plugins, in the order configured
    * @throws IllegalStateException If a class is unknown, is no plugin, cannot be
    *           instantiated or a property does not exist - each with the key which caused it

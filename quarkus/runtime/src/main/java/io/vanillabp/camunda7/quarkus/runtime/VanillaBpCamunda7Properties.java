@@ -41,8 +41,10 @@ public interface VanillaBpCamunda7Properties {
 
   /**
    * The workflow-module sections of the shared tree - only the Camunda 7 keys which are
-   * resolvable per scope are modeled here (the serialization format, and the tenant the
-   * module is deployed into).
+   * resolvable per scope are modeled here: the serialization format, the tenant the module
+   * is deployed into, and <code>allow-listeners</code>. Below a workflow, the
+   * <code>tasks</code> section is read as well, to name an <code>allow-listeners</code> put at
+   * task level.
    *
    * @return The configured workflow-module sections, keyed by workflow module id
    */
@@ -352,8 +354,8 @@ public interface VanillaBpCamunda7Properties {
     /**
      * OPTIONAL acknowledgement that the application's identifiers are unique across all
      * of its workflow modules - it silences the WARN logged while the
-     * name-clash-avoidance mode <code>none</code> applies (this adapter's default
-     * mode). Default <code>false</code>.
+     * name-clash-avoidance mode <code>none</code> applies (the default mode of this adapter
+     * is <code>by-adapter</code>). Default <code>false</code>.
      *
      * @return The configured acknowledgement, empty for <code>false</code>
      */

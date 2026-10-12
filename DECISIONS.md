@@ -197,6 +197,9 @@ platform's decision 29 says why the operation itself carries no engine knowledge
 
 ### 12. A suspended process definition counts, and the only way past it is a system property
 
+*Note of 2026-10-12: the title names only the system property. The environment variable below is a
+second, equal way past it.*
+
 Deleting a process definition really removes it here. The engine drops it from the database and the
 definition query no longer returns it, so the startup check for old process versions stops reporting
 about it by itself. Camunda 7 also offers suspending, and that is not the same. A suspended

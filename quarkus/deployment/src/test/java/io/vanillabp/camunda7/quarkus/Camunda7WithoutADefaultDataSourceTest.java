@@ -39,6 +39,7 @@ public class Camunda7WithoutADefaultDataSourceTest {
                 + message);
         Assertions.assertTrue(message.contains("quarkus.datasource.*"), () -> message);
         Assertions.assertTrue(message.contains("vanillabp.adapters.c7.data-source-name"), () -> message);
+        Assertions.assertTrue(message.contains("remove the adapter configuration"), () -> message);
       });
 
   @Test

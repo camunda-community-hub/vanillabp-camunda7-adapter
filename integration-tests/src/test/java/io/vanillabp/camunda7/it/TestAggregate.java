@@ -10,7 +10,8 @@ import lombok.Setter;
 
 /**
  * The JPA workflow aggregate. It is saved in the same H2 database as the embedded Camunda 7
- * engine, and in the same transaction. The generated ID is not a string. It becomes the
+ * engine. The workflow is started after the transaction which saves it has committed. The
+ * generated ID is not a string. It becomes the
  * Camunda business key of the started workflow.
  */
 @Entity

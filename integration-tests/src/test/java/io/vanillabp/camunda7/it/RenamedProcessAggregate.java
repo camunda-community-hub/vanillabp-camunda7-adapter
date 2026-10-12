@@ -26,7 +26,7 @@ public class RenamedProcessAggregate {
    */
   @Id
   @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "c7RenamedProcessSeq")
-  @SequenceGenerator(name = "c7RenamedProcessSeq", initialValue = 950000, allocationSize = 1)
+  @SequenceGenerator(name = "c7RenamedProcessSeq", initialValue = 990000, allocationSize = 1)
   private Long id;
 
   /**

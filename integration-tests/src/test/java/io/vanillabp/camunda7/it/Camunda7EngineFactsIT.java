@@ -16,7 +16,8 @@ import io.vanillabp.integration.test.utils.SuppressOutputExtension;
  * What this adapter hands an extension on Spring Boot. It is measured after the deployment
  * pipeline really ran against a real embedded engine. The facts are the way back from the
  * identifiers of the engine to the workflow module and the plain BPMN process id. And they
- * are the deployed version behind a definition id, out of the own cache of the adapter.
+ * are the deployed version behind a definition id, which the adapter answers out of its own
+ * cache. This test checks the answers, not whether the cache or the engine gave them.
  * <p>
  * The Quarkus counterpart is {@code Camunda7EngineFactsOnQuarkusTest}. Both platforms run
  * it. An answer which only the neutral core gets right says nothing about whether a
@@ -81,7 +82,7 @@ public class Camunda7EngineFactsIT {
   public void theDeployedVersionComesOutOfTheCache() {
 
     // what the application deployed while booting. The adapter recorded it, so no query
-    // runs for it at all.
+    // runs for it at all. The test does not count the queries
     final var deployedWhileBooting = engineFacts.definitionOf(latestDefinitionIdOf("VersionedProcess"));
 
     Assertions.assertNotNull(deployedWhileBooting, "the adapter deployed this definition, so it knows it");
@@ -90,7 +91,8 @@ public class Camunda7EngineFactsIT {
     Assertions.assertEquals("1", deployedWhileBooting.displayVersion());
 
     // a version deployed by somebody else, which is what a rolling deployment from another
-    // node looks like. The adapter asks the engine once and then answers from memory.
+    // node looks like. The adapter asks the engine once and then answers from memory. Here
+    // only the answer is checked
     repositoryService
         .createDeployment()
         .name("c7-it")

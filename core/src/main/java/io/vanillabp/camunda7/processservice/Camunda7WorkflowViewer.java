@@ -32,7 +32,9 @@ import lombok.extern.slf4j.Slf4j;
  * &quot;deployed by a previous application version&quot; boundary.
  * <p>
  * Addressing follows the adapter's conventions: the workflow-aggregate ID is the
- * BUSINESS KEY, the workflow module ID the TENANT ID.
+ * BUSINESS KEY. A TENANT ID is used only under the name-clash-avoidance mode
+ * {@code by-adapter}. It is the workflow module ID, unless <code>tenant-id</code> gives the
+ * module another name.
  * <p>
  * The <b>history context</b> of this adapter is the (historic) process instance ID
  * of the instance a call activity called. It is stable, and it leads to the exact
@@ -247,8 +249,8 @@ public class Camunda7WorkflowViewer {
         .createProcessInstanceQuery()
         .processInstanceBusinessKey(String.valueOf(workflowAggregateId))
         .processDefinitionKey(bpmnProcessId);
-    // a module without a tenant is the DEFAULT ('name-clash-avoidance: none'), and
-    // Camunda rejects a null tenant id instead of ignoring it
+    // a module has no tenant under the modes 'use-prefix' and 'none', and Camunda
+    // rejects a null tenant id instead of ignoring it
     runningQuery = tenantId != null
         ? runningQuery.tenantIdIn(tenantId)
         : runningQuery.withoutTenantId();
@@ -319,7 +321,8 @@ public class Camunda7WorkflowViewer {
       return null;
     }
     // the walk to the root, and the rule that an instance nobody called is its own root,
-    // are stated once - see io.vanillabp.camunda7.api.Camunda7Executions
+    // are stated in io.vanillabp.camunda7.api.Camunda7Executions. The lookup of a running
+    // instance above writes the same rule out once more
     final var rootInstanceId = io.vanillabp.camunda7.api.Camunda7Executions
         .rootProcessInstanceIdOf(calledInstance);
     if (!rootInstanceId.equals(primaryInstance.getId())) {

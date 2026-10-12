@@ -39,8 +39,8 @@ import lombok.extern.slf4j.Slf4j;
  * {@link BpmnModelInstance} model and collected in a {@link Camunda7ProcessingContext}. At
  * the end they are deployed as one single Camunda deployment. Whether a module is isolated
  * by a Camunda TENANT named after it (version 1's behavior), by prefixed identifiers or not
- * at all is the name-clash-avoidance mode's decision, {@code none} being this adapter's
- * default. Duplicate filtering is on, so unchanged models are not deployed again on every
+ * at all is the name-clash-avoidance mode's decision, {@code by-adapter} (the tenant) being
+ * this adapter's default. Duplicate filtering is on, so unchanged models are not deployed again on every
  * boot.
  * <p>
  * Task wiring ({@link #wireBpmn}) extracts the service-like tasks from the model. It
@@ -63,8 +63,9 @@ public class Camunda7DeploymentService implements AdapterDeploymentService<BpmnM
 
   /**
    * The embedded engine's repository service, used to deploy BPMN resources. The platform
-   * module (Spring Boot) provides it. That module wires the embedded engine, which shares
-   * the application's data source and transaction manager.
+   * module (Spring Boot or Quarkus) provides it. That module wires the embedded engine. The
+   * engine runs on the application's datasource, or on a datasource of its own where the
+   * adapter id names one.
    */
   private final RepositoryService repositoryService;
 
@@ -139,7 +140,7 @@ public class Camunda7DeploymentService implements AdapterDeploymentService<BpmnM
    * The core's name-clash-avoidance model. It decides how a workflow module is isolated: by
    * the Camunda TENANT ({@code by-adapter}, version 1's behavior), by PREFIXING the
    * identifiers ({@code use-prefix}, no tenant) or not at
-   * all ({@code none}, this adapter's default). May be <code>null</code> (tests).
+   * all ({@code none}). {@code by-adapter} is this adapter's default. May be <code>null</code> (tests).
    */
   private final io.vanillabp.integration.adapter.spi.NameClashAvoidanceSupport scoping;
 
@@ -737,6 +738,8 @@ public class Camunda7DeploymentService implements AdapterDeploymentService<BpmnM
           filename,
           io.vanillabp.integration.adapter.spi.DmnDecisionIds.of(toDeploy));
     }
+    // the core reads the DMN files after the BPMN files, and only for a module whose BPMN
+    // files produced a context. So the context is never null here
     existingContext.addDecision(filename, toDeploy);
     // the ids as the application knows them. The engine is asked about these, and another
     // workflow module may declare them as well
@@ -2448,8 +2451,8 @@ public class Camunda7DeploymentService implements AdapterDeploymentService<BpmnM
   }
 
   /**
-   * Reports the start events the engine fires on its own (timer, signal,
-   * conditional) to the core. The core validates the application's
+   * Reports every start event of the process to the core, each with its kind, not only
+   * the ones the engine fires on its own (timer, signal, conditional). The core validates the application's
    * <code>&#64;WorkflowStartedByBpms</code> methods against them. This method also remembers
    * the PLAIN signal names for the listener attached at parse time.
    *
@@ -2692,8 +2695,8 @@ public class Camunda7DeploymentService implements AdapterDeploymentService<BpmnM
       final String workflowModuleId,
       final Camunda7ProcessingContext bpmsProcessingContext) throws IllegalStateException {
 
-    // the core calls deployResources for every pair of workflow module and prioritized
-    // adapter, even for modules without any executable BPMN process
+    // the core skips a module without an executable BPMN process before it gets here, and
+    // it never passes null. The check stays for a caller which does not keep to that
     if (bpmsProcessingContext == null || bpmsProcessingContext.isEmpty()) {
       log.debug(
           "Camunda7[{}]: no BPMN resources to deploy for workflow module '{}'",
@@ -2702,9 +2705,9 @@ public class Camunda7DeploymentService implements AdapterDeploymentService<BpmnM
       return;
     }
 
-    // one deployment per workflow module; tenant id = workflow module id isolates BPMN
-    // process ids between modules; duplicate filtering avoids redeploying unchanged models
-    // Whether the module is isolated by a tenant is the mode's decision
+    // one deployment per workflow module. Duplicate filtering avoids redeploying unchanged
+    // models. Whether the module is isolated by a tenant is the mode's decision: only
+    // by-adapter uses one, named after the workflow module unless tenant-id renames it
     validateTenantConfiguration(workflowModuleId);
     final var tenantId = tenantIdOf(workflowModuleId);
     if (tenantId != null) {
@@ -2828,9 +2831,6 @@ public class Camunda7DeploymentService implements AdapterDeploymentService<BpmnM
               .map(decision -> "%s (version %d)".formatted(decision.getKey(), decision.getVersion()))
               .toList());
     }
-
-    // The deployment is done, so the version tags the application's
-    // annotations name can be resolved against what the engine has now
 
     reportAboutTheNamesThisModuleDeploys(workflowModuleId, bpmsProcessingContext, tenantId);
 

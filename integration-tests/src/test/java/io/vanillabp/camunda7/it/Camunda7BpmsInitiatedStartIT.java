@@ -24,7 +24,8 @@ import io.vanillabp.integration.test.utils.SuppressOutputExtension;
  * under exactly that key.
  * <p>
  * The application has to serve such a start: a process the engine starts by itself does not
- * boot without that method.
+ * boot without that method. This test does not check that half. It only runs the case where
+ * the method is there.
  */
 @SpringBootTest(classes = TestApplication.class, properties = {
     // own database. Contexts are cached and live in parallel. A foreign engine and its job
@@ -44,6 +45,12 @@ public class Camunda7BpmsInitiatedStartIT {
 
   @Autowired
   private RuntimeService runtimeService;
+
+  /**
+   * The adapter publishes no bean for the history. So it is taken from the engine itself.
+   */
+  @Autowired
+  private org.camunda.bpm.engine.ProcessEngine processEngine;
 
   private void awaitUntil(
       final Supplier<Boolean> condition,
@@ -91,14 +98,23 @@ public class Camunda7BpmsInitiatedStartIT {
                 .orElse(null)),
         "the task following the timer start event to be processed");
 
-    // the instance carries the aggregate's ID as its business key, which is how
-    // every other operation of this adapter addresses a workflow
+    // the workflow runs to its end
     awaitUntil(
         () -> runtimeService
             .createProcessInstanceQuery()
             .processInstanceBusinessKey(aggregate.getId())
             .count() == 0,
         "the workflow started by the timer to run to its end");
+    // and the instance carried the aggregate's ID as its business key, which is how
+    // every other operation of this adapter addresses a workflow
+    assertEquals(
+        1,
+        processEngine
+            .getHistoryService()
+            .createHistoricProcessInstanceQuery()
+            .processInstanceBusinessKey(aggregate.getId())
+            .count(),
+        "the instance the timer started carries the aggregate's id as its business key");
 
     // The end is reported to the application in the transaction which ended the workflow.
     // So it is visible as soon as the instance is gone.

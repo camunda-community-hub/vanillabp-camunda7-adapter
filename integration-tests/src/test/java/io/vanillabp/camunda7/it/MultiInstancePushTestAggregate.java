@@ -29,7 +29,7 @@ public class MultiInstancePushTestAggregate {
    */
   @Id
   @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "c7MiPushSeq")
-  @SequenceGenerator(name = "c7MiPushSeq", initialValue = 710000, allocationSize = 1)
+  @SequenceGenerator(name = "c7MiPushSeq", initialValue = 750000, allocationSize = 1)
   private Long id;
 
   /**
@@ -39,9 +39,9 @@ public class MultiInstancePushTestAggregate {
   private String taskIds;
 
   /**
-   * What the conditional start event of the event subprocess waits for. Not shared
-   * with the BPMS: Camunda 7 reads the aggregate live, so the condition sees it
-   * either way.
+   * What the conditional start event of the event subprocess waits for. It is shared with
+   * the BPMS like every attribute without {@code @NoSyncWithBPMS}, because the default sync
+   * mode FULL shares everything. So the condition reads the process variable a push wrote.
    */
   private boolean escalate;
 

@@ -231,10 +231,7 @@ public class Camunda7SleepingEngineIT {
   }
 
   /**
-   * Which thread runs the acquisition cycles right now. The adapter answers that question
-   * itself - {@code Camunda7WakeupAfterCommit} asks it about every committing thread - so
-   * the threads of the application are held against that answer instead of against a name
-   * somebody guessed.
+   * Whether the thread with the given id waits right now.
    */
   private boolean isParked(
       final long threadId) {
@@ -249,6 +246,12 @@ public class Camunda7SleepingEngineIT {
 
   }
 
+  /**
+   * Which thread runs the acquisition cycles right now. The adapter answers that question
+   * itself - {@code Camunda7WakeupAfterCommit} asks it about every committing thread - so
+   * the threads of the application are held against that answer instead of against a name
+   * somebody guessed.
+   */
   private long threadRunningTheAcquisition() {
 
     final var acquisition = acquisition();

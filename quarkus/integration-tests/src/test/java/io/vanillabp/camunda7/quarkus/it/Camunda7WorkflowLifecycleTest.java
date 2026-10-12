@@ -41,12 +41,13 @@ import io.vanillabp.integration.test.utils.SuppressOutputExtension;
  * agent is forwarded into it. Otherwise the run would prove the features and count as
  * nothing.
  * <p>
- * Four things of the Spring Boot suite are deliberately NOT repeated here, and the
- * reason is the same for all of them - they are about a second boot or a second
- * engine, neither of which a prod-mode test can produce inside one class:
+ * Four things of the Spring Boot suite are deliberately NOT repeated here. They are about
+ * a second boot or a second engine, which this class does not produce:
  * <ul>
- * <li>the startup check for old process versions needs five boots against
- * one database, each with a different model or configuration;</li>
+ * <li>the startup check for old process versions needs several boots against one
+ * database, each with a different model or configuration. A prod-mode test can boot its
+ * application twice, and {@code Camunda7OldProcessVersionsTest} does that for this
+ * check;</li>
  * <li>two adapter ids on one datasource kept apart by a table prefix and
  * two engines side by side are covered at extension level in
  * {@code quarkus/deployment}, where a second configuration is a second test class;
@@ -359,7 +360,7 @@ public class Camunda7WorkflowLifecycleTest {
   }
 
   @Test
-  @DisplayName("A rollback removes both the aggregate and the workflow - the engine shares the transaction")
+  @DisplayName("A rollback removes both the aggregate and the workflow - the outbox entry rolls back with it")
   public void rollbackRemovesTheAggregateAndTheWorkflow() throws Exception {
 
     final var aggregateId = post("introspect/workflows/true/rollback")
@@ -658,8 +659,8 @@ public class Camunda7WorkflowLifecycleTest {
         String.valueOf(mismatch.get("rootMessage")));
     assertEquals(1, instances(aggregateId), "the workflow has to keep waiting");
 
-    // a rolled-back correlation changes nothing either - the embedded engine shares
-    // the caller's transaction
+    // a rolled-back correlation changes nothing either - its outbox entry rolls back
+    // with the caller's transaction
     post("introspect/messages/PaymentReceived/correlate-and-rollback/"
         + aggregateId);
     awaitNothingElseHappens();

@@ -29,10 +29,12 @@ import org.camunda.bpm.model.bpmn.instance.UserTask;
  *
  * <h2>What it does not promise</h2>
  *
- * It promises nothing about what this adapter REPORTS. For a user task without a form key,
- * the adapter leaves the task definition empty and does not fill in the element id. So
- * {@link #of(String, String)} is the published rule. It does not describe what the adapter
- * writes into its own wiring. Changing the reported value would be a change of behaviour.
+ * It promises nothing about what this adapter writes into its own wiring. For a user task
+ * without a form key, the wiring leaves the task definition empty and does not fill in the
+ * element id. What a <code>&#64;WorkflowTask</code> method of such a user task is told falls
+ * back to the element id, as this rule says (see {@code Camunda7UserTaskEventListener}). So
+ * {@link #of(String, String)} is the published rule. Changing what the wiring holds would be a
+ * change of behaviour.
  *
  * <p>
  * The rules above are held by <code>Camunda7TaskDefinitionsTest</code>.

@@ -18,7 +18,8 @@ import org.slf4j.LoggerFactory;
  * command is asked to wake the acquisition ({@link Camunda7WakeupAfterCommit}). Second, jobs
  * are acquired by due date. The executor wakes for the earliest due job. If it then acquired
  * in some other order, it would pick the wrong job where more are due than one cycle takes.
- * Third, the engine's metrics reporter is switched off. It writes through a database command
+ * Third, the engine's metrics reporter is switched off, unless
+ * <code>db-metrics-reporting</code> says otherwise. It writes through a database command
  * every 900 seconds. So it would wake an engine four times an hour, which was meant to stay
  * quiet.
  * <p>

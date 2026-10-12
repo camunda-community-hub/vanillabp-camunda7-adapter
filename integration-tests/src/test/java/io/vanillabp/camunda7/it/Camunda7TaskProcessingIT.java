@@ -148,10 +148,10 @@ public class Camunda7TaskProcessingIT {
    * How long the engine is watched after a rolled-back operation. After that, what did not
    * happen counts as something which never will.
    * <p>
-   * Half a second, against the moment a committed operation takes: this engine shares the
-   * caller's transaction, so a completion which committed is in the database when the
-   * transaction returns, and an asynchronous continuation is handed to a job executor
-   * which is told about it at the same commit.
+   * Half a second, against the moment a committed operation takes: the phase-two outbox
+   * dispatches a committed completion right after the commit, and an asynchronous
+   * continuation is handed to a job executor which is told about it at the commit of that
+   * dispatch.
    * <p>
    * This is a guard, not a time limit anybody has to beat. The test asserts afterwards that
    * the instance is where it was. A machine which gives this JVM no turn only makes the
@@ -392,7 +392,7 @@ public class Camunda7TaskProcessingIT {
   }
 
   @Test
-  @DisplayName("completeTask inside a rolled-back transaction leaves the task open (shared transaction)")
+  @DisplayName("completeTask inside a rolled-back transaction leaves the task open (the outbox entry rolls back)")
   public void completeTaskInRolledBackTransactionLeavesTaskOpen() throws Exception {
 
     final var aggregateId = startSecondaryProcess("AsyncProcess", true, null);
@@ -409,8 +409,8 @@ public class Camunda7TaskProcessingIT {
           throw new RuntimeException("test rollback");
         }));
 
-    // the engine shares the caller's transaction: the rolled-back signal never
-    // happened - the execution is still parked at the task
+    // the outbox entry of the completion rolled back with the caller's transaction. So the
+    // signal never happened - the execution is still parked at the task
     Thread.sleep(500);
     final var instanceId = instanceIdOf(aggregateId);
     assertNotNull(instanceId, "the process must still be active");
@@ -846,7 +846,7 @@ public class Camunda7TaskProcessingIT {
   }
 
   @Test
-  @DisplayName("A rolled-back correlation leaves the instance waiting (shared transaction)")
+  @DisplayName("A rolled-back correlation leaves the instance waiting (the outbox entry rolls back)")
   public void rolledBackCorrelationLeavesInstanceWaiting() throws Exception {
 
     final var aggregateId = startSecondaryProcess("MessageProcess", true, null);

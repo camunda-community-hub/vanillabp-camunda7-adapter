@@ -34,8 +34,9 @@ public class ForeignTimerWorkflowService {
 
   /**
    * Starts the workflow the way an application does it, although the process is started
-   * by a timer as well. VanillaBP writes the aggregate and then the instance, both in
-   * this transaction, and the business key it sets is the aggregate's id.
+   * by a timer as well. VanillaBP writes the aggregate in this transaction. The instance is
+   * started after the commit, through the phase-two outbox, and the business key it gets is
+   * the aggregate's id.
    *
    * @param id The id of the workflow aggregate to start
    */

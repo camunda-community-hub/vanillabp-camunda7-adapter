@@ -18,9 +18,10 @@ import io.vanillabp.integration.adapter.spi.workflowtask.WorkflowTaskWiring;
  * A real embedded engine running processes which call each other, prepared the way the
  * deployment prepares them.
  * <p>
- * Every called process lives in a BPMN file of ITS OWN, and that is the point of this
- * harness. The walk looks up an enclosing element by id. With the calling and the called
- * process in one file, that lookup finds the element of the other process by chance. For
+ * The called processes live in a BPMN file which holds no caller, and that is the point of
+ * this harness. <code>mi-called.bpmn</code> holds all three called processes, the callers are
+ * in other files. The walk looks up an enclosing element by id. With the calling and the
+ * called process in one file, that lookup finds the element of the other process by chance. For
  * exactly that reason, the defect this harness measures stayed invisible, in version 1 as
  * well as in version 2.
  */

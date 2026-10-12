@@ -73,6 +73,12 @@ public class Camunda7EngineCustomizerIT {
   @Autowired
   private RuntimeService runtimeService;
 
+  /**
+   * The adapter publishes no bean for the history. So it is taken from the engine itself.
+   */
+  @Autowired
+  private org.camunda.bpm.engine.ProcessEngine processEngine;
+
   @Autowired
   private TransactionTemplate transactionTemplate;
 
@@ -149,13 +155,14 @@ public class Camunda7EngineCustomizerIT {
 
     // history is still WRITTEN, which is what the composite handler is for
     awaitUntil(
-        () -> !runtimeService
-            .createProcessInstanceQuery()
+        () -> !processEngine
+            .getHistoryService()
+            .createHistoricProcessInstanceQuery()
             .processInstanceBusinessKey(String.valueOf(aggregateId))
             .tenantIdIn(MODULE_ID)
             .list()
             .isEmpty(),
-        "the workflow to be running");
+        "the engine to write the historic process instance");
 
   }
 

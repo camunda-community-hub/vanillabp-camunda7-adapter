@@ -271,8 +271,9 @@ public class Camunda7ForeignStartIT {
   @DisplayName("The application's own start of such a process is not mistaken for a foreign one")
   public void theApplicationsOwnStart() throws Exception {
 
-    // the aggregate is written and the instance started in ONE transaction here, so this
-    // is also the proof that the aggregate is readable while that transaction runs
+    // the aggregate is written in the caller's transaction. The instance is started after
+    // its commit, through the phase-two outbox. So the start listener reads a committed
+    // aggregate
     timerWorkflowService.startTheWorkflow("started-by-the-application");
 
     awaitUntil(
@@ -285,7 +286,7 @@ public class Camunda7ForeignStartIT {
 
     // the value the application wrote before starting is still there. A start VanillaBP
     // had taken for a foreign one would have built a second aggregate over this one, so
-    // this is the proof that the aggregate is readable in the transaction writing it
+    // this is the proof that the start listener found the aggregate the application wrote
     assertEquals(
         "the application",
         timerRepository.findById("started-by-the-application").orElseThrow().getStartedBy(),

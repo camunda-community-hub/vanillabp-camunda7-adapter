@@ -18,10 +18,10 @@ import org.slf4j.LoggerFactory;
  * Every one of those cycles is a database command. This class asks the database once when
  * the next job is due, and it waits exactly that long.
  * <p>
- * Only a cycle which found nothing is changed here. Found nothing means all four of these
- * at once: every registered engine handed out fewer jobs than were asked for, no job was
- * lost to another node's lock, the acquisition itself did not fail, and the threads
- * executing jobs were not full. In any other case the superclass decides, because then the
+ * Only a cycle which found nothing is changed here. Found nothing means all five of these
+ * at once: every registered engine handed out fewer jobs than were asked for, nobody asked
+ * to wake up for a job written meanwhile, no job was lost to another node's lock, the
+ * acquisition itself did not fail, and the threads executing jobs were not full. In any other case the superclass decides, because then the
  * wait is about load and not about a due date.
  * <p>
  * A cycle which found nothing is asked one question: which job has the earliest due date

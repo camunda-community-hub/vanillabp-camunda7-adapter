@@ -192,11 +192,13 @@ public class Camunda7WorkflowTaskBehavior extends AbstractBpmnActivityBehavior {
     // what the handler computed has to reach the engine BEFORE it evaluates what comes
     // next. Otherwise a gateway right behind this task would decide on the values of the
     // last ProcessService call. They are written here, inside the engine's transaction, so
-    // the variables commit with the aggregate and with the token
+    // the variables commit with the token. On the application's datasource the aggregate
+    // commits with them. An engine on a datasource of its own saw the aggregate commit
+    // before, in the transaction VanillaBP opened around the handler
     writeSharedValues(execution);
     if (outcome.kind() == WorkflowTaskOutcome.Kind.BPMN_ERROR) {
-      // for the error boundary event. The aggregate changes were saved, and they commit
-      // with the engine's transaction (the V1 contract). The values are written above,
+      // for the error boundary event. The aggregate changes were saved. On the application's
+      // datasource they commit with the engine's transaction (the V1 contract). The values are written above,
       // because the flow behind the error boundary may branch on them as well
       throw outcome.errorName() != null
           ? new BpmnError(scopedErrorCode(outcome.errorCode()), outcome.errorName())
@@ -209,9 +211,11 @@ public class Camunda7WorkflowTaskBehavior extends AbstractBpmnActivityBehavior {
   /**
    * Writes the values the aggregate shares with the BPMS onto the execution.
    * <p>
-   * The values are read in the CALLER's transaction, which is the engine's. The handler
-   * just changed the aggregate there. A read in a new transaction would either see the
-   * state before the handler, or wait for the row this transaction holds. The read never
+   * The values are read in the CALLER's transaction, which is the engine's. On the
+   * application's datasource the handler just changed the aggregate there. A read in a new
+   * transaction would either see the state before the handler, or wait for the row this
+   * transaction holds. An engine on a datasource of its own runs the handler in a transaction
+   * of its own, which has committed by now. So the read sees what the handler saved. The read never
    * throws. Where nothing is shared, nothing is written.
    *
    * @param execution The execution of the task just processed
@@ -417,8 +421,9 @@ public class Camunda7WorkflowTaskBehavior extends AbstractBpmnActivityBehavior {
       // the activity instance is what the engine calls the running element instance.
       // Its id reads '<element-id>:<instance-id>'. So the second element of a
       // multi-instance activity and the next iteration of a loop each get their own.
-      // Camunda 7 reports no delivery id at all (a redelivery here proves that nothing
-      // was committed) and still answers this one - the two are different questions
+      // Camunda 7 reports a delivery id only on an engine with a datasource of its own
+      // (on the application's datasource a redelivery proves that nothing was committed).
+      // It answers this one in both modes - the two are different questions
       return execution.getActivityInstanceId();
 
     }

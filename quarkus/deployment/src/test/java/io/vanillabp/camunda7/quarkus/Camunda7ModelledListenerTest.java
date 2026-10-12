@@ -28,8 +28,8 @@ import jakarta.transaction.UserTransaction;
  * {@code camunda:delegateExpression} has to give a listener object, which the engine then
  * notifies. Each sets a flag of its own, so a half-working resolver cannot look complete.
  * <p>
- * The feature is off until an application asks for it, which is the second test here: the
- * same model without {@code allow-listeners} must not deploy at all.
+ * The feature is off until an application asks for it. {@code Camunda7ListenersNobodyAllowedTest}
+ * holds that: the same model without {@code allow-listeners} must not deploy at all.
  */
 @ExtendWith(SuppressOutputExtension.class)
 @SuppressOutputExtension.SuppressBackgroundOutput

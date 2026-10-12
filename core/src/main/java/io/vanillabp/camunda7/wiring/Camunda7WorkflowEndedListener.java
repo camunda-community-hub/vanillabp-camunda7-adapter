@@ -17,9 +17,11 @@ import io.vanillabp.spi.service.WorkflowEnd;
  * to the PROCESS scope of processes whose workflow service declares a
  * <code>&#64;WorkflowEnded</code> method (see {@link Camunda7AsyncBpmnParseListener}).
  * <p>
- * It runs inside the engine's own transaction. So the application's change to the
- * workflow aggregate commits together with the end of the process instance, and it
- * rolls back with it. What the engine reports decides the KIND. An execution which
+ * It runs inside the engine's own transaction. On the application's datasource, the
+ * application's change to the workflow aggregate commits together with the end of the process
+ * instance, and it rolls back with it. An engine on a datasource of its own cannot share that
+ * transaction. Then VanillaBP opens a transaction of its own for the notification, and the
+ * notification is delivered at least once. What the engine reports decides the KIND. An execution which
  * carries a delete reason was cancelled: by the API, by a terminate end event or by an
  * interrupting event. Every other execution reached an end event.
  * <p>

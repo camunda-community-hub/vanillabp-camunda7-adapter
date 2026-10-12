@@ -138,7 +138,9 @@ public class Camunda7SerializationRoundTripTest {
   public void aFormatWhichCarriesTheTypeSaysNothing() {
 
     // Java serialization writes the object and reads it back as it was, scale included.
-    // That is why an application configuring no format hears nothing about round-tripping
+    // So the probe answers nothing. It answers nothing as well where the measurement fails,
+    // and this test alone cannot tell the two apart. aFormatWhichChangesTheValueSaysSo shows
+    // that the measurement runs on this engine
     assertTrue(
         Camunda7SerializationRoundTrip
             .of(engine)

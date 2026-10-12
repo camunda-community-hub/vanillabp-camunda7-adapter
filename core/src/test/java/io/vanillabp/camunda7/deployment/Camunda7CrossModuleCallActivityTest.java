@@ -97,7 +97,8 @@ public class Camunda7CrossModuleCallActivityTest {
 
   /**
    * What the adapter warned about while it wired a model with the given call activity.
-   * The module's logback-test.xml attaches no appender, so the list is this test's own.
+   * The appender is attached to the adapter's own logger, which carries no other appender,
+   * so the list is this test's own.
    */
   private static List<String> warningsWhileDeploying(
       final String callActivity) {

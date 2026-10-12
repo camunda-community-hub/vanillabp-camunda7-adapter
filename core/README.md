@@ -42,7 +42,7 @@ transaction: the engine delivers a task inside its own transaction. Work which g
 takes a different path. Every operation which moves a workflow forward is planned in phase one.
 After the commit, the phase-two outbox sends it to the engine, as on every other BPMS (see
 decision 2 of this repository's `DECISIONS.md`). To keep workflow modules apart, the adapter uses
-the workflow module id as the Camunda **tenant id**. The 1:1 relation to the aggregate becomes the
+by default (`by-adapter`) a Camunda **tenant id** named after the workflow module. The 1:1 relation to the aggregate becomes the
 Camunda **business key**.
 
 ## What is implemented
@@ -52,12 +52,14 @@ The adapter serves the whole SPI: the deployment pipeline (`readBpmn` …
 `@TaskEvent` deliveries, user tasks, message correlation and start by message, the
 probes the BPMS election uses to find out what a BPMS knows, and the viewer/history API.
 
-There are two exceptions on purpose. Both fail LOUDLY, never silently:
+There is one exception on purpose, and it fails LOUDLY, never silently:
 
-- **external tasks (`camunda:topic`)** are not wired. VanillaBP has nothing yet that matches
-  Camunda 7's external-task pattern.
-- `cancelUserTask` by BPMN error works here (unlike Camunda 8), so nothing is stubbed
-  for it.
+- **external tasks (`camunda:topic`)** are not served by this adapter. VanillaBP has nothing
+  yet that matches Camunda 7's external-task pattern. Deploying one is refused, unless the
+  application marks the task with `implemented-externally=true`.
+
+`cancelUserTask` by BPMN error is no exception. It works here (unlike Camunda 8), so nothing
+is stubbed for it.
 
 A method which cannot do its job throws, and the message names the reason. A method which
 silently does nothing would hide wiring bugs. The integration tests of both platforms check what

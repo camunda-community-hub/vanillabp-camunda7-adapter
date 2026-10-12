@@ -14,8 +14,9 @@ import lombok.Setter;
  * <p>
  * Two expressions read it. The gateway of {@code SyncProcess} branches on
  * {@link #isApproved()}, which is NOT shared. That only works through the MIGRATION FALLBACK of
- * the EL resolver, which will be removed. The test pins that, including the warning (see
- * decision 1 in the repository's DECISIONS.md). The decision case lives in
+ * the EL resolver, which will be removed (see decision 1 in the repository's DECISIONS.md). The
+ * test pins that the fallback answers. It does not check the warning the fallback prints.
+ * {@code AbstractNestedExpressionsIT} checks that warning, for a model of its own. The decision case lives in
  * {@code DecisionTestAggregate}: a task computes what the gateway right behind it reads.
  */
 @Entity
@@ -31,7 +32,7 @@ public class SyncTestAggregate {
    */
   @Id
   @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "c7SyncTestSeq")
-  @jakarta.persistence.SequenceGenerator(name = "c7SyncTestSeq", initialValue = 900000, allocationSize = 1)
+  @jakarta.persistence.SequenceGenerator(name = "c7SyncTestSeq", initialValue = 910000, allocationSize = 1)
   private Long id;
 
   /**

@@ -13,8 +13,10 @@ import io.vanillabp.integration.adapter.spi.workflowtask.WorkflowTaskWiring;
 
 /**
  * What the platform hands the adapter. It is for tests which need the adapter and not the
- * registration. The mandatory collaborators are mocks which nobody calls unless the test
- * says so. The two optional ones are supplied per test.
+ * registration. Every collaborator is a mock. Most of them answer nothing unless the test
+ * stubs them. The core's wiring, its start entry and the name-clash avoidance answer the way
+ * the platform does (see the methods below). A test replaces any of them through
+ * {@link #builder()}.
  */
 public final class TestCollaborators {
 
@@ -23,8 +25,8 @@ public final class TestCollaborators {
   }
 
   /**
-   * The default of this adapter: identifiers are deployed as modelled. A bare mock would
-   * answer null here. The adapter does not have to cope with null, because the platform
+   * The default of this adapter: the mode {@code by-adapter}, which isolates a module by a
+   * tenant and deploys the identifiers as modelled. A bare mock would answer null here. The adapter does not have to cope with null, because the platform
    * always answers with one of the three modes.
    */
   private static NameClashAvoidanceSupport scopingWithoutNameClashAvoidance() {

@@ -57,7 +57,9 @@ import io.vanillabp.integration.adapter.spi.workflowtask.MultiInstanceValue;
  * apart asks the engine's history instead.
  *
  * <p>
- * The promises above are held by <code>Camunda7MultiInstancesTest</code>.
+ * The promises above are held by <code>Camunda7MultiInstancesTest</code>. The order
+ * outermost first and the walk across a call activity are held by
+ * <code>Camunda7MultiInstancesAcrossCallActivitiesTest</code>.
  */
 public final class Camunda7MultiInstances {
 

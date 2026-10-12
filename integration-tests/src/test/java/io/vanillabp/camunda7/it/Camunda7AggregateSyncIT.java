@@ -25,8 +25,8 @@ import io.vanillabp.integration.test.utils.SuppressOutputExtension;
  * <li>This adapter shares like every other BPMS. An aggregate which carries NO annotation
  * writes every attribute as a process variable, and the expressions of the engine read
  * those variables.</li>
- * <li>an aggregate which minimizes ({@code @SyncWithBPMS} on one attribute derives opt-out
- * for the rest) writes exactly what it named - and an expression reading something it did
+ * <li>an aggregate which minimizes ({@code @SyncWithBPMS} on one attribute derives opt-in, so
+ * the rest is not shared) writes exactly what it named - and an expression reading something it did
  * NOT share only works through the MIGRATION FALLBACK of the EL resolver, which will be
  * removed;</li>
  * <li>The demanding case: the gateway right behind a service task branches on what THAT

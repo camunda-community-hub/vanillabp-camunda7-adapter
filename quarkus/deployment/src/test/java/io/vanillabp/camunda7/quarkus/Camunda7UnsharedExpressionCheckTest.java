@@ -32,8 +32,8 @@ import io.vanillabp.integration.test.utils.SuppressOutputExtension;
  * only. A check nobody runs on a platform is a promise nobody kept there. That is the whole
  * reason why this repository measures its coverage per platform.
  * <p>
- * The model deploys one process whose expressions stop in five different places, plus three
- * which read what is shared and have to stay unmentioned. Nothing of it ever runs: every
+ * The model deploys one process whose expressions stop in five different places, plus one
+ * which reads what is shared and has to stay unmentioned. Nothing of it ever runs: every
  * branch parks in a timer, and what is measured is the deployment.
  * <p>
  * The same boot answers the second question about the same expressions: what does an

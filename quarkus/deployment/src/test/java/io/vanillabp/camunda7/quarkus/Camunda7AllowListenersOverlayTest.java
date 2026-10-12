@@ -40,7 +40,18 @@ public class Camunda7AllowListenersOverlayTest {
           .addClass(TestWorkflowService.class)
           .addAsResource("listeners/application.yaml", "application.yaml")
           .addAsResource("c7-test/processes/test-process.bpmn", "c7-test/processes/test-process.bpmn")
-          .addAsResource("workflow-module-descriptor/workflow-module", "META-INF/workflow-module"));
+          .addAsResource("workflow-module-descriptor/workflow-module", "META-INF/workflow-module"))
+      .setLogRecordPredicate(record -> record
+          .getLoggerName()
+          .startsWith("io.vanillabp"))
+      .assertLogRecords(records -> Assertions
+          .assertTrue(
+              records
+                  .stream()
+                  .anyMatch(record -> String
+                      .valueOf(record.getMessage())
+                      .contains("and no model of it carries one")),
+              "the boot has to say that the switch is on and nothing uses it"));
 
   private VanillaBpCamunda7Properties overlay() {
 

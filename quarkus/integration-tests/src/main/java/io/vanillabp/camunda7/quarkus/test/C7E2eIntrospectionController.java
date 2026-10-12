@@ -626,8 +626,8 @@ public class C7E2eIntrospectionController {
   }
 
   /**
-   * Broadcasts a signal and rolls the transaction back. The embedded engine shares that
-   * transaction, so nothing may have happened.
+   * Broadcasts a signal and rolls the transaction back. The broadcast waits in the phase-two
+   * outbox until the commit, so the rollback takes it away and nothing may have happened.
    *
    * @param signalName The signal's name
    */

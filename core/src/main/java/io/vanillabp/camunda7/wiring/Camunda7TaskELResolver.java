@@ -45,7 +45,8 @@ public class Camunda7TaskELResolver extends ELResolver {
   /**
    * Which live reads were reported already (workflow module, process and name). The
    * migration fallback names a configuration gap, and one line per evaluation would bury
-   * it.
+   * it. The set has no bound of its own. It holds at most one entry per name an expression
+   * of a deployed model asks for, so the models limit it.
    */
   private final java.util.Set<String> liveReadsReported = java.util.concurrent.ConcurrentHashMap
       .newKeySet();
@@ -56,14 +57,13 @@ public class Camunda7TaskELResolver extends ELResolver {
    * answer it. A name says that a model reads something unshared. An instance says that a
    * workflow still depends on the live read.
    * <p>
-   * The number falls on its own without anything being done to it: an instance stops
-   * needing the fallback as soon as it reaches a sync point, because the adapter writes
-   * the shared values at every point it talks to the engine. So a shrinking count is the
-   * signal, and a count which stays is a workflow parked in a wait state.
+   * The set only grows. Nothing removes an instance, also not once it reached a point where
+   * the adapter writes the shared values. So the count says how many instances the fallback
+   * served since the start, not how many still depend on it.
    * <p>
-   * Bounded like {@link #liveReadsReported}, and for the same reason: losing an entry
-   * costs one instance counted twice, and nothing durable belongs in an expression
-   * evaluation.
+   * It stops at {@link #MAX_REMEMBERED_INSTANCES}. An instance served after that is not
+   * counted, and the count is reported as "at least". Nothing durable belongs in an
+   * expression evaluation.
    */
   private final java.util.Set<String> liveReadInstances = java.util.concurrent.ConcurrentHashMap
       .newKeySet();
@@ -254,10 +254,11 @@ public class Camunda7TaskELResolver extends ELResolver {
    * This is the number the removal needs, and it is not the one the startup check
    * reports. That check names the EXPRESSIONS which read something unshared, which is a
    * modelling gap and stays the same however many workflows there are. This says how
-   * many workflows still depend on the live read, and it falls on its own: an instance
-   * stops needing the fallback the moment it reaches a sync point, because the adapter
-   * writes the shared values at every point it talks to the engine. A count which stops
-   * growing is the signal that the upgrade window is closing; one which keeps growing
+   * many workflows the live read served since the start. Decision 25 in the repository's
+   * DECISIONS.md, and the message below, say that the count falls on its own once a workflow
+   * reaches a point where the adapter writes the shared values. As built it does not fall,
+   * because nothing removes an instance from {@link #liveReadInstances}. A count which stops
+   * growing is the signal that no new workflow needs the fallback. One which keeps growing
    * means new workflows are being started into the gap, which is a defect in the sharing
    * rather than a leftover of the upgrade.
    *
@@ -312,8 +313,8 @@ public class Camunda7TaskELResolver extends ELResolver {
    * How many workflow instances the migration fallback served since this application
    * started, and whether that is an exact number or a lower bound.
    * <p>
-   * Read by whoever wants to report it - the resolver itself says nothing periodically,
-   * because an expression evaluation is the wrong place to own a schedule.
+   * Nothing in this adapter calls it. The resolver reports the same number itself, at
+   * most once an hour, see {@link #reportLiveReadUsage(String)}.
    *
    * @return The instances, and whether the memory ran full
    */

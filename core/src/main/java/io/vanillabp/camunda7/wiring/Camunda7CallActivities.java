@@ -52,8 +52,12 @@ import lombok.extern.slf4j.Slf4j;
  * A call activity which names the process to call in an expression has nothing to carry such a
  * note. Instead, {@link #continuesTheCallersWorkflowAggregate(DelegateExecution,
  * DelegateExecution, Camunda7TaskRegistry)} asks the core for it while the workflow runs.
- * That is the only case where it is asked twice: where the model spells the called
- * process out, the answer of the deployment stands and nobody asks again.
+ * The multi-instance walk asks only in this case. Where the model spells the called process
+ * out, the walk reads the note. The start of a called instance which has no business key of
+ * its own asks as well, and it does not check how the call activity names the process. So it
+ * also asks for a call activity the deployment already answered, for example where the called
+ * process has a workflow aggregate of its own. The answer is the same, and it costs two
+ * lookups.
  * <p>
  * Decision 5 in the repository's DECISIONS.md says why the business key is added here and not
  * left to the application, and why it is not added blindly. Decision 22 says what the note on
@@ -266,9 +270,11 @@ public final class Camunda7CallActivities {
    * the process which called it, asked while the workflow runs.
    * <p>
    * {@link #prepareCallActivities} asks the core the same question while a model is prepared.
-   * Here it is asked a second time, about the same pair of processes. It is for the one
+   * Here it is asked a second time, about the same pair of processes. It is mainly for the
    * call activity the deployment could say nothing about: the process behind an expression
-   * is chosen per instance, so there was nothing to write the answer onto. The core answers
+   * is chosen per instance, so there was nothing to write the answer onto. The start of a
+   * called instance without a business key asks here for any call activity, see the class
+   * comment. The core answers
    * from the declarations of the workflow services, which it read while the application
    * started. So asking again costs two lookups, and the answer comes from the same source.
    * <p>

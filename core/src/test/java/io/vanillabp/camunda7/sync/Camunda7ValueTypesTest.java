@@ -1,6 +1,7 @@
 package io.vanillabp.camunda7.sync;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import java.math.BigDecimal;
@@ -58,6 +59,7 @@ public class Camunda7ValueTypesTest {
     assertEquals(ValueTypeVerdict.Kind.CHANGED, inbound.kind());
     assertNotNull(outbound.explanation());
     assertNotNull(inbound.explanation());
+    assertNotEquals(outbound.explanation(), inbound.explanation(), "the two directions say the same thing");
 
   }
 

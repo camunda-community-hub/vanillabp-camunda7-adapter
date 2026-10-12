@@ -13,8 +13,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import io.vanillabp.integration.test.utils.SuppressOutputExtension;
 
 /**
- * What {@link Camunda7MultiInstances} promises: the scopes of an execution, outermost first,
- * and an empty map wherever the engine holds nothing to walk.
+ * What {@link Camunda7MultiInstances} promises: the scopes of an execution, and an empty map
+ * wherever the engine holds nothing to walk. Each case here has one level only. The order
+ * outermost first is held by {@code Camunda7MultiInstancesAcrossCallActivitiesTest}.
  */
 @ExtendWith(SuppressOutputExtension.class)
 public class Camunda7MultiInstancesTest {

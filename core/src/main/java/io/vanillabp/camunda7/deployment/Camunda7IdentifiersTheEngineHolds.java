@@ -240,8 +240,9 @@ public final class Camunda7IdentifiersTheEngineHolds {
   }
 
   /**
-   * The findings among the definitions the engine answered with: everything this adapter id
-   * did not deploy for this workflow module.
+   * The findings among the definitions the engine answered with: everything which is not in a
+   * deployment named after this workflow module. The filter is by deployment name, not by
+   * adapter id.
    *
    * @param kind Which kind of identifier those definitions are keyed by
    * @param plainIdentifiersByKey The plain identifier per key the engine knows

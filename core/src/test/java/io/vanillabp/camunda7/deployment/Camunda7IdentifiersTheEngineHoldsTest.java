@@ -409,17 +409,42 @@ public class Camunda7IdentifiersTheEngineHoldsTest {
     });
     final var scoping = unscoped();
 
-    assertDoesNotThrow(
-        () -> Camunda7IdentifiersTheEngineHolds
-            .reportWhatTheEngineAlreadyHolds(
-                ADAPTER_ID,
-                MODULE,
-                java.util.Map.of(PROCESS_ID, PROCESS_ID),
-                java.util.Map.of(DECISION_ID, DECISION_ID),
-                null,
-                refusingEngine,
-                scoping),
-        "a diagnostic must never fail a deployment");
+    final var logWatcher = new ch.qos.logback.core.read.ListAppender<ch.qos.logback.classic.spi.ILoggingEvent>();
+    logWatcher.start();
+    final var checkLog = (ch.qos.logback.classic.Logger) org.slf4j.LoggerFactory
+        .getLogger(Camunda7IdentifiersTheEngineHolds.class);
+    final var levelBefore = checkLog.getLevel();
+    checkLog.setLevel(ch.qos.logback.classic.Level.DEBUG);
+    checkLog.addAppender(logWatcher);
+    try {
+      assertDoesNotThrow(
+          () -> Camunda7IdentifiersTheEngineHolds
+              .reportWhatTheEngineAlreadyHolds(
+                  ADAPTER_ID,
+                  MODULE,
+                  java.util.Map.of(PROCESS_ID, PROCESS_ID),
+                  java.util.Map.of(DECISION_ID, DECISION_ID),
+                  null,
+                  refusingEngine,
+                  scoping),
+          "a diagnostic must never fail a deployment");
+    } finally {
+      checkLog.detachAppender(logWatcher);
+      checkLog.setLevel(levelBefore);
+    }
+    assertEquals(
+        java.util.List.of(ch.qos.logback.classic.Level.DEBUG),
+        logWatcher.list
+            .stream()
+            .map(ch.qos.logback.classic.spi.ILoggingEvent::getLevel)
+            .distinct()
+            .toList(),
+        "the engine which did not answer costs debug lines and nothing louder");
+    assertTrue(
+        logWatcher.list
+            .stream()
+            .anyMatch(event -> event.getFormattedMessage().contains("the engine did not answer")),
+        "the debug line says that the engine did not answer");
     assertEquals(
         java.util.List.of(),
         scoping.getAnswersAboutWhatIsHeld(),

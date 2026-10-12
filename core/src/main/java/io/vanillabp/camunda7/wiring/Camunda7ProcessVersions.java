@@ -27,7 +27,9 @@ import io.vanillabp.integration.adapter.spi.workflowtask.BpmnTaskSpec;
  * {@link #versionOfDefinition(String)});</li>
  * <li>the deployed versions per BPMN process. The deployment fills them, because it reports
  * what it deployed. A definition query fills in everything deployed before or
- * elsewhere - the query only ever runs where a version TAG is involved.</li>
+ * elsewhere. The query runs once per process and boot, where a version TAG is involved
+ * and also where {@link #definitionIdsHeldUnder(String, String)} asks for the models the
+ * engine still holds.</li>
  * </ul>
  */
 // see decision 4 in the repository's DECISIONS.md

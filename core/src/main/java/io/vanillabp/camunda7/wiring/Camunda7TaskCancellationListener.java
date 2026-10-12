@@ -29,8 +29,10 @@ import lombok.extern.slf4j.Slf4j;
  * two events and no others.
  * <p>
  * The invocation runs INSIDE the engine's cancellation transaction
- * ({@code runInCurrentTransaction}). The changes the handler makes to the aggregate commit
- * or roll back together with the cancellation itself.
+ * ({@code runInCurrentTransaction}). On the application's datasource, the changes the handler
+ * makes to the aggregate commit or roll back together with the cancellation itself. An engine
+ * on a datasource of its own cannot share that transaction. Then VanillaBP opens a
+ * transaction of its own around the handler.
  */
 @Slf4j
 public class Camunda7TaskCancellationListener implements ExecutionListener {
@@ -40,8 +42,9 @@ public class Camunda7TaskCancellationListener implements ExecutionListener {
   private final Camunda7TaskRegistry taskRegistry;
 
   /**
-   * One listener for the whole engine. It is attached to every activity whose cancelation
-   * a method of the application asks about.
+   * One listener for the whole engine. It is attached to every service-like activity of a
+   * process the application claims, and to the activities whose served listeners wait for a
+   * cancelation. The core then skips a method which does not ask about the cancelation.
    *
    * @param workflowTaskInvoker Where the application's method is called
    * @param taskRegistry What the method serving the canceled element is looked up in

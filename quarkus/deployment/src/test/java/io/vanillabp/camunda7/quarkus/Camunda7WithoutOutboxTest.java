@@ -48,7 +48,8 @@ public class Camunda7WithoutOutboxTest {
             assertTrue(message.contains("c7"), message);
             assertTrue(message.contains("TestProcess"), message);
             // the ways out are part of it
-            assertTrue(message.contains("PhaseTwoOutbox"), message);
+            assertTrue(message.contains("To solve this"), message);
+            assertTrue(message.contains("io.vanillabp.integration.spi.PhaseTwoOutboxAware"), message);
             return;
           }
           current = current.getCause();

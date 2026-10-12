@@ -138,8 +138,8 @@ public class Camunda7DeploymentServiceTest {
   }
 
   /**
-   * The WARNs the adapter logged (the module's logback-test.xml has no appender on
-   * purpose).
+   * The WARNs the adapter logged. The appender is attached to the adapter's own logger, which
+   * carries no other appender, so the list is this test's own.
    */
   private static List<String> warningsOf(
       final Runnable action) {

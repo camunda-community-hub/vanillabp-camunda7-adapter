@@ -84,8 +84,8 @@ public class Camunda7EngineHolderTest {
       holder.close();
     }
 
-    // close stops the executor unconditionally, before the engine closes. And it is
-    // safe to call more than once
+    // close stops the executor unconditionally. That it does so before the engine closes is
+    // not checked here. And it is safe to call more than once
     Assertions.assertFalse(holder.isJobExecutorActive());
     holder.close();
 

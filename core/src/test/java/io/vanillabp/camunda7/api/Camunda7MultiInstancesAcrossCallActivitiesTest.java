@@ -17,9 +17,10 @@ import io.vanillabp.integration.test.utils.SuppressOutputExtension;
  * What a task of a CALLED process is told about the iteration it runs in.
  * <p>
  * The walk leaves the called process through the call activity which started it. So the
- * models of these tests are split over files the way an application splits them: one file
- * per process which is called. Both halves of that sentence are measured here. One of them
- * used to be wrong, and nobody ever asked about the other one.
+ * models of these tests are split over files the way an application splits them: the callers
+ * in one file, the processes they call in another (<code>mi-called.bpmn</code> holds all three
+ * of them), and the outer caller in a third. Both halves of that sentence are measured here.
+ * One of them used to be wrong, and nobody ever asked about the other one.
  * <p>
  * Whether the walk may leave is a question about the workflow aggregate. The answer comes
  * from two places. For a call activity which names the called process directly, it is the

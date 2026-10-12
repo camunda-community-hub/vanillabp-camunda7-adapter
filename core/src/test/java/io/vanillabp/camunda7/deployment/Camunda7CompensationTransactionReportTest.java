@@ -126,7 +126,8 @@ public class Camunda7CompensationTransactionReportTest {
 
   /**
    * What the adapter warned about while it wired a model carrying the given elements. The
-   * module's logback-test.xml attaches no appender, so the list is this test's own.
+   * appender is attached to the adapter's own logger, which carries no other appender, so
+   * the list is this test's own.
    *
    * @param processContent The elements of the process to deploy
    * @return The warnings about the transaction of a compensation, in the order they were made

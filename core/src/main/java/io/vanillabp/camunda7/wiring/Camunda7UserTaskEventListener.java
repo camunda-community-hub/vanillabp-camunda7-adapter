@@ -30,8 +30,9 @@ import lombok.extern.slf4j.Slf4j;
  * application's persistence cannot join its transaction, so VanillaBP opens the one the
  * workflow aggregate is saved in.
  * <p>
- * Why a listener is added to the deployed model, and only where a handler exists, is decision 5 in
- * the repository's DECISIONS.md.
+ * Why a listener is added to the deployed model is decision 5 in the repository's DECISIONS.md.
+ * It is added to every user task of a process the application claims, whether a handler exists
+ * or not. Decision 5 limits only the END listener of a workflow to processes with a handler.
  */
 @Slf4j
 public class Camunda7UserTaskEventListener implements TaskListener {
@@ -41,8 +42,8 @@ public class Camunda7UserTaskEventListener implements TaskListener {
   private final Camunda7TaskRegistry taskRegistry;
 
   /**
-   * One listener for the whole engine. It is attached to every user task while the model
-   * is parsed.
+   * One listener for the whole engine. It is attached to every user task of a claimed
+   * process while the model is parsed.
    *
    * @param workflowTaskInvoker Where the application's method is called
    * @param taskRegistry What the method serving the user task is looked up in

@@ -15,8 +15,9 @@ import io.vanillabp.integration.test.utils.SuppressOutputExtension;
 
 /**
  * What VanillaBP can say about a Camunda 7 tenant. The engine needs no tenant to exist. So
- * the only thing worth reporting is a tenant missing in an identity service which knows
- * others.
+ * one thing worth reporting is a tenant missing in an identity service which knows others. The
+ * other is a deployment whose tenant or process id does not match where the running workflows
+ * of that process are.
  */
 @ExtendWith(SuppressOutputExtension.class)
 public class Camunda7TenantCheckTest {
@@ -53,8 +54,8 @@ public class Camunda7TenantCheckTest {
   }
 
   /**
-   * The WARNs the check logged (the module's logback-test.xml has no appender on
-   * purpose).
+   * The WARNs the check logged. The appender is attached to the check's own logger, which
+   * carries no other appender, so the list is this test's own.
    */
   private static List<String> warningsOf(
       final Runnable action) {

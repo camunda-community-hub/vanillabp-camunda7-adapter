@@ -13,8 +13,8 @@ import org.slf4j.LoggerFactory;
  * <p>
  * Suspending a process definition is not deleting it. Decision 12 in the repository's
  * DECISIONS.md draws three things from that. A suspended version counts like every other
- * one, as long as this switch is not set. The switch is a system property and not
- * configuration. And its name carries no adapter part. The switch is for the one situation
+ * one, as long as this switch is not set. The switch is a system property or an environment
+ * variable, and not configuration. And its name carries no adapter part. The switch is for the one situation
  * that decision cannot cover: an application which has to run NOW, and must not hang on
  * versions nobody is able to clean up at this minute.
  * <p>

@@ -43,8 +43,9 @@ import lombok.extern.slf4j.Slf4j;
  * and tenant. Completing or cancelling a task checks that the task is still there.
  * Correlating checks the subscription.
  * <p>
- * The workflow-aggregate ID maps naturally onto the Camunda 7 <b>business key</b> and the
- * workflow module ID onto the Camunda <b>tenant ID</b> - see
+ * The workflow-aggregate ID maps onto the Camunda 7 <b>business key</b>. A Camunda <b>tenant
+ * ID</b> is used only under the name-clash-avoidance mode {@code by-adapter}. It is the workflow
+ * module ID, unless <code>tenant-id</code> gives the module another name - see
  * {@link #startProcessInstance(String, String, Object)}.
  * <p>
  * Decision 8 in the repository's DECISIONS.md says why every probe, and the instance lookup
@@ -69,8 +70,9 @@ public class Camunda7ProcessService<A> implements MigratableProcessService<A> {
 
   /**
    * The embedded engine's runtime service used to start process instances. Provided by
-   * the platform module (Spring Boot) which wires the embedded engine sharing the
-   * application's data source and transaction manager.
+   * the platform module (Spring Boot or Quarkus) which wires the embedded engine. The engine
+   * runs on the application's datasource, or on one of its own where the adapter id names
+   * one.
    */
   private final RuntimeService runtimeService;
 
@@ -497,8 +499,9 @@ public class Camunda7ProcessService<A> implements MigratableProcessService<A> {
   }
 
   /**
-   * Convenience constructor without the sync model (tests) - no operator context
-   * is written then.
+   * Builds the service. It is the only constructor. The sync model, the scoping and the
+   * rest come from the collaborators. Where they carry no sync model (tests), no operator
+   * context is written.
    *
    * @param adapterId The configured adapter id this service serves
    * @param runtimeService The engine's runtime, where a workflow is started and a message
@@ -986,8 +989,9 @@ public class Camunda7ProcessService<A> implements MigratableProcessService<A> {
     // On the application's datasource Camunda 7 hands a task to the handler INSIDE its
     // own (job) transaction (TaskInvocationContext#runInCurrentTransaction). So
     // aggregate changes and engine state commit or roll back together. A redelivered job
-    // proves that NOTHING was committed, and there is nothing a delivery record could
-    // remember. Deduplicating would cost a store access per task and buy nothing.
+    // proves that NOTHING was committed. So there is nothing to deduplicate. A delivery
+    // record is still written, see decision 39 in the repository's DECISIONS.md, but
+    // deduplicating would cost a store access per task and buy nothing.
     //
     // An engine on a datasource of its own commits where the application's persistence
     // cannot join. So the aggregate commits first, and the job after it. A crash in
@@ -1111,9 +1115,9 @@ public class Camunda7ProcessService<A> implements MigratableProcessService<A> {
 
   /**
    * The values the aggregate shares with the BPMS, as Camunda 7 process variables. The
-   * engine's expressions read them, and an operator sees them in Cockpit. Nested
-   * structures travel as JSON strings, see
-   * {@link io.vanillabp.camunda7.sync.Camunda7Variables}.
+   * engine's expressions read them, and an operator sees them in Cockpit. A nested
+   * structure travels in the engine's own serialization format (see decision 9 in the
+   * repository's DECISIONS.md and {@link io.vanillabp.camunda7.sync.Camunda7Variables}).
    *
    * @param aggregate The workflow aggregate or <code>null</code>
    * @return The variables (never <code>null</code>)
@@ -1470,26 +1474,17 @@ public class Camunda7ProcessService<A> implements MigratableProcessService<A> {
   /**
    * Completes (or cancels, if an error code is given) the parked execution of an
    * asynchronous task by signaling it. The {@code Camunda7WorkflowTaskBehavior} then
-   * leaves the activity or propagates the BPMN error. Runs within the caller's
-   * transaction for engines sharing the application's datasource.
+   * leaves the activity or propagates the BPMN error. It is phase two of the operation, so
+   * it runs after the caller's commit, in the transaction of the outbox dispatcher (see
+   * decision 2 in the repository's DECISIONS.md). An engine on a datasource of its own runs
+   * the command in a transaction of its own.
    *
    * @param taskId The parked execution's ID
    * @param bpmnErrorCode The BPMN error code or <code>null</code> to complete
    * @param tolerateGoneTask Whether a no-longer-existing execution is tolerated
    *        (phase two is at-least-once) instead of failing
-   */
-  private void signalTask(
-      final String taskId,
-      final String bpmnErrorCode,
-      final boolean tolerateGoneTask) {
-
-    signalTask(taskId, bpmnErrorCode, tolerateGoneTask, null);
-
-  }
-
-  /**
-   * @param beforeSignal Runs after the task was found and before it is signalled -
-   *        used to refresh what an operator sees along with a cancellation
+   * @param beforeSignal Runs after the task was found and before it is signalled. It
+   *        writes the values the model reads next, which an operator also sees in Cockpit
    */
   private void signalTask(
       final String taskId,
@@ -1562,24 +1557,15 @@ public class Camunda7ProcessService<A> implements MigratableProcessService<A> {
   }
 
   /**
-   * Completes (or cancels by BPMN error) a user task. Runs within the caller's
-   * transaction for engines sharing the application's datasource.
+   * Completes (or cancels by BPMN error) a user task. It is phase two of the operation, so
+   * it runs after the caller's commit, in the transaction of the outbox dispatcher (see
+   * decision 2 in the repository's DECISIONS.md). An engine on a datasource of its own runs
+   * the command in a transaction of its own.
    *
    * @param taskId The user task's ID (ACT_RU_TASK)
    * @param bpmnErrorCode The BPMN error code or <code>null</code> to complete
    * @param tolerateGoneTask Whether a no-longer-existing task is tolerated (phase
    *        two is at-least-once)
-   */
-  private void executeUserTask(
-      final String taskId,
-      final String bpmnErrorCode,
-      final boolean tolerateGoneTask) {
-
-    executeUserTask(taskId, bpmnErrorCode, tolerateGoneTask, null);
-
-  }
-
-  /**
    * @param beforeExecute Runs after the user task was found and before it is completed
    *        or cancelled. It writes the values the model reads next
    */
@@ -2192,9 +2178,11 @@ public class Camunda7ProcessService<A> implements MigratableProcessService<A> {
   }
 
   /**
-   * Reads the aggregate for the operator context of a workflow about to start. An
-   * operator sees the context in Cockpit. So a persistence which cannot read an
-   * aggregate by its ID must not keep the workflow from starting.
+   * Reads the aggregate for the values phase two writes into the engine. They are the
+   * operator context of a workflow about to start, and the values the model reads after a
+   * completed task or a correlated message. An operator sees them in Cockpit. So a
+   * persistence which cannot read an aggregate by its ID must not keep the operation from
+   * running.
    *
    * @param aggregatePersistence The aggregate's persistence
    * @param workflowAggregateId The aggregate's ID
@@ -2211,8 +2199,8 @@ public class Camunda7ProcessService<A> implements MigratableProcessService<A> {
       return aggregatePersistence.loadById(workflowAggregateId);
     } catch (final RuntimeException e) {
       log.warn(
-          "Camunda7[{}]: could not read the aggregate '{}' to write the operator context of "
-              + "the workflow about to start - starting it without that context",
+          "Camunda7[{}]: could not read the aggregate '{}' to write the values it shares with "
+              + "the workflow - going on without them",
           adapterId,
           workflowAggregateId,
           e);

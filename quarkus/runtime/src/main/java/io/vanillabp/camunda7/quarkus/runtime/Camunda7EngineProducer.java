@@ -31,9 +31,12 @@ import jakarta.transaction.TransactionManager;
  *       on a declared NAMED datasource (<code>quarkus.datasource.&lt;name&gt;.*</code>),
  *       set in <code>vanillabp.adapters.&lt;id&gt;.data-source-name</code>. An unknown
  *       name fails the boot and lists the declared names.</li>
- *   <li>two embedded engines on one schema are the same engine state - more than
- *       one {@code camunda7} id resolving to the SAME datasource fails the boot
- *       naming the <code>data-source-name</code> remedy.</li>
+ *   <li>two embedded engines on one set of tables are the same engine state. More than
+ *       one {@code camunda7} id on the SAME datasource AND the same
+ *       <code>table-prefix</code> fails the boot, naming the remedies. A distinct
+ *       <code>table-prefix</code> on a shared datasource is allowed. The check is not made
+ *       here but in {@code validateDistinctAdapterInstances}, which the platform's
+ *       deployment pipeline calls.</li>
  * </ul>
  * The set of adapter ids comes from the platform's core properties: the adapter ids of
  * type {@code camunda7}. The overlay map ({@link VanillaBpCamunda7Properties}) only looks

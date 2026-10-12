@@ -9,7 +9,7 @@ import io.vanillabp.spi.service.WorkflowService;
 /**
  * The workflow service bound to the {@code TestProcess} BPMN process. Its presence makes
  * the VanillaBP Spring Boot integration build a {@link ProcessService} bean for
- * {@link TestAggregate} and associate it with the {@code c7-smoke-test} workflow module.
+ * {@link TestAggregate} and associate it with the {@code c7-it} workflow module.
  */
 @Service
 @WorkflowService(

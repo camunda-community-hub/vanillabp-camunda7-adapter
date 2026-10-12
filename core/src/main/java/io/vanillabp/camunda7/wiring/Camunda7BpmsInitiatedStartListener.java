@@ -20,8 +20,11 @@ import io.vanillabp.spi.service.BpmsStartTrigger;
  * it writes the name of that workflow into the instance's BUSINESS KEY. Everything else in this
  * adapter finds a workflow again by that key.
  * <p>
- * It runs inside the engine's own transaction (the timer job's or the command's). So aggregate
- * and process instance commit together.
+ * It runs inside the engine's own transaction (the timer job's or the command's). On the
+ * application's datasource, aggregate and process instance commit together. An engine on a
+ * datasource of its own cannot share that transaction with the application's persistence. Then
+ * VanillaBP opens a transaction of its own for the aggregate, and the two commit one after the
+ * other.
  * <p>
  * What a start means is not read from the kind of its start event. On Camunda 7 anybody with
  * access to the engine can start any of these processes, with a business key or without one.

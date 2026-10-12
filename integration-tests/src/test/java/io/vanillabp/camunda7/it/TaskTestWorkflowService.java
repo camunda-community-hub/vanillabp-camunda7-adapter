@@ -16,7 +16,7 @@ import io.vanillabp.spi.service.WorkflowTask;
 
 /**
  * The workflow service of the task-processing integration tests: one
- * {@code @WorkflowTask} method per outcome/binding variation, serving FIVE BPMN
+ * {@code @WorkflowTask} method per outcome/binding variation, serving 14 BPMN
  * processes of one aggregate ({@code secondaryBpmnProcesses} - exercised for real
  * on Camunda 7).
  */

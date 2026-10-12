@@ -27,7 +27,7 @@ public class MiUserTaskAggregate {
    */
   @Id
   @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "c7MiUserTaskSeq")
-  @SequenceGenerator(name = "c7MiUserTaskSeq", initialValue = 940000, allocationSize = 1)
+  @SequenceGenerator(name = "c7MiUserTaskSeq", initialValue = 920000, allocationSize = 1)
   private Long id;
 
   /**

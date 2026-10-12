@@ -43,8 +43,10 @@ public class VanillaBpCamunda7Properties {
 
   /**
    * The workflow-module sections of the shared tree - only the Camunda 7 keys resolvable
-   * per scope are modeled here (the serialization format of the shared values the engine
-   * has no variable type for, and the tenant the module is deployed into).
+   * per scope are modeled here: the serialization format of the shared values the engine
+   * has no variable type for, the tenant the module is deployed into, and
+   * <code>allow-listeners</code>. Below a workflow, the <code>tasks</code> section is read as
+   * well, to name an <code>allow-listeners</code> put at task level.
    */
   private Map<String, Camunda7WorkflowModuleProperties> workflowModules = Map.of();
 

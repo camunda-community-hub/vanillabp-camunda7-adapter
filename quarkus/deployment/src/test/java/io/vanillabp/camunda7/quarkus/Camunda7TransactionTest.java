@@ -18,14 +18,12 @@ import jakarta.persistence.EntityManager;
 import jakarta.transaction.UserTransaction;
 
 /**
- * THE critical assertion of the Camunda 7 adapter on Quarkus: the
- * embedded engine joins the caller's JTA transaction (the {@code REQUIRED} semantics
- * of the engine's {@code JakartaTransactionInterceptor} on the shared Agroal
- * datasource) - a workflow started inside a {@code UserTransaction} is visible
- * within the transaction (business key = aggregate id, tenant = workflow module id)
- * and is committed or ROLLED BACK together with the JPA workflow aggregate. This is
- * the phase-one guarantee proven by the plain-engine analysis probe, now asserted
- * through the VanillaBP user API.
+ * How a start relates to the caller's JTA transaction on Quarkus. A workflow started inside a
+ * {@code UserTransaction} is NOT visible within that transaction. The phase-two outbox starts
+ * it after the commit (business key = aggregate id, tenant = workflow module id). A start
+ * whose transaction rolls back never reaches the engine, because the JPA workflow aggregate
+ * and the outbox entry roll back together. Decision 2 in the repository's DECISIONS.md says
+ * why.
  */
 @ExtendWith(SuppressOutputExtension.class)
 @SuppressOutputExtension.SuppressBackgroundOutput

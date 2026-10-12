@@ -32,7 +32,8 @@ import io.vanillabp.integration.test.utils.SuppressOutputExtension;
  * Comparing with what the adapter has DEPLOYED is not enough. Two workflow modules of one
  * adapter would both be its own scope. And a foreign-module instance with the same aggregate
  * id would still be claimed. So the probe is told which workflow module and which BPMN
- * processes are meant, and that case is the third test below.
+ * processes are meant, and that case is the test
+ * {@code anotherModuleOfTheSameAdapterIsNotClaimed} below.
  */
 @ExtendWith(SuppressOutputExtension.class)
 public class Camunda7AwarenessScopeTest {

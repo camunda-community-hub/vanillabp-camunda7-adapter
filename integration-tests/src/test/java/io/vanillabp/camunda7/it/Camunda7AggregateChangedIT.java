@@ -97,11 +97,11 @@ public class Camunda7AggregateChangedIT {
     // The pushed VALUES are the change now. The technical marker is written only for an
     // aggregate which shares nothing at all.
     final var marker = "escalate";
-    // the push happens after the commit, so the scope it lands in is
-    // waited for
+    // the push happens after the commit, so the scope it lands in is waited for. The
+    // value is waited for, not the name: the start may have written the name already
     final var instanceId = processInstanceIdOf(aggregateId);
     AwaitPhaseTwo.until(
-        () -> runtimeService.getVariablesLocal(instanceId).containsKey(marker),
+        () -> Boolean.TRUE.equals(runtimeService.getVariablesLocal(instanceId).get(marker)),
         "the scope around the task is the workflow itself here");
     // the boundary event makes the engine give the activity a scope of its own. That scope
     // is the context of the task, not the scope the task RUNS in.
@@ -291,15 +291,29 @@ public class Camunda7AggregateChangedIT {
     // a workflow of its own. The escalation of the test above interrupts an iteration and
     // may take the whole instance with it. A push needs a workflow which is there.
     final var aggregateId = startedMultiInstanceWorkflow();
-
-    transactionTemplate.executeWithoutResult(status -> multiInstanceWorkflowService.pushGlobally(aggregateId));
-
     final var instanceId = processInstanceIdOf(aggregateId);
-    AwaitPhaseTwo.until(
-        () -> runtimeService
-            .getVariablesLocal(instanceId)
-            .containsKey("escalate"),
-        "the global push has to land at the workflow's scope");
+    // the start wrote 'escalate' as false into the workflow's scope. So only the changed
+    // value shows that the push arrived
+    assertEquals(
+        Boolean.FALSE,
+        runtimeService.getVariablesLocal(instanceId).get("escalate"),
+        "the start has to write the value the push changes");
+
+    // park the executor. The changed value makes the conditional start events of both
+    // iterations fire, and the jobs behind them would end the workflow this test reads
+    engineHolder.stopWorkflowProcessing(MODULE_ID);
+    try {
+      transactionTemplate.executeWithoutResult(status -> {
+        multiInstanceRepository.findById(aggregateId).orElseThrow().setEscalate(true);
+        multiInstanceWorkflowService.pushGlobally(aggregateId);
+      });
+
+      AwaitPhaseTwo.until(
+          () -> Boolean.TRUE.equals(runtimeService.getVariablesLocal(instanceId).get("escalate")),
+          "the global push has to land at the workflow's scope");
+    } finally {
+      engineHolder.startWorkflowProcessing(MODULE_ID);
+    }
 
   }
 

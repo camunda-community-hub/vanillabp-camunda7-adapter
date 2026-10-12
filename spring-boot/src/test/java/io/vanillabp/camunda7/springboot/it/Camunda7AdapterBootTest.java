@@ -25,10 +25,11 @@ import io.vanillabp.integration.workflowmodule.WorkflowModuleAutoConfiguration;
  * {@code DataSourceTransactionManagerAutoConfiguration}), with NO JPA on purpose. There
  * are no BPMN files and no {@code @WorkflowService} classes, so no workflow is deployed.
  * <p>
- * The deployment lifecycle ({@code DeploymentAutoConfiguration}) is deliberately NOT
- * loaded: the core deployment pipeline would invoke {@code deployResources} once per
- * (workflow module x prioritized adapter); deploying real BPMN is covered by the
- * integration-tests module. This test proves discovery/registration only.
+ * The deployment lifecycle ({@code DeploymentAutoConfiguration}) is NOT loaded, except in
+ * {@code twoAdapterIdsSharingTheSameDataSourceFailWithGuidingMessage}. That test needs it,
+ * because the deployment pipeline is what checks two adapter ids for being distinct at
+ * startup. Deploying real BPMN is covered by the integration-tests module. These tests prove
+ * discovery, registration and the startup checks only.
  */
 @ExtendWith(SuppressOutputExtension.class)
 public class Camunda7AdapterBootTest {

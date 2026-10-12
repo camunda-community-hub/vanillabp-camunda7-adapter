@@ -20,8 +20,10 @@ on are explained in the [VanillaBP Wiki](https://github.com/vanillabp/adapter-pl
 > completing and canceling asynchronous tasks, user tasks, message correlation, signals, the
 > end-of-workflow notification, the aggregate sync (`@SyncWithBPMS`, `aggregateChanged`),
 > the viewer/history API, process versions and the BPMS-election awareness probes. All of it
-> runs on the embedded engine and in the caller's transaction. What this adapter does NOT
-> deliver is listed under [Known deviations](#known-deviations).
+> runs on the embedded engine. An operation which moves a workflow on runs after the caller's
+> commit, through the phase-two outbox (see
+> [decision 2](./DECISIONS.md#2-a-workflow-is-progressed-after-the-callers-commit)). What this
+> adapter does NOT deliver is listed under [Known deviations](#known-deviations).
 
 ## Documentation and supported platforms
 
@@ -1721,7 +1723,7 @@ a citation written today still resolves in a year.
 This section lists what this adapter does not deliver. The wiki's
 [Deviations](https://github.com/camunda-community-hub/vanillabp-camunda7-adapter/wiki/Deviations)
 page repeats each in one sentence. An engine on its own datasource is NOT one of them. It is the
-documented mode described under [Transaction caveat](#behaviour) above.
+documented mode described under [Behaviour](#behaviour) above.
 
 ### External tasks
 

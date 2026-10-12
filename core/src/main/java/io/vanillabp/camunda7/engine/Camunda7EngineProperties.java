@@ -20,15 +20,17 @@ package io.vanillabp.camunda7.engine;
  *       own pool. On Spring Boot it is the name of a {@code DataSource} BEAN. On Quarkus
  *       it is the name of a declared named Agroal datasource
  *       (<code>quarkus.datasource.&lt;name&gt;.*</code>). Without it the engine shares the
- *       application's default datasource and joins the caller's transaction (the
- *       embedded-engine guarantee). With it the engine runs on its own schema. A
- *       side-by-side migration of engines needs that, because two embedded engines must
- *       never share one schema. Starting a workflow then uses VanillaBP's two-phase
- *       pattern (see <code>Camunda7ProcessService</code>).</li>
+ *       application's default datasource, and a task handler runs in the engine's job
+ *       transaction. With it the engine runs on its own schema. A side-by-side migration
+ *       of engines needs that or a <code>table-prefix</code>, because two embedded engines
+ *       must never share one set of tables. In both cases an operation which moves a
+ *       workflow on runs after the caller's commit, through VanillaBP's two-phase pattern
+ *       (see <code>Camunda7ProcessService</code>).</li>
  *   <li><code>accept-unscoped-identifiers</code> - OPTIONAL acknowledgement that the
  *       application's identifiers are unique across all of its workflow modules, which
  *       silences the WARN logged while the name-clash-avoidance mode <code>none</code>
- *       applies (this adapter's default mode); default <code>false</code>;</li>
+ *       applies (the default mode of this adapter is <code>by-adapter</code>); default
+ *       <code>false</code>;</li>
  *   <li><code>table-prefix</code> - OPTIONAL. The prefix of the engine's database tables
  *       (engine setting <code>databaseTablePrefix</code>). With it two adapter ids share
  *       ONE datasource and still run separate engines. This is the side-by-side migration

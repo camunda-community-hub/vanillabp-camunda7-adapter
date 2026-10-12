@@ -9,8 +9,10 @@ import jakarta.enterprise.inject.Instance;
  * Forces the {@link Camunda7QuarkusEngineRegistry} to be built when the application
  * starts. Configuration is validated AT STARTUP, never first at runtime. That is a core
  * principle of VanillaBP. Without this observer the CDI producer would run lazily. Then a
- * configuration defect (unknown datasource name, shared datasource, broken engine schema)
- * would show up only when the deployment pipeline first touches the engine. The default
+ * configuration defect (unknown datasource name, broken engine schema) would show up only
+ * when the deployment pipeline first touches the engine. Two adapter ids on one database are
+ * not checked here. The platform's deployment pipeline checks them through
+ * {@code validateDistinctAdapterInstances}. The default
  * observer priority also puts this BEFORE the platform's deployment runner.
  */
 @ApplicationScoped

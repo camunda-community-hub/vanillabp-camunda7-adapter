@@ -187,6 +187,9 @@ public class Camunda7AdapterBeanRegistrar implements BeanRegistrar {
                         workflowModuleId,
                         bpmnProcessId) -> deploymentOverlay
                             .allowListenersFor(adapterId, workflowModuleId, bpmnProcessId));
+                // a Spring bean named like a task definition takes the expression away
+                // from the method. The startup check asks the context the engine asks
+                deploymentService.setClassOfTheBeanNamed(engine::classOfTheBeanNamed);
                 // a key at a level which does not resolve it changes nothing. Silence
                 // would be worse than a line which says where the key is read
                 io.vanillabp.camunda7.wiring.Camunda7Listeners.reportKeysSetAtTaskLevel(

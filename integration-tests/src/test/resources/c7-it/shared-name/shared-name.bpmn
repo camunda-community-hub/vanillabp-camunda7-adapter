@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- The task definition 'chargeCard' while the workflow aggregate shares an attribute of
+     the same name. The process variable would answer the expression, so the start ends. -->
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" id="Definitions_SharedName" targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:process id="SharedNameProcess" isExecutable="true">
+    <bpmn:startEvent id="SN_Start">
+      <bpmn:outgoing>SN_f1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:sequenceFlow id="SN_f1" sourceRef="SN_Start" targetRef="SN_Charge" />
+    <bpmn:serviceTask id="SN_Charge" camunda:expression="${chargeCard}">
+      <bpmn:incoming>SN_f1</bpmn:incoming>
+      <bpmn:outgoing>SN_f2</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="SN_f2" sourceRef="SN_Charge" targetRef="SN_End" />
+    <bpmn:endEvent id="SN_End">
+      <bpmn:incoming>SN_f2</bpmn:incoming>
+    </bpmn:endEvent>
+  </bpmn:process>
+</bpmn:definitions>

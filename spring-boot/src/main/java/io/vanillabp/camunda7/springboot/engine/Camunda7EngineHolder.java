@@ -206,6 +206,29 @@ public class Camunda7EngineHolder implements Camunda7WorkflowProcessingLifecycle
 
   }
 
+  /**
+   * The class of the Spring bean the engine resolves a name to. The engine asks the
+   * application context exactly this way, before it asks VanillaBP. So a bean found here
+   * hides a task definition of the same name.
+   *
+   * @param name The EL name
+   * @return The class of the bean, empty where the context has no bean of that name
+   */
+  public java.util.Optional<Class<?>> classOfTheBeanNamed(
+      final String name) {
+
+    if ((applicationContext == null) || !applicationContext.containsBean(name)) {
+      return java.util.Optional.empty();
+    }
+    // asked without creating the bean. A bean whose type cannot be told without creating
+    // it is still a bean the engine would use
+    final Class<?> type = applicationContext.getType(name, false);
+    return java.util.Optional.of(type != null
+        ? type
+        : Object.class);
+
+  }
+
   @Override
   public void setApplicationContext(
       final ApplicationContext applicationContext) {
@@ -257,10 +280,9 @@ public class Camunda7EngineHolder implements Camunda7WorkflowProcessingLifecycle
 
     final var configuration = new SpringProcessEngineConfiguration();
     configuration.setApplicationContext(applicationContext);
-    // VanillaBP task wiring: top-level EL names resolve @WorkflowTask methods and
-    // workflow-aggregate attributes, and Spring beans stay resolvable. The parse
-    // listener sets transaction boundaries like a remote BPMS has them (async
-    // before/after)
+    // VanillaBP task wiring: a top-level EL name which neither a process variable nor a
+    // Spring bean answers reaches a @WorkflowTask method. The parse listener sets
+    // transaction boundaries like a remote BPMS has them (async before/after)
     configuration.setExpressionManager(new Camunda7SpringExpressionManager(
         applicationContext, taskRegistry, workflowTaskInvoker));
     final var parseListener = new io.vanillabp.camunda7.wiring.Camunda7AsyncBpmnParseListener(

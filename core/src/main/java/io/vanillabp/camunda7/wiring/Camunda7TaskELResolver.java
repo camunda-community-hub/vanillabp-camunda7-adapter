@@ -17,8 +17,10 @@ import io.vanillabp.integration.adapter.spi.workflowtask.WorkflowTaskOutcome;
  * by the task definition. A <code>camunda:expression</code> task runs the handler during
  * evaluation. A <code>camunda:delegateExpression</code> task receives the
  * {@link Camunda7WorkflowTaskBehavior}, so a <code>&#64;TaskId</code> task can stay open.
- * Every other name falls through to the engine's other resolvers. The process variables
- * live there.
+ * The engine asks this resolver LAST. A process variable, and on Spring Boot a bean, has
+ * answered a name before this resolver sees it. That is why the start refuses a task
+ * definition which a bean or a shared attribute would hide (see {@code DECISIONS.pending/966.md}
+ * in the repository). Every name this resolver does not claim stays unresolved.
  * <p>
  * <b>Attributes of the workflow aggregate are a MIGRATION FALLBACK here</b>, and it will be
  * removed. Reading the aggregate live made a model which reads <code>${riskAcceptable}</code>
@@ -88,8 +90,8 @@ public class Camunda7TaskELResolver extends ELResolver {
   private final WorkflowTaskInvoker workflowTaskInvoker;
 
   /**
-   * One resolver for the whole engine. It sits in front of everything else the engine
-   * would resolve a name with. That is why it has to hand back what is not its own.
+   * One resolver for the whole engine. It sits behind everything else the engine resolves
+   * a name with, so it only sees the names nobody else answered.
    *
    * @param taskRegistry What an EL name evaluated by the engine is looked up in
    * @param workflowTaskInvoker Where the application's method is called, and what is asked
@@ -116,7 +118,7 @@ public class Camunda7TaskELResolver extends ELResolver {
       final Object base,
       final Object property) {
 
-    // only top-level names. The resolvers after this one serve attribute chains
+    // only top-level names. The engine's resolvers before this one serve attribute chains
     if (base != null) {
       return null;
     }
@@ -125,7 +127,7 @@ public class Camunda7TaskELResolver extends ELResolver {
         .getELResolver()
         .getValue(context, null, "execution");
     // the built-in variable-scope resolver marks 'execution' as resolved. Reset it, so
-    // OUR verdict decides whether the resolvers after this one get their chance
+    // the name counts as resolved only where this resolver answers it
     context.setPropertyResolved(false);
     if (execution == null) {
       return null;
@@ -201,12 +203,11 @@ public class Camunda7TaskELResolver extends ELResolver {
       return null;
     }
 
-    // no wired task. The values the aggregate shares are process variables, so the
-    // engine's own resolvers answer the name. But this workflow may still run without
-    // them, and the migration fallback below is for that case
-    if (execution.hasVariable(propertyName)) {
-      return null;
-    }
+    // no wired task. The values the aggregate shares are process variables, and a variable
+    // of this name never gets here: the engine's variable-scope resolver asks the same
+    // scope before this resolver is asked, and it answers every name the scope has. So the
+    // workflow carries no variable of this name. That is the case of the migration fallback
+    // below
     final var businessKey = execution.getBusinessKey();
     if (businessKey == null) {
       return null;

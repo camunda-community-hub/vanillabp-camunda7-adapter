@@ -884,7 +884,7 @@ See [The start of a workflow](./README.md#the-start-of-a-workflow-and-workflows-
 
 The id of a workflow is the id of its workflow aggregate. The application assigns it in the
 `@WorkflowStartedByBpms` method, and nobody else does. On Camunda 7 that id is kept in the BUSINESS
-KEY. The rule itself, and what the core does with it, is decision 98 of
+KEY. The rule itself, and what the core does with it, is decision 69 of
 `adapter-platform-integration`.
 
 This supersedes decision 24 of this repository. Decision 24 said the opposite: a workflow somebody
@@ -895,7 +895,7 @@ did not write is refused, and the message says that VanillaBP names a workflow.
 Decision 24 was right about the one thing Camunda 7 can answer: a start is the application's own
 where the id already has an aggregate. It was wrong about what to do with a key which names no
 aggregate. Taking over such a key made the starter the one who names the workflow. From then on two
-parties named workflows. An id is a value of the workflow aggregate like any other, and decision 92
+parties named workflows. An id is a value of the workflow aggregate like any other, and decision 69
 of the platform had already handed the aggregate to the application. So the key follows the id, not
 the other way round.
 

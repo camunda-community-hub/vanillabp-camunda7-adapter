@@ -442,7 +442,7 @@ public class Camunda7TaskProcessingIT {
         }));
 
     // the probe of a task is an engine question with an exact answer, so nothing is gained
-    // by asking again. And this runs in the transaction of the caller (decision 27 of the
+    // by asking again. And this runs in the transaction of the caller (decision 5 of the
     // platform's DECISIONS.md). The exception is the whole promise. An embedded engine
     // reports no visibility window, so there is no window a caller could wait out. And how
     // long the call took would say more about the machine than about the code.

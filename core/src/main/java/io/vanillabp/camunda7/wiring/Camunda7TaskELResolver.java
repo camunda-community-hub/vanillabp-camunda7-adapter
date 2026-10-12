@@ -254,7 +254,7 @@ public class Camunda7TaskELResolver extends ELResolver {
    * This is the number the removal needs, and it is not the one the startup check
    * reports. That check names the EXPRESSIONS which read something unshared, which is a
    * modelling gap and stays the same however many workflows there are. This says how
-   * many workflows the live read served since the start. Decision 25 in the repository's
+   * many workflows the live read served since the start. Decision 1 in the repository's
    * DECISIONS.md, and the message below, say that the count falls on its own once a workflow
    * reaches a point where the adapter writes the shared values. As built it does not fall,
    * because nothing removes an instance from {@link #liveReadInstances}. A count which stops

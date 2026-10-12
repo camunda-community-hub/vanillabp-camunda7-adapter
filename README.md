@@ -170,7 +170,7 @@ deployed to the embedded engine of every prioritized adapter.
   adapter id answers `deliversTasksAtLeastOnce()` with `true` and names each delivery by
   the id of the current job. The core then answers the repetition from its delivery log
   and does not run the `@WorkflowTask` method a second time (see
-  [decision 6](./DECISIONS.md#6-a-task-handler-runs-inside-the-engines-own-job-transaction---the-delivery-record-part-superseded-by-decision-39)).
+  [decision 6](./DECISIONS.md#6-a-task-handler-runs-inside-the-engines-own-job-transaction)).
 
 Each of the four bullets has tests. `Camunda7StartWorkflowIT` tests the deployment and the
 two-phase start. `Camunda7JobExecutorLifecycleIT` and its Quarkus twin test that the executor
@@ -894,7 +894,7 @@ an application can catch.
 `Camunda7RepeatedDeliveryIT#aStaleCompletionRaisesTheGuidingException` runs it against
 an engine on its own datasource.
 `Camunda7UserTaskDeliveryRecordIT#aUserTaskDeliveryIsRecordedAndSharpensAWrongCompletion`
-runs it against the shared one, where a record is written as well (decision 39).
+runs it against the shared one, where a record is written as well (decision 6).
 
 Every phase two is idempotent, because the outbox dispatches at-least-once. A start
 skips an instance which already carries the business key. Completing or cancelling
@@ -1537,7 +1537,7 @@ check. Where both are set, the property wins, and only the value `true` counts. 
 appear in the log of every start. One says that the exit was taken and what it costs. The other
 names the versions it hid. Neither is remembered anywhere, because they are meant to be in the way
 until the switch is gone. The reasoning, including why this is not a configuration property, is
-[decision 12](./DECISIONS.md#12-a-suspended-process-definition-counts-and-the-only-way-past-it-is-a-system-property).
+[decision 12](./DECISIONS.md#12-a-suspended-process-definition-counts-and-the-only-way-past-it-is-a-system-property-or-its-environment-variable).
 `Camunda7SuspendedProcessVersionsTest` tests the switch and both warnings.
 `Camunda7OldProcessVersionsIT#aSuspendedVersionIsStillReported` and
 `#theEmergencyExitTakesTheSuspendedVersionOut` test the same against a running engine.

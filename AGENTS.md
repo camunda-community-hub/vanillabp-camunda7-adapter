@@ -48,6 +48,9 @@ yes, the same commit updates the log: the old entry STAYS, marked as superseded 
 entry which replaced it, and the new decision takes the next free number. Numbers are never reused
 and never renumbered, because a citation in an older release still points at them. Never edit an
 entry until its old text is gone.
+This rule had one exception, once, before the 2.0 release. On 2026-10-12 an entry which a later
+one changed in part took in today's rule: 25 went into 1, 39 into 6 and 26 into 20, and the notes of
+5, 12, 32 and 41 became part of their text. From 2.0 on, the rule holds again without exception.
 
 Adding an entry has the same rule. A decision earns a number when several places rely on it and
 copying the explanation to each of them would rot; anything smaller is a comment where it belongs,

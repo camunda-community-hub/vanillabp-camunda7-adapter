@@ -863,6 +863,12 @@ public class Camunda7DeploymentService implements AdapterDeploymentService<BpmnM
                   .formatted(connectable.taskDefinition(), bpmnProcessId, workflowModuleId));
         });
 
+    // A bean or a shared attribute which has the name of a task definition answers the
+    // expression before this adapter is asked. The method would never run, and the
+    // workflow would not say why. So the start ends here, before any workflow can run
+    // into it (see decision 46 in the repository's DECISIONS.md)
+    refuseNamesWhichHideATask(workflowModuleId, bpmnProcessId, connectables);
+
     // A handler reads the item of an iteration out of the variable the model names in
     // 'camunda:elementVariable'. An element which names none hands no item over. So the
     // parameter would receive null once a workflow reaches the task, and nothing would say
@@ -952,6 +958,72 @@ public class Camunda7DeploymentService implements AdapterDeploymentService<BpmnM
         bpmnProcessId,
         filename,
         workflowModuleId);
+
+  }
+
+  /**
+   * The class of the bean the engine resolves a name to, before it asks this adapter. Only
+   * the Spring Boot module has such beans. The engine there resolves every bean of the
+   * application context by its name. Without a platform module handing one over, no name is
+   * a bean.
+   */
+  private java.util.function.Function<String, java.util.Optional<Class<?>>> classOfTheBeanNamed = name -> java.util.Optional
+      .empty();
+
+  /**
+   * Hands over how to find the bean the engine resolves a name to. The startup check needs
+   * it, because such a bean hides a task of the same name.
+   *
+   * @param classOfTheBeanNamed The class of the bean of a name, empty where the engine
+   *          resolves no bean of that name
+   */
+  public void setClassOfTheBeanNamed(
+      final java.util.function.Function<String, java.util.Optional<Class<?>>> classOfTheBeanNamed) {
+
+    this.classOfTheBeanNamed = classOfTheBeanNamed;
+
+  }
+
+  /**
+   * Ends the start where a task definition of the model this boot deploys has the name of
+   * something the engine resolves first: a shared attribute of the workflow aggregate, or a
+   * bean. Every such task definition of the process is named at once.
+   *
+   * @param workflowModuleId The workflow module ID
+   * @param bpmnProcessId The PLAIN BPMN process ID
+   * @param connectables The tasks of the model
+   */
+  private void refuseNamesWhichHideATask(
+      final String workflowModuleId,
+      final String bpmnProcessId,
+      final List<Camunda7TaskConnectable> connectables) {
+
+    final var names = Camunda7NamesHidingATask
+        .reachedByAnExpression(connectables)
+        .stream()
+        .map(Camunda7TaskConnectable::taskDefinition)
+        // a name with a dot in it would be read as a path into the aggregate. A task
+        // definition is one name, and only one name can be a process variable
+        .filter(name -> !name.contains("."))
+        .distinct()
+        .toList();
+    if (names.isEmpty()) {
+      return;
+    }
+    // the core answers a type exactly for the names whose value reaches the engine. That is
+    // the set of process variables the aggregate writes, under the sync mode which applies
+    final var sharedAttributes = workflowTaskWiring
+        .declaredTypesOfWorkflowAggregatePaths(
+            workflowModuleId,
+            bpmnProcessId,
+            names,
+            io.vanillabp.camunda7.processservice.Camunda7ProcessService.SYNC_MODE)
+        .keySet();
+    final var findings = Camunda7NamesHidingATask
+        .findings(connectables, bpmnProcessId, workflowModuleId, sharedAttributes, classOfTheBeanNamed);
+    if (!findings.isEmpty()) {
+      throw new IllegalStateException(String.join("\n", findings));
+    }
 
   }
 

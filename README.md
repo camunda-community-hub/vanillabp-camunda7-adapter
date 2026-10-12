@@ -680,6 +680,21 @@ which the business key identifies. They use a getter, a boolean getter or a fiel
 Boot, Spring beans still resolve. VanillaBP does not serve external tasks (`camunda:topic`),
 see [External tasks](#external-tasks).
 
+The engine asks for a top-level name in this order: its process variables first, on Spring Boot
+the beans of the application context next, and VanillaBP's EL resolver last. Version 1 used the
+same order. So a bean or a process variable named like a task definition takes the expression
+away from the `@WorkflowTask` method, and the method never runs. Putting VanillaBP first is no
+way out. A task wired by its element id answers every name evaluated at its element, so an input
+mapping `${amount}` there would run the handler instead of reading the variable.
+
+The start ends instead (`Camunda7NamesHidingATask`, see decision 46 in `DECISIONS.md`). It checks the
+task definitions of every task and listener which the engine reaches through an expression, user
+tasks excluded. A task definition fails the start if a Spring bean has its name, or if the
+workflow aggregate shares an attribute of its name with the engine. Which attributes are shared
+is the core's answer under the sync mode of this adapter. Quarkus has no beans in the engine's
+expressions, so there only the attribute counts. A process variable which the model or the
+application creates while a workflow runs cannot be seen at the start, and nothing checks it.
+
 ### Listeners somebody modelled
 
 A `camunda:executionListener` is a place where the engine lets the application in. VanillaBP 1 let

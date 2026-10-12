@@ -109,6 +109,9 @@ vanillabp:
               implemented-externally: true
           declared-aggregate-values:
             - '*'
+        NameHidingProcess:
+          declared-aggregate-values:
+            - '*'
         OldProcessVersionsProcess:
           allow-full-sync-with-bpms: true
           declared-aggregate-values:
@@ -134,6 +137,10 @@ vanillabp:
           declared-aggregate-values:
             - '*'
         RepeatedDeliveryProcess:
+          allow-full-sync-with-bpms: true
+          declared-aggregate-values:
+            - '*'
+        SharedNameProcess:
           allow-full-sync-with-bpms: true
           declared-aggregate-values:
             - '*'

@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- A task definition, and a task wired by its element id. Whether the start accepts this
+     model depends on what else carries the name 'chargeCard': a Spring bean ends the start,
+     an attribute the aggregate keeps to itself does not. The element id 'reviewOrder' is
+     never an EL name, so a bean or a shared attribute of that name changes nothing. -->
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" id="Definitions_NameHiding" targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:process id="NameHidingProcess" isExecutable="true">
+    <bpmn:startEvent id="NH_Start">
+      <bpmn:outgoing>NH_f1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:sequenceFlow id="NH_f1" sourceRef="NH_Start" targetRef="NH_Charge" />
+    <bpmn:serviceTask id="NH_Charge" camunda:expression="${chargeCard}">
+      <bpmn:incoming>NH_f1</bpmn:incoming>
+      <bpmn:outgoing>NH_f2</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="NH_f2" sourceRef="NH_Charge" targetRef="reviewOrder" />
+    <bpmn:serviceTask id="reviewOrder" camunda:delegateExpression="${theExpressionNobodyNames}">
+      <bpmn:incoming>NH_f2</bpmn:incoming>
+      <bpmn:outgoing>NH_f3</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="NH_f3" sourceRef="reviewOrder" targetRef="NH_End" />
+    <bpmn:endEvent id="NH_End">
+      <bpmn:incoming>NH_f3</bpmn:incoming>
+    </bpmn:endEvent>
+  </bpmn:process>
+</bpmn:definitions>

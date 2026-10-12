@@ -19,8 +19,9 @@ public class Camunda7TaskExpressionManager extends JuelExpressionManager {
   private final WorkflowTaskInvoker workflowTaskInvoker;
 
   /**
-   * Puts this adapter's resolver in front of the engine's own. It is for a platform which
-   * has no bean-aware expression manager to extend instead.
+   * Adds this adapter's resolver behind the engine's own ones. So a process variable answers
+   * a name before a task does (see decision 46 in the repository's {@code DECISIONS.md}). It is for a
+   * platform which has no bean-aware expression manager to extend instead.
    *
    * @param taskRegistry What the resolver built here looks a task up in
    * @param workflowTaskInvoker Where the application's method is called

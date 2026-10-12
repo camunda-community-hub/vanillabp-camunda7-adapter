@@ -431,6 +431,30 @@ This applies however the method is wired to the task, by `@WorkflowTask(taskDefi
 or by `@WorkflowTask(id = ...)`. The opposite pairing is fine: a *Delegate expression* also serves
 a method without `@TaskId`, because the behavior leaves the activity when the handler returns.
 
+### A bean or a shared attribute named like a task definition ends the boot
+
+The engine resolves `${chargeCard}` by asking in this order: its process variables, on Spring
+Boot the beans of the application context, and VanillaBP last. Version 1 asked in the same
+order. So a Spring bean named `chargeCard` got the expression, and the `@WorkflowTask` method
+for the task definition `chargeCard` never ran. Nothing said so.
+
+Version 2 ends the boot in that case. Such an application ran in version 1 and does not start
+any more. This is on purpose: the method never ran in version 1 either.
+
+Version 2 also ends the boot where the workflow aggregate has an attribute with the name of a
+task definition and shares it with the engine. This case is new. Version 2 writes every shared
+attribute as a process variable, and the variable would win against the task. In version 1 the
+task won, because the adapter read attributes itself and asked for the task first.
+
+The message names the task definition, the BPMN process, the element and the workflow module. It
+also names the bean and its class, or the attribute. There are three ways out. Rename the task
+definition in the BPMN and in the `@WorkflowTask` method. Rename the bean or the attribute. Or
+keep the attribute away from the engine with `@NoSyncWithBPMS`.
+
+The check reads only what is known at the start. A process variable which the model or your code
+creates while a workflow runs, for example by an output mapping, is not checked. Do not give it
+the name of a task definition.
+
 ### A task somebody else serves can say so
 
 Version 1 ended the boot over a user task which no method serves. Its parse listener wired every

@@ -990,7 +990,7 @@ public class Camunda7ProcessService<A> implements MigratableProcessService<A> {
     // own (job) transaction (TaskInvocationContext#runInCurrentTransaction). So
     // aggregate changes and engine state commit or roll back together. A redelivered job
     // proves that NOTHING was committed. So there is nothing to deduplicate. A delivery
-    // record is still written, see decision 39 in the repository's DECISIONS.md, but
+    // record is still written, see decision 6 in the repository's DECISIONS.md, but
     // deduplicating would cost a store access per task and buy nothing.
     //
     // An engine on a datasource of its own commits where the application's persistence

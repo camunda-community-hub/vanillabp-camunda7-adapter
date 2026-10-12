@@ -25,7 +25,7 @@ import lombok.extern.slf4j.Slf4j;
  * listener to those activities as well. The registry says which listeners of an activity are
  * waiting for it. A listener the modeller put on <code>end</code> is not among them. The
  * engine fires an END execution listener on a cancellation too, so that method already hears
- * the moment. Decision 26 in the repository's DECISIONS.md says why a listener knows these
+ * the moment. Decision 20 in the repository's DECISIONS.md says why a listener knows these
  * two events and no others.
  * <p>
  * The invocation runs INSIDE the engine's cancellation transaction

@@ -12,17 +12,28 @@ easily, and this log exists to avoid that kind.
 The links below point into this repository's [`README.md`](./README.md). The README has the details
 an entry leaves out on purpose.
 
-### 1. The workflow aggregate is shared as process variables - the version named for the removal superseded by decision 25
-
-*Superseded by decision 25: no version is named for the removal of the migration fallback.*
+### 1. The workflow aggregate is shared as process variables
 
 Camunda 7 runs embedded, so the EL resolver (the part of the engine which evaluates expressions)
 could read the aggregate live. But exactly that makes a model portable in one direction only:
 `${riskAcceptable}` would work here and fail on every remote BPMS. So the adapter writes the values
 an aggregate shares as process variables, at every point where it talks to the engine. The engine
-evaluates its expressions against those variables. Reading an attribute through the EL resolver
-stays as a migration fallback for workflows started before. It is reported once per name and
-removed in 2.1.
+evaluates its expressions against those variables.
+
+Reading an attribute through the EL resolver stays as a migration fallback for workflows started
+before. It answers only where the engine has no variable with the name an expression asks for. The
+fallback will be removed, but no version is named for that, because nobody can promise a date
+today. Whoever needs a date asks the VanillaBP team. So no message, README or wiki names a version.
+
+Instead of a version, a reader can watch the fallback itself. It warns once per workflow module,
+process and name that it answered an expression by reading the aggregate. It also says, at most once
+an hour, how many workflow instances it has served since the application started. That count falls
+on its own, because a workflow stops needing the fallback as soon as it reaches a point where this
+adapter writes the shared values. A count which keeps growing says something else: a model reads an
+attribute which is not shared. The startup check names those expressions.
+
+`Camunda7UnsharedExpressionCheckIT` asserts the sentence the startup check prints about the
+fallback. So a message which names a version again fails the build.
 See [Sharing the workflow aggregate](./README.md#sharing-the-workflow-aggregate).
 
 ### 2. A workflow is progressed after the caller's commit
@@ -61,8 +72,6 @@ also every field a later change adds.
 
 ### 5. The adapter changes the BPMN it deploys, and only in ways the model's author can predict
 
-*Bounded further by decision 43: the parse listener and `wireBpmn` change a process only where a `@WorkflowService` class of this application claims it. A process nobody claims and a process somebody else deployed keep their model as it is, flags included.*
-
 An embedded engine offers no other place to hook in. A remote BPMS gets some things for free from
 its own protocol. This adapter has to put them into the model before it is deployed. `prepareBpmn`
 and `wireBpmn` write two things into the deployed BPMN. The first is the business key handed into a
@@ -80,13 +89,14 @@ only where a `@WorkflowEnded` method exists. The start listener goes onto every 
 process itself holds and onto no other (decisions 27 and 28). The business key is not injected where
 the called process has an aggregate of its own, or where the application modelled a
 `camunda:in businessKey` itself. The scoping rewrite runs once per FILE and not once per process,
-because all processes of one file share a model. The wiki lists what the adapter adds in
+because all processes of one file share a model.
+
+All of this happens only to a process which a `@WorkflowService` class of this application claims
+(decision 43). The parse listener and `wireBpmn` leave a process nobody claims, and a process
+somebody else deployed, exactly as modelled, flags included. The wiki lists what the adapter adds in
 [What the adapter changes in the BPMN it deploys](https://github.com/camunda-community-hub/vanillabp-camunda7-adapter/wiki/Home#what-the-adapter-changes-in-the-bpmn-it-deploys).
 
-### 6. A task handler runs inside the engine's own job transaction - the delivery record part superseded by decision 39
-
-*Superseded by decision 39: a delivery is recorded in both datasource modes, and the modes differ
-in the deduplication rather than in the record.*
+### 6. A task handler runs inside the engine's own job transaction
 
 Camunda 7 delivers a task inside the transaction of the job it is executing. So this adapter runs
 the handler in that transaction and does not open one of its own. This is what makes the three
@@ -97,21 +107,32 @@ outcomes exact:
 - any other exception rolls the job transaction back. The engine then lowers the job's retries and
   delivers again.
 
-So here the engine's retry IS the recovery. This is why the adapter adds nothing to the delivery
-log of the platform: a redelivery proves that nothing was committed. An application which gives the
-engine a datasource of its own loses that proof. That limit is documented, not hidden.
+So here the engine's retry IS the recovery. On the application's datasource nothing is
+deduplicated: a job the engine hands out again proves that nothing was committed. An application
+which gives the engine a datasource of its own loses that proof.
 
-The limit now has an answer, and the answer depends on the datasource mode. An engine on a
-datasource of its own runs its job transaction on a resource which the application's persistence
-cannot join. So VanillaBP opens the transaction for the handler and the workflow aggregate. That
-transaction commits before the job does, and a job the engine hands out after that is a repeated
-delivery of committed work. Such an adapter id answers `deliversTasksAtLeastOnce()` with `true`. It
-names each delivery by the id of the job at hand, and the engine keeps that id across its retries.
-On the application's datasource none of this happens, because a record would add nothing. A
-user-task notification stays unnamed in both modes. One transaction creates every user task the
-token reaches, so the job id would name several notifications. And the id which is unique per task
-is generated while the task is created, so it does not survive the rollback which causes the
-repetition.
+On such a datasource the answer is different. An engine on a datasource of its own runs its job
+transaction on a resource which the application's persistence cannot join. So VanillaBP opens the
+transaction for the handler and the workflow aggregate. That transaction commits before the job
+does, and a job the engine hands out after that is a repeated delivery of committed work. Such an
+adapter id answers `deliversTasksAtLeastOnce()` with `true`. It names each delivery by the id of the
+job at hand, and the engine keeps that id across its retries.
+
+A delivery is recorded in both datasource modes, and only the deduplication differs. Story 879 of
+the platform gave a delivery which names no id a record of its own. Such a record takes no part in
+the deduplication. It still answers the two other questions a record answers: which BPMS holds the
+task, and which kind of id the id of that task is. So a caller who completes a task which is gone is
+told which method to use, instead of getting a list of guesses. So this adapter writes a record on
+the application's datasource as well as on an engine datasource of its own. It also writes one for a
+user-task notification, in both modes.
+
+A user-task notification is not deduplicated in either mode, because no delivery of a user task is
+named. One transaction creates every user task the token reaches, so the job id would name several
+notifications. And the id which is unique per task is generated while the task is created, so it
+does not survive the rollback which causes the repetition.
+
+`Camunda7UserTaskDeliveryRecordIT` holds what a user-task notification leaves behind.
+`Camunda7RepeatedDeliveryIT` holds the two datasource modes side by side.
 
 ### 7. `table-prefix` says the tables are already there
 
@@ -195,10 +216,7 @@ boot if one is missing which every adapter has to serve. Second, the phase-one h
 adapter is most useful, because an embedded engine answers from the caller's own transaction. The
 platform's decision 29 says why the operation itself carries no engine knowledge at all.
 
-### 12. A suspended process definition counts, and the only way past it is a system property
-
-*Note of 2026-10-12: the title names only the system property. The environment variable below is a
-second, equal way past it.*
+### 12. A suspended process definition counts, and the only way past it is a system property or its environment variable
 
 Deleting a process definition really removes it here. The engine drops it from the database and the
 definition query no longer returns it, so the startup check for old process versions stops reporting
@@ -583,10 +601,9 @@ asks for a `@WorkflowTask` method and ends the boot where none exists.
 `validateNoUnwiredWorkflowTaskMethods` reports a method which matches no listener of any wired
 process. Version 1 wired its listeners privately and had neither check.
 
-The event is part of a listener's identity, because one method serves one event of one element. So
-`@TaskEvent` receives `CREATED` for every listener. This is the only value that works at all,
-because a method without the parameter subscribes to `CREATED` alone. What a method hears when the
-element is CANCELED is decided by entry 26, which supersedes this paragraph in that one. Two
+The event is part of a listener's identity, because one method serves one event of one element. A
+listener knows the two events `TaskEvent.Event` already has. `CREATED` is the modelled listener
+firing, whatever moment that is. `CANCELED` is the element going away (see below). Two
 served listeners of one element under ONE expression end the boot, and the message names both. One
 method would serve two events, and nothing it could ask would tell it which one it is in. Version 1
 decided this case with a `findFirst`. Two listeners of one element under different expressions are
@@ -595,6 +612,42 @@ element and cannot tell them apart. A method which declares `@TaskId` also ends 
 listener is notified and done, and the task can never stay open. A method which throws
 `TaskException` is answered with the reason and not with an incident: a listener has no token to
 route.
+
+**When the element is canceled.** A listener fires at the moment the modeller picked, and at no
+other. An element which an interrupting boundary event or a terminating end event takes away never
+reaches a `start` listener. So without more, the method which serves it would never be told that the
+work it was waiting for is gone. Version 1 had this hole and said nothing about it.
+
+`TaskEvent.Event` does not get new values for this. No two BPMS promise a listener the same way.
+This engine knows `start`, `end` and `take`. Camunda 8 knows `creating`, `assigning`, `updating`,
+`completing` and `canceling` on a task listener. A common set over the two would be a promise
+VanillaBP cannot keep. So the event a method really wants is in the model: one listener per event,
+one method per listener.
+
+The engine already fires an END execution listener when an element is canceled. This is how
+`Camunda7TaskCancellationListener` hears a cancellation for a TASK. So the same listener serves the
+listeners of an element, and `Camunda7AsyncBpmnParseListener#parseProcess` attaches it to the
+elements which have one. The adapter looks at the process once, after its whole scope was parsed,
+and not through a `parseXxx` method per element type. A listener may sit wherever a modeller can
+select something. A method per type would be a list which falls behind the next BPMN element the
+engine learns. An element the engine has no activity for is skipped. The case a modeller reaches is
+a sequence flow, and a sequence flow is never canceled.
+
+A listener the modeller put on `end` gets nothing from VanillaBP. Such a method already hears the
+cancellation through its own listener, as `CREATED`, and a second report would be the same moment
+twice. The Camunda 8 adapter draws the same line for the listener a modeller puts on its own cancel
+moment: whoever already hears the moment is not told a second time.
+
+An element which already has the cancellation listener keeps the one it has. Every service-like
+activity has one, because the transaction boundaries put it there. A second copy would report one
+cancellation twice.
+
+Nothing is written into the BPMN for this. Decision 14 states this rule for everything VanillaBP and
+its extensions attach here. What the wiring learns is written into `Camunda7TaskRegistry`. The parse
+listener reads it there, under the process definition key the engine reports.
+`Camunda7ListenersTest` holds which listener needs a cancellation and which one does not.
+`Camunda7ModelledListenerIT` holds a boundary event which takes an element away, and the method
+which hears it.
 
 The default is off because of what serving a listener costs. A listener is where a BPMS lets an
 application in at a moment the BPMS owns. Every BPMS draws that moment differently, so the model is
@@ -734,10 +787,10 @@ measures.
 
 ### 24. A start is the application's own where the ID already has an aggregate - superseded by decision 28
 
-> Superseded. A workflow started past VanillaBP no longer keeps the business key it was started
-> with: the id of a workflow is the id of its workflow aggregate, the application assigns it, and
-> a key VanillaBP did not write is refused. Decision 28 says why and what replaced the parts of
-> this entry which still hold. The entry stays because code and messages pointed at it.
+*Superseded by decision 28: a workflow started past VanillaBP no longer keeps the business key it
+was started with. The id of a workflow is the id of its workflow aggregate, the application assigns
+it, and a key VanillaBP did not write is refused. Decision 28 says why and what replaced the parts of
+this entry which still hold. The entry stays because code and messages pointed at it.*
 
 On Camunda 7 the business key IS the workflow aggregate's ID. When the application starts a
 workflow, `Camunda7ProcessService` writes the ID into the key. Every other part of this adapter
@@ -786,68 +839,14 @@ against them, and reads the message of the refused one. See
 
 ### 25. The migration fallback names no version for its removal
 
-Decision 1 ends by saying that version 2.1 removes the live read of the aggregate. Nobody can
-promise that date today. So the date is gone from every message, from the README and from both
-wikis. This entry says what stands instead: the fallback stays a fallback, it will be removed, and
-whoever needs a date asks the VanillaBP team. Everything else decision 1 says stays as it is. The
-values an aggregate shares are written as process variables, and the engine evaluates its
-expressions against them. The live read answers only where the engine has no variable with the name
-an expression asks for.
-
-Instead of a version, a reader can watch the fallback itself. It warns once per workflow module,
-process and name that it answered an expression by reading the aggregate. It also says, at most once
-an hour, how many workflow instances it has served since the application started. That count falls
-on its own, because a workflow stops needing the fallback as soon as it reaches a point where this
-adapter writes the shared values. A count which keeps growing says something else: a model reads an
-attribute which is not shared. The startup check names those expressions.
-
-`Camunda7UnsharedExpressionCheckIT` asserts the sentence the startup check prints about the
-fallback. So a message which names a version again fails the build.
+*Merged into decision 1 on 2026-10-12, before the 2.0 release.* It said that no version is named
+for the removal of the migration fallback, and how a reader watches the fallback instead.
 
 ### 26. A served listener is told when its element is canceled, through the listener the engine already fires
 
-This supersedes the paragraph of decision 20 about what `@TaskEvent` receives. The rest of that
-entry stays as it is.
-
-A listener fires at the moment the modeller picked, and at no other. An element which an
-interrupting boundary event or a terminating end event takes away never reaches a `start` listener.
-So the method which serves it is never told that the work it was waiting for is gone. Version 1 had
-the same hole and said nothing about it.
-
-`TaskEvent.Event` does not get new values for this. No two BPMS promise a listener the same way.
-This engine knows `start`, `end` and `take`. Camunda 8 knows `creating`, `assigning`, `updating`,
-`completing` and `canceling` on a task listener. A common set over the two would be a promise
-VanillaBP cannot keep. So a listener knows the two events `TaskEvent.Event` already has. `CREATED`
-is the modelled listener firing, whatever moment that is. The event a method really wants is in the
-model: one listener per event, one method per listener. `CANCELED` is the element going away.
-
-The engine already fires an END execution listener when an element is canceled. This is how
-`Camunda7TaskCancellationListener` hears a cancellation for a TASK. So the same listener serves the
-listeners of an element, and `Camunda7AsyncBpmnParseListener#parseProcess` attaches it to the
-elements which have one. The adapter looks at the process once, after its whole scope was parsed,
-and not through a `parseXxx` method per element type. A listener may sit wherever a modeller can
-select something. A method per type would be a list which falls behind the next BPMN element the
-engine learns. An element the engine has no activity for is skipped. The case a modeller reaches is
-a sequence flow, and a sequence flow is never canceled.
-
-A listener the modeller put on `end` gets nothing from VanillaBP. Such a method already hears the
-cancellation through its own listener, as `CREATED`, and a second report would be the same moment
-twice. The Camunda 8 adapter draws the same line for the listener a modeller puts on its own cancel
-moment: whoever already hears the moment is not told a second time.
-
-An element which already has the cancellation listener keeps the one it has. Every service-like
-activity has one, because the transaction boundaries put it there. A second copy would report one
-cancellation twice.
-
-Nothing is written into the BPMN for this. Decision 14 states this rule for everything VanillaBP and
-its extensions attach here. What the wiring learns is written into `Camunda7TaskRegistry`. The parse
-listener reads it there, under the process definition key the engine reports.
-
-`Camunda7ListenersTest` holds which listener needs a cancellation and which one does not.
-`Camunda7ModelledListenerIT` holds a boundary event which takes an element away, and the method
-which hears it.
-
-See [Listeners somebody modelled](./README.md#listeners-somebody-modelled).
+*Merged into decision 20 on 2026-10-12, before the 2.0 release.* It said how a served listener
+hears `CANCELED`: through the END execution listener the engine already fires when an element is
+canceled.
 
 ### 27. An event subprocess does not start a workflow
 
@@ -885,7 +884,7 @@ See [The start of a workflow](./README.md#the-start-of-a-workflow-and-workflows-
 
 The id of a workflow is the id of its workflow aggregate. The application assigns it in the
 `@WorkflowStartedByBpms` method, and nobody else does. On Camunda 7 that id is kept in the BUSINESS
-KEY. The rule itself, and what the core does with it, is decision 98 of
+KEY. The rule itself, and what the core does with it, is decision 69 of
 `adapter-platform-integration`.
 
 This supersedes decision 24 of this repository. Decision 24 said the opposite: a workflow somebody
@@ -896,7 +895,7 @@ did not write is refused, and the message says that VanillaBP names a workflow.
 Decision 24 was right about the one thing Camunda 7 can answer: a start is the application's own
 where the id already has an aggregate. It was wrong about what to do with a key which names no
 aggregate. Taking over such a key made the starter the one who names the workflow. From then on two
-parties named workflows. An id is a value of the workflow aggregate like any other, and decision 92
+parties named workflows. An id is a value of the workflow aggregate like any other, and decision 69
 of the platform had already handed the aggregate to the application. So the key follows the id, not
 the other way round.
 
@@ -1068,9 +1067,6 @@ method would only add a sentence nobody acts on. Both adapters say so where the 
 
 ### 32. A called process named by an expression is asked about while it runs
 
-*Decision 44 adds that the start of a called process is not reported to the core. The listener still hands the
-caller's name on.*
-
 Camunda 7 hands a called process no business key, and this adapter keeps the workflow aggregate's
 id in the business key. Decision 5 closes that gap in the model. The deployment writes
 `camunda:in businessKey="#{execution.processBusinessKey}"` onto a call activity whose called process
@@ -1092,6 +1088,8 @@ Now the answer comes while the workflow runs. The start listener of the called p
 call activity which started the instance out of the execution tree. It asks the core whether caller
 and called process work on one workflow aggregate. Where they do, it writes the caller's name into
 the instance. Where they do not, nothing is inherited, and the start stays the start it looks like.
+The start of a called process is not reported to the core (decision 44). The listener still hands
+the caller's name on.
 
 There were three other ways, and none of them works.
 
@@ -1361,25 +1359,8 @@ reader in this repository already held.
 
 ### 39. A delivery is recorded in both datasource modes, and only the deduplication differs
 
-Story 879 of the platform gave a delivery which names no id a record of its own. Such a record
-takes no part in the deduplication. It still answers the two other questions a record answers:
-which BPMS holds the task, and which kind of id the id of that task is. So a caller who completes a
-task which is gone is told which method to use, instead of getting a list of guesses. So this
-adapter writes a record on the application's datasource as well as on an engine datasource of its
-own. It also writes one for a user-task notification, in both modes.
-
-The deduplication is what decision 6 says it is. On the application's datasource nothing is
-deduplicated. The handler runs in the engine's job transaction, and a job the engine hands out
-again proves that nothing was committed. A user-task notification is not deduplicated either, not
-even on an engine with a datasource of its own, because no delivery of a user task is named. One
-transaction creates every user task the token reaches, and the id of such a task only comes into
-being while the task is created.
-
-The reasoning of decision 6 holds as it stands. Only the sentence drawn from it was too wide. It
-said that nothing is written down, but the truth is that nothing is deduplicated.
-
-`Camunda7UserTaskDeliveryRecordIT` holds what a user-task notification leaves behind.
-`Camunda7RepeatedDeliveryIT` holds the two datasource modes side by side.
+*Merged into decision 6 on 2026-10-12, before the 2.0 release.* It said that a delivery is recorded
+on both kinds of datasource, and that the two modes differ only in the deduplication.
 
 ### 40. A workflow is served from the model of its own version
 
@@ -1423,9 +1404,7 @@ the expression.
 `Camunda7TasksOfTheOwnVersionTest` holds the lookup. `Camunda7HandlersOfTheOwnVersionIT` holds the
 upgrade against a running engine.
 
-### 41. A standard loop is refused in a claimed process, warned about in one nobody claims, and a held version is warned about while workflows run on it
-
-*Superseded in part by decision 43: a standard loop in a process nobody claims gets no WARN any more. Such a process is not looked at.*
+### 41. A standard loop is refused in a claimed process, and a held version is warned about while workflows run on it
 
 #### What was decided
 
@@ -1436,21 +1415,21 @@ about it. Measured on 7.24 by `Camunda7StandardLoopTest`: `BpmnParse` reads only
 somebody finds out in production.
 
 So the deployment first reads the model for the marker, at any depth of its subprocesses. It
-answers in three ways:
+answers in two ways:
 
 - A BPMN process which a `@WorkflowService` class claims does not deploy. The message names the
   activity, the process, the workflow module, and what the engine does with the marker. It also
   names the two forms which really repeat an activity: a loop in the sequence flow, or a
   multi-instance element with `@MultiInstanceElement`, `@MultiInstanceIndex` and
   `@MultiInstanceTotal`.
-- A process nobody claims gets one WARN with the same words. It is somebody else's model. Ending the
-  boot over it would take the application down for a process it does not run. The Camunda 8
-  adapter makes the same split for the findings of this kind.
 - A version the engine already holds is never refused, because nobody can change it. Where
   workflows still run on it, the start of the workflow module logs a WARN. The WARN names the
   version, the activity and how many workflows are on it. A version no workflow runs on any more is
   skipped. The model is read first, and the workflows are counted only where the model has the
   marker.
+
+A process nobody claims is not looked at (decision 43). It is somebody else's model. Ending the boot
+over it would take the application down for a process it does not run.
 
 #### Why
 
@@ -1463,9 +1442,9 @@ as wrong here.
 This is a rule which refuses a model. If it came after the 2.0 release, it would stop an
 application which boots today. That is why it comes with 2.0.
 
-`Camunda7StandardLoopRefusalTest` holds the refusal, the WARN of an unclaimed process, the
-multi-instance element which must deploy, and the WARN about a held version with and without
-workflows on it.
+`Camunda7StandardLoopRefusalTest` holds the refusal, the unclaimed process which is not looked
+at, the multi-instance element which must deploy, and the WARN about a held version with and
+without workflows on it.
 
 See [A standard loop is refused while deploying](https://github.com/camunda-community-hub/vanillabp-camunda7-adapter/wiki/Deviations#a-standard-loop-is-refused-while-deploying).
 

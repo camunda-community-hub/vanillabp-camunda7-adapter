@@ -1639,3 +1639,28 @@ It is not checked at runtime either. The documentation names the case instead. A
 an earlier version is not checked. Nobody can change it any more.
 
 Camunda 8 has no such collision. A task there is a job type, and no expression is resolved to find its worker.
+
+### 47. The tables of an engine are compared across adapter types, too
+
+Proposed by story 984. It follows decision 129 of `adapter-platform-integration`, stated here from
+this adapter's side.
+
+Two `camunda7` ids are the same engine if they share the datasource and the table prefix.
+`Camunda7InstanceIdentity` compares them, and the platform hands this adapter only the ids of its own
+type. The forks CIB seven and Operaton use the same tables. A fork adapter is generated from this
+code, so it would compare only its own ids, too. A `camunda7` id and a fork id on the same tables
+would pass both checks. Then each job executor runs the jobs of the other engine, and nothing fails
+at startup.
+
+**The adapter answers `getAddressedSystem()`.** The platform compares that answer for every id,
+across types. This adapter builds it from the same `Camunda7InstanceIdentity` as the check of its
+own ids, so both checks agree on what "the same tables" means. The key starts with the words
+`embedded engine tables` and names the datasource and the prefix. It contains no type and no
+`camunda`, so the generated fork adapters build exactly the same key. The advice in the message names
+`data-source-name` and `table-prefix`, the same two ways out as the check of one type.
+
+**The reserved datasource name `default` counts as no name.** Before, `data-source-name: default`
+and an id without a name were two different datasources to the check, although both mean the
+application's datasource. Now both are the same, in the check of one type and in the key.
+
+The check of one type stays as it was, with its own message. It runs first.

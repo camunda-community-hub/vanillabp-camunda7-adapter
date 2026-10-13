@@ -5,6 +5,8 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.function.Function;
 
+import io.vanillabp.integration.adapter.spi.AddressedSystem;
+
 /**
  * What makes two configured <code>camunda7</code> adapter ids DIFFERENT engines:
  * the database they run on. Camunda 7 is embedded. So two ids which share one
@@ -23,7 +25,8 @@ import java.util.function.Function;
  * </ul>
  *
  * @param dataSourceName The configured datasource name or <code>null</code> for the
- *          application's default datasource
+ *          application's default datasource. The reserved name <code>default</code> means
+ *          the default datasource as well
  * @param tablePrefix The configured engine table prefix or <code>null</code> for
  *          the engine's default (no prefix)
  */
@@ -33,7 +36,8 @@ public record Camunda7InstanceIdentity(
 
   private String describeDataSource() {
 
-    return (dataSourceName == null) || dataSourceName.isBlank()
+    // 'default' names the application's datasource too, so it must not count as another one
+    return Camunda7EngineProperties.isDefaultDataSourceName(dataSourceName)
         ? "<the application's default datasource>"
         : dataSourceName;
 
@@ -55,6 +59,28 @@ public record Camunda7InstanceIdentity(
     return describeDataSource()
         + "|"
         + describeTablePrefix();
+
+  }
+
+  /**
+   * The same comparison for the core, which compares ids across adapter types. A fork of
+   * Camunda 7 uses the same tables (<code>ACT_*</code>). So a <code>camunda7</code> id and
+   * an id of a fork adapter on one datasource and one prefix are the same engine state, and
+   * each job executor would run the jobs of the other one. The key therefore names no
+   * adapter type, and an adapter generated from this one builds the same key. See decision
+   * 47 in the repository's DECISIONS.md.
+   *
+   * @return The tables this identity addresses, as the adapter SPI compares them
+   */
+  public AddressedSystem addressedSystem() {
+
+    return new AddressedSystem(
+        "embedded engine tables|"
+            + key(), "datasource %s, table prefix %s".formatted(describeDataSource(), describeTablePrefix()), """
+                give each one its own datasource ('vanillabp.adapters.<id>.data-source-name'), or \
+                its own engine tables on the shared datasource ('vanillabp.adapters.<id>.table-prefix', \
+                with the tables created beforehand and 'vanillabp.adapters.<id>.database-schema-update: \
+                false')""");
 
   }
 

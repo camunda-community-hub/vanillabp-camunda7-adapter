@@ -1,6 +1,8 @@
 package io.vanillabp.camunda7.engine;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -47,6 +49,18 @@ public class Camunda7InstanceIdentityTest {
   }
 
   @Test
+  @DisplayName("The reserved name 'default' is the application's default datasource, too")
+  public void theReservedNameDefaultIsTheDefaultDataSource() {
+
+    assertThrows(
+        IllegalStateException.class,
+        () -> validate(Map.of(
+            "c7-old", new Camunda7InstanceIdentity("default", null),
+            "c7-new", new Camunda7InstanceIdentity(null, null))));
+
+  }
+
+  @Test
   @DisplayName("Two ids on the same named datasource and prefix are the same engine")
   public void sameNamedDataSourceFails() {
 
@@ -72,6 +86,60 @@ public class Camunda7InstanceIdentityTest {
         () -> validate(Map.of(
             "c7-old", new Camunda7InstanceIdentity(null, null),
             "c7-new", new Camunda7InstanceIdentity(null, "NEW_"))));
+
+  }
+
+  @Test
+  @DisplayName("The key for the check across adapter types is equal exactly where two camunda7 ids are refused")
+  public void theAddressedSystemComparesLikeTheCheckOfOneType() {
+
+    final var identities = List.of(
+        new Camunda7InstanceIdentity(null, null),
+        new Camunda7InstanceIdentity("", " "),
+        new Camunda7InstanceIdentity("default", null),
+        new Camunda7InstanceIdentity("legacy", null),
+        new Camunda7InstanceIdentity("legacy", "MY_"),
+        new Camunda7InstanceIdentity(null, "MY_"));
+    for (final var first : identities) {
+      for (final var second : identities) {
+        assertEquals(
+            first.equals(second),
+            first
+                .addressedSystem()
+                .key()
+                .equals(second
+                    .addressedSystem()
+                    .key()),
+            () -> "%s against %s".formatted(first, second));
+      }
+    }
+
+  }
+
+  @Test
+  @DisplayName("The addressed system names datasource and prefix, and both ways to separate two engines")
+  public void theAddressedSystemGuides() {
+
+    final var system = new Camunda7InstanceIdentity("legacy", null).addressedSystem();
+
+    assertEquals("datasource legacy, table prefix <no table prefix>", system.description());
+    assertTrue(
+        system
+            .howToSeparate()
+            .contains("'vanillabp.adapters.<id>.data-source-name'"),
+        system::howToSeparate);
+    assertTrue(
+        system
+            .howToSeparate()
+            .contains("'vanillabp.adapters.<id>.table-prefix'"),
+        system::howToSeparate);
+    // a fork adapter is generated from this code, and its key must stay equal to this one
+    assertFalse(
+        system
+            .key()
+            .toLowerCase()
+            .contains("camunda"),
+        system::key);
 
   }
 

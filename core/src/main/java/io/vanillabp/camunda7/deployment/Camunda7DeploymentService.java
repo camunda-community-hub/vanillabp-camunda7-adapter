@@ -5,6 +5,7 @@ import java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
@@ -25,6 +26,7 @@ import io.vanillabp.camunda7.wiring.Camunda7TaskConnectable;
 import io.vanillabp.camunda7.wiring.Camunda7TaskRegistry;
 import io.vanillabp.integration.adapter.spi.AdapterCollaborators;
 import io.vanillabp.integration.adapter.spi.AdapterDeploymentService;
+import io.vanillabp.integration.adapter.spi.AddressedSystem;
 import io.vanillabp.integration.adapter.spi.BpmnParseException;
 import io.vanillabp.integration.adapter.spi.workflowtask.BpmnTaskSpec;
 import io.vanillabp.integration.adapter.spi.workflowtask.WorkflowTaskWiring;
@@ -536,6 +538,24 @@ public class Camunda7DeploymentService implements AdapterDeploymentService<BpmnM
       final List<String> adapterIdsOfThisType) {
 
     Camunda7InstanceIdentity.validateDistinct(adapterIdsOfThisType, instanceIdentities);
+
+  }
+
+  /**
+   * The tables this engine works on: datasource and table prefix, compared exactly as
+   * {@link #validateDistinctAdapterInstances(List)} compares two <code>camunda7</code> ids.
+   * The core compares it with the ids of other adapter types, so that a Camunda 7 engine and
+   * an engine of a fork never share one set of tables (see {@link Camunda7InstanceIdentity}).
+   */
+  @Override
+  public Optional<AddressedSystem> getAddressedSystem() {
+
+    if (instanceIdentities == null) {
+      return Optional.empty();
+    }
+    return Optional
+        .ofNullable(instanceIdentities.apply(adapterId))
+        .map(Camunda7InstanceIdentity::addressedSystem);
 
   }
 

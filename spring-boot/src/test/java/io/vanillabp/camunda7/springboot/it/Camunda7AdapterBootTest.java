@@ -9,6 +9,7 @@ import org.springframework.boot.test.context.ConfigDataApplicationContextInitial
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 
 import io.vanillabp.camunda7.deployment.Camunda7DeploymentService;
+import io.vanillabp.camunda7.engine.Camunda7InstanceIdentity;
 import io.vanillabp.camunda7.springboot.Camunda7AdapterConfiguration;
 import io.vanillabp.camunda7.springboot.engine.Camunda7EngineHolder;
 import io.vanillabp.camunda7.springboot.processservice.Camunda7ProcessServiceConfiguration;
@@ -143,6 +144,21 @@ public class Camunda7AdapterBootTest {
               .collect(java.util.stream.Collectors.toSet());
           Assertions.assertEquals(java.util.Set.of("c7", "c7-two"), deploymentServiceIds);
 
+          // what the platform compares across adapter types is built from datasource and
+          // prefix, exactly as two camunda7 ids are compared
+          final var tablesByAdapterId = context
+              .getBeanProvider(AdapterDeploymentService.class)
+              .stream()
+              .map(service -> (AdapterDeploymentService<?, ?>) service)
+              .collect(java.util.stream.Collectors
+                  .toMap(AdapterDeploymentService::getAdapterId, AdapterDeploymentService::getAddressedSystem));
+          Assertions.assertEquals(
+              java.util.Optional.of(new Camunda7InstanceIdentity(null, null).addressedSystem()),
+              tablesByAdapterId.get("c7"));
+          Assertions.assertEquals(
+              java.util.Optional.of(new Camunda7InstanceIdentity("c7TwoDataSource", null).addressedSystem()),
+              tablesByAdapterId.get("c7-two"));
+
           final var processServices = context
               .getBeanProvider(io.vanillabp.integration.adapter.spi.MigratableProcessService.class)
               .stream()
@@ -273,6 +289,86 @@ public class Camunda7AdapterBootTest {
           Assertions.assertTrue(
               message.contains("table-prefix"),
               "the message has to name the second way of making two ids distinct");
+
+        });
+
+  }
+
+  /**
+   * A fork of Camunda 7 uses the same tables. A <code>camunda7</code> id and an id of a fork
+   * adapter on the same datasource without prefixes would be two engines on one set of
+   * tables, and each job executor would run the jobs of the other one. The check of one
+   * adapter type cannot see that, so the platform compares the tables across types.
+   */
+  @Test
+  public void aCamunda7IdAndAForkIdOnTheSameTablesFailWithGuidingMessage() {
+
+    this.contextRunner
+        .withBean(
+            "cibsevenDouble",
+            ForkAdapterDouble.class,
+            () -> new ForkAdapterDouble(
+                "cib", "cibseven", new Camunda7InstanceIdentity(null, null).addressedSystem()))
+        .withPropertyValues(
+            "spring.config.location=classpath:application.yaml",
+            "spring.datasource.url=jdbc:h2:mem:camunda7-fork-same-tables-test;DB_CLOSE_DELAY=-1")
+        .withInitializer(new ConfigDataApplicationContextInitializer())
+        .withConfiguration(
+            AutoConfigurations.of(
+                org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration.class,
+                org.springframework.boot.jdbc.autoconfigure.DataSourceTransactionManagerAutoConfiguration.class,
+                Camunda7AdapterConfiguration.class,
+                Camunda7ProcessServiceConfiguration.class,
+                WorkflowModuleAutoConfiguration.class,
+                SpringBootMigrationAdapterAutoConfiguration.class,
+                io.vanillabp.integration.deployment.DeploymentAutoConfiguration.class))
+        .run(context -> {
+
+          final var message = rootCauseMessage(context.getStartupFailure());
+          Assertions.assertTrue(
+              message.contains("The adapters 'c7' (type 'camunda7'), 'cib' (type 'cibseven') work on the SAME "
+                  + "system: datasource <the application's default datasource>, table prefix <no table prefix>."),
+              () -> message);
+          Assertions.assertTrue(message.contains("for type 'camunda7', 'cibseven':"), () -> message);
+          Assertions.assertTrue(message.contains("'vanillabp.adapters.<id>.data-source-name'"), () -> message);
+          Assertions.assertTrue(message.contains("'vanillabp.adapters.<id>.table-prefix'"), () -> message);
+
+        });
+
+  }
+
+  /**
+   * The migration case: a fork adapter on tables of its own, next to <code>camunda7</code>.
+   */
+  @Test
+  public void aCamunda7IdAndAForkIdOnTablesOfTheirOwnStart() {
+
+    this.contextRunner
+        .withBean(
+            "cibsevenDouble",
+            ForkAdapterDouble.class,
+            () -> new ForkAdapterDouble(
+                "cib", "cibseven", new Camunda7InstanceIdentity(null, "CIB_").addressedSystem()))
+        .withPropertyValues(
+            "spring.config.location=classpath:application.yaml",
+            "spring.datasource.url=jdbc:h2:mem:camunda7-fork-own-tables-test;DB_CLOSE_DELAY=-1")
+        .withInitializer(new ConfigDataApplicationContextInitializer())
+        .withConfiguration(
+            AutoConfigurations.of(
+                org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration.class,
+                org.springframework.boot.jdbc.autoconfigure.DataSourceTransactionManagerAutoConfiguration.class,
+                Camunda7AdapterConfiguration.class,
+                Camunda7ProcessServiceConfiguration.class,
+                WorkflowModuleAutoConfiguration.class,
+                SpringBootMigrationAdapterAutoConfiguration.class,
+                io.vanillabp.integration.deployment.DeploymentAutoConfiguration.class))
+        .run(context -> {
+
+          final var failure = context.getStartupFailure();
+          Assertions.assertTrue(
+              (failure == null) || !rootCauseMessage(failure).contains("work on the SAME system"),
+              () -> rootCauseMessage(failure));
+          Assertions.assertNull(failure, "context should start");
 
         });
 

@@ -83,6 +83,12 @@
     </dependency>
 
     <dependency>
+      <!-- reads the configuration metadata in EveryKeyIsKnownToTheIdeTest, the way tools do -->
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-configuration-metadata</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-test</artifactId>
       <scope>test</scope>
@@ -98,4 +104,25 @@
       <scope>test</scope>
     </dependency>
   </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <!-- the configuration processor writes META-INF/spring-configuration-metadata.json.
+             An IDE reads that file to offer and check the keys in application.yaml. The
+             processor merges META-INF/additional-spring-configuration-metadata.json into it,
+             see decision 48 in the repository's DECISIONS.md -->
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <configuration>
+          <annotationProcessorPaths combine.children="append">
+            <path>
+              <groupId>org.springframework.boot</groupId>
+              <artifactId>spring-boot-configuration-processor</artifactId>
+            </path>
+          </annotationProcessorPaths>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
 </project>

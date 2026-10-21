@@ -1664,3 +1664,41 @@ and an id without a name were two different datasources to the check, although b
 application's datasource. Now both are the same, in the check of one type and in the key.
 
 The check of one type stays as it was, with its own message. It runs first.
+
+### 48. The IDE learns every key from the metadata of the Spring Boot jars, and a test keeps it complete
+
+Built by story 993 on 2026-10-21.
+
+An IDE offers the keys of `application.yaml` and marks a key it does not know. It reads them from
+`META-INF/spring-configuration-metadata.json` in the jars of the application. Until this story the
+adapter shipped no such file, so every key of the adapter looked unknown. Version 1 had none either.
+
+Both Spring Boot modules, `spring-boot` and `spring-boot-webapps`, now write the file in two parts:
+
+- The configuration processor writes one entry for each map of the overlay class
+  (`VanillaBpCamunda7Properties`, `Camunda7WebappsProperties`): `vanillabp.adapters` and, in
+  `spring-boot`, `vanillabp.workflow-modules`. Each entry names the type of the map's values. The
+  processor never describes the keys below a map key, because the application chooses that key. An
+  IDE which follows the value type finds the keys there, for every adapter id, workflow module,
+  workflow and task. We expect IntelliJ IDEA to do this, but nobody tried it in an IDE yet.
+- `additional-spring-configuration-metadata.json` is written by hand. It describes every key of the
+  adapter level once more, under the adapter id `camunda7`. That is the id which needs no `type`
+  key. These entries are the only place where a key gets a type, a
+  description and a default which every IDE shows. The
+  metadata format has no name for "any id", so the levels below a workflow module cannot get entries
+  of their own. A key which is also read there names those levels in its description instead. A map
+  inside the adapter level, `engine-plugins`, is described as one entry with its type, like the
+  processor does.
+
+`EveryKeyIsKnownToTheIdeTest`, one in each module, walks the overlay class the way the binder does.
+It fails when a key has no entry, when an entry describes a key nobody reads, and when a type or a
+default in the file differs from the code. So a new key needs its field in the overlay of both
+platforms and its entry in the file, or the build is red.
+
+`vanillabp.ignore-suspended-process-definitions` has no entry. It is a system property or an
+environment variable, not a key of `application.yaml`.
+
+The platform also writes an entry `vanillabp.adapters`, with a type of its own. Which entry an IDE
+uses when several jars describe the same name was not tried in an IDE. The Quarkus modules need
+none of this: they are Quarkus extensions, and their build writes a description of every key into
+`META-INF/quarkus-config-doc/`.

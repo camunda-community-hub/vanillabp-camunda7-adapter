@@ -133,6 +133,33 @@ public DataSource legacy() {
 BPMN files are read from each workflow module's configured `resources-location` and
 deployed to the embedded engine of every prioritized adapter.
 
+### What the IDE knows about the keys
+
+Both Spring Boot modules, `spring-boot` and `spring-boot-webapps`, ship
+`META-INF/spring-configuration-metadata.json`. An IDE reads it to offer the keys in
+`application.yaml` and to mark a key it does not know. The file has two parts, see decision 48 in
+[`DECISIONS.md`](./DECISIONS.md):
+
+- The configuration processor writes one entry for each map of `VanillaBpCamunda7Properties` and
+  `Camunda7WebappsProperties`, with the type of the map's values. An IDE which follows that type
+  below a map key offers the keys for every adapter id, workflow module, workflow and task. We
+  expect IntelliJ IDEA to do so, but nobody tried it in an IDE yet.
+- `src/main/resources/META-INF/additional-spring-configuration-metadata.json` of each module is
+  written by hand. It describes every key of the adapter level once more, under the adapter id
+  `camunda7`, with a type, a description and a default where there is one. A key which is also
+  read below a workflow module names those levels in its description.
+
+So a new key needs its field in the overlay of both platforms and an entry in the hand-written
+file. `EveryKeyIsKnownToTheIdeTest` of the module fails when the entry is missing, when an entry
+describes a key nobody reads, and when a type or a default differs from the code.
+
+The processor merges the hand-written file only while `javac` compiles. A change to that file alone
+leaves the old metadata in `target`, and the test then reads the old file. Build with `clean` after
+such a change.
+
+The Quarkus modules need none of this. They are Quarkus extensions, and their build writes a
+description of every key into `META-INF/quarkus-config-doc/`.
+
 ### Behaviour
 
 - **BPMN deployment.** On boot the adapter reads every executable BPMN process

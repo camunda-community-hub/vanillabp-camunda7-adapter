@@ -1,0 +1,35 @@
+{
+  "properties": [
+    {
+      "name": "vanillabp.adapters.camunda7.webapps.enabled",
+      "type": "java.lang.Boolean",
+      "description": "Whether Cockpit, Tasklist and Admin serve the engine of this adapter id. Switch it off for an engine which only exists for a migration. All keys of this section work for every adapter id of type 'camunda7', not only for the id 'camunda7'.",
+      "defaultValue": true
+    },
+    {
+      "name": "vanillabp.adapters.camunda7.webapps.admin-user.id",
+      "type": "java.lang.String",
+      "description": "The id of the administrator the start creates. Without an admin user the webapps show their setup wizard."
+    },
+    {
+      "name": "vanillabp.adapters.camunda7.webapps.admin-user.password",
+      "type": "java.lang.String",
+      "description": "The password of the administrator. It is never logged."
+    },
+    {
+      "name": "vanillabp.adapters.camunda7.webapps.admin-user.first-name",
+      "type": "java.lang.String",
+      "description": "The first name shown next to the administrator."
+    },
+    {
+      "name": "vanillabp.adapters.camunda7.webapps.admin-user.last-name",
+      "type": "java.lang.String",
+      "description": "The last name shown next to the administrator."
+    },
+    {
+      "name": "vanillabp.adapters.camunda7.webapps.admin-user.email",
+      "type": "java.lang.String",
+      "description": "The mail address of the administrator."
+    }
+  ]
+}

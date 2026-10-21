@@ -1,0 +1,64 @@
+{
+  "properties": [
+    {
+      "name": "vanillabp.adapters.camunda7.database-schema-update",
+      "type": "java.lang.String",
+      "description": "What the engine does to its database schema on start, as Camunda's 'databaseSchemaUpdate': for example 'true', 'false' or 'create-drop'. All keys of this section work for every adapter id of type 'camunda7', not only for the id 'camunda7'.",
+      "defaultValue": "true"
+    },
+    {
+      "name": "vanillabp.adapters.camunda7.history-time-to-live",
+      "type": "java.lang.String",
+      "description": "The default history time to live of the engine, as an ISO 8601 period.",
+      "defaultValue": "P180D"
+    },
+    {
+      "name": "vanillabp.adapters.camunda7.data-source-name",
+      "type": "java.lang.String",
+      "description": "The name of the datasource bean the engine of this adapter id runs on."
+    },
+    {
+      "name": "vanillabp.adapters.camunda7.table-prefix",
+      "type": "java.lang.String",
+      "description": "The prefix of the engine's database tables."
+    },
+    {
+      "name": "vanillabp.adapters.camunda7.serialization-format",
+      "type": "java.lang.String",
+      "description": "The serialization format of a shared value the engine has no variable type for, for example 'application/json' or 'application/xstream'. The matching dataformat has to be on the class path. It is also read per workflow module and per workflow, and the most specific value wins: 'vanillabp.workflow-modules.<module>.workflows.<workflow>.adapters.<id>.serialization-format'."
+    },
+    {
+      "name": "vanillabp.adapters.camunda7.engine-plugins",
+      "type": "java.util.Map<java.lang.String,io.vanillabp.camunda7.engine.Camunda7EnginePluginProperties>",
+      "description": "The Camunda engine plugins of this adapter id, keyed by a name you choose. Each one names its class in 'plugin-class' and its settings in 'properties'."
+    },
+    {
+      "name": "vanillabp.adapters.camunda7.tenant-id",
+      "type": "java.lang.String",
+      "description": "The Camunda tenant a workflow module is deployed to under the name-clash avoidance mode 'by-adapter'. Without it the workflow module id is the tenant, as in VanillaBP 1. A workflow module may name its own tenant at 'vanillabp.workflow-modules.<module>.adapters.<id>.tenant-id'."
+    },
+    {
+      "name": "vanillabp.adapters.camunda7.accept-unscoped-identifiers",
+      "type": "java.lang.Boolean",
+      "description": "States that the identifiers of this application are unique across all its workflow modules. It silences the warning which the name-clash-avoidance mode 'none' logs per workflow module.",
+      "defaultValue": false
+    },
+    {
+      "name": "vanillabp.adapters.camunda7.allow-listeners",
+      "type": "java.lang.Boolean",
+      "description": "Whether @WorkflowTask methods serve the execution listeners somebody modelled. Without it a model with such a listener does not start. It is also read per workflow module and per workflow, and the most specific value wins: 'vanillabp.workflow-modules.<module>.workflows.<workflow>.adapters.<id>.allow-listeners'. There is no task level.",
+      "defaultValue": false
+    },
+    {
+      "name": "vanillabp.adapters.camunda7.sleep-until-something-is-due",
+      "type": "java.lang.Boolean",
+      "description": "Whether the job executor of this adapter id waits until the next job is due, instead of polling. Useful on a database which is billed by use.",
+      "defaultValue": false
+    },
+    {
+      "name": "vanillabp.adapters.camunda7.db-metrics-reporting",
+      "type": "java.lang.Boolean",
+      "description": "Whether the engine writes its metrics to the database every 900 seconds. Default: the opposite of 'sleep-until-something-is-due', so a sleeping engine stops writing them."
+    }
+  ]
+}

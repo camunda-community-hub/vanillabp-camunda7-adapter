@@ -191,6 +191,10 @@ public class Camunda7QuarkusEngineHolder implements Camunda7WorkflowProcessingLi
     // poll, it wakes on a commit, and it leaves the metrics reporter's timer alone. This
     // is applied for every adapter id, because the metrics reporter is a setting of its own
     io.vanillabp.camunda7.engine.Camunda7JobExecutorSleep.applyTo(adapterId, configuration, properties);
+
+    // the FEEL implementation decisions are evaluated with. The older one needs no FEEL
+    // engine library, which is what an application needs next to the Operaton adapter
+    io.vanillabp.camunda7.engine.Camunda7DmnFeelLegacyBehavior.applyTo(adapterId, configuration, properties);
     // job-executor threads must load delegate classes through the Quarkus runtime
     // classloader. Otherwise they fail with ClassNotFoundException; we have seen it
     configuration.setClassLoader(Thread.currentThread().getContextClassLoader());
@@ -255,7 +259,15 @@ public class Camunda7QuarkusEngineHolder implements Camunda7WorkflowProcessingLi
                 .map(io.quarkus.arc.InstanceHandle::get)
                 .toList());
 
-    this.processEngine = configuration.buildProcessEngine();
+    try {
+      this.processEngine = configuration.buildProcessEngine();
+    } catch (final RuntimeException | LinkageError e) {
+      // a FEEL engine library which does not fit Camunda 7 surfaces here as a linkage
+      // error. The developer gets the remedy instead of a NoSuchMethodError
+      io.vanillabp.camunda7.engine.Camunda7DmnFeelLegacyBehavior.explainWhyTheEngineDidNotStart(adapterId, properties,
+          e);
+      throw e;
+    }
     this.jobExecutorLifecycle = new Camunda7JobExecutorLifecycle(
         adapterId, ((ProcessEngineConfigurationImpl) processEngine.getProcessEngineConfiguration()).getJobExecutor());
 

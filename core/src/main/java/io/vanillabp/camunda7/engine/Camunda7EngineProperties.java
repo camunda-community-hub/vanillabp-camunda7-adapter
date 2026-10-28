@@ -53,6 +53,9 @@ package io.vanillabp.camunda7.engine;
  *       reporter writes its counters to the database every 900 seconds. Unset means
  *       the opposite of the sleep. So an engine which may sleep is not woken by its own
  *       metrics.</li>
+ *   <li><code>dmn-feel-legacy-behavior</code> - OPTIONAL. The engine evaluates decisions with
+ *       its older FEEL implementation, which needs no FEEL engine library. Default
+ *       <code>false</code>, see {@link Camunda7DmnFeelLegacyBehavior}.</li>
  * </ul>
  */
 public class Camunda7EngineProperties {
@@ -159,6 +162,19 @@ public class Camunda7EngineProperties {
    * either way. Only the writing stops.
    */
   private Boolean dbMetricsReporting;
+
+  /**
+   * Whether the engine evaluates decisions with its older FEEL implementation (Camunda's
+   * {@code dmnFeelEnableLegacyBehavior}). It needs no {@code org.camunda.feel:feel-engine}
+   * library. An application which runs the Operaton adapter next to this one needs it,
+   * because both engines bring a different version of that library. See
+   * {@link Camunda7DmnFeelLegacyBehavior}. Default <code>false</code>, which is how
+   * VanillaBP 1 behaved.
+   * <p>
+   * There is only this adapter level. The setting belongs to the engine, and one engine
+   * serves every workflow module of the adapter id.
+   */
+  private boolean dmnFeelLegacyBehavior = false;
 
   /**
    * What the engine does to its schema on boot, e.g. <code>true</code>,
@@ -372,6 +388,25 @@ public class Camunda7EngineProperties {
   public void setDbMetricsReporting(
       final Boolean dbMetricsReporting) {
     this.dbMetricsReporting = dbMetricsReporting;
+  }
+
+  /**
+   * Whether the engine evaluates decisions with its older FEEL implementation.
+   *
+   * @return Whether the older FEEL implementation is used
+   */
+  public boolean isDmnFeelLegacyBehavior() {
+    return dmnFeelLegacyBehavior;
+  }
+
+  /**
+   * Whether the engine evaluates decisions with its older FEEL implementation.
+   *
+   * @param dmnFeelLegacyBehavior Whether the older FEEL implementation is used
+   */
+  public void setDmnFeelLegacyBehavior(
+      final boolean dmnFeelLegacyBehavior) {
+    this.dmnFeelLegacyBehavior = dmnFeelLegacyBehavior;
   }
 
   /**

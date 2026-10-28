@@ -357,6 +357,10 @@ public class Camunda7EngineHolder implements Camunda7WorkflowProcessingLifecycle
     // is applied for every adapter id, because the metrics reporter is a setting of its own
     io.vanillabp.camunda7.engine.Camunda7JobExecutorSleep.applyTo(adapterId, configuration, properties);
 
+    // the FEEL implementation decisions are evaluated with. The older one needs no FEEL
+    // engine library, which is what an application needs next to the Operaton adapter
+    io.vanillabp.camunda7.engine.Camunda7DmnFeelLegacyBehavior.applyTo(adapterId, configuration, properties);
+
     // what an extension contributes to THIS engine: parse listeners before or after
     // VanillaBP's own, and a history event handler installed next to the engine's
     io.vanillabp.camunda7.engine.Camunda7EngineCustomizers
@@ -368,7 +372,15 @@ public class Camunda7EngineHolder implements Camunda7WorkflowProcessingLifecycle
                 .orderedStream()
                 .toList());
 
-    this.processEngine = configuration.buildProcessEngine();
+    try {
+      this.processEngine = configuration.buildProcessEngine();
+    } catch (final RuntimeException | LinkageError e) {
+      // a FEEL engine library which does not fit Camunda 7 surfaces here as a linkage
+      // error. The developer gets the remedy instead of a NoSuchMethodError
+      io.vanillabp.camunda7.engine.Camunda7DmnFeelLegacyBehavior.explainWhyTheEngineDidNotStart(adapterId, properties,
+          e);
+      throw e;
+    }
     this.jobExecutorLifecycle = new Camunda7JobExecutorLifecycle(adapterId, this.jobExecutor);
 
   }

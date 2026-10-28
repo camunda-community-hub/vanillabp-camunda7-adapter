@@ -1208,4 +1208,14 @@ public class Camunda7TaskProcessingIT {
 
   }
 
+  @Test
+  @DisplayName("without 'dmn-feel-legacy-behavior' the engine evaluates decisions with the FEEL engine library, as before")
+  public void decisionsUseTheFeelLibraryByDefault() {
+
+    // the same decision Camunda7DmnFeelLegacyBehaviorIT evaluates with the key set
+    assertEquals("ScalaFeelEngineFactory", LoanSizeDecision.feelImplementation(processEngine));
+    assertEquals(LoanSizeDecision.SIZES, LoanSizeDecision.evaluate(processEngine));
+
+  }
+
 }

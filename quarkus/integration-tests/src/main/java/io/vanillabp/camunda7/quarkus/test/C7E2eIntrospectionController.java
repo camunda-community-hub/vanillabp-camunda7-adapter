@@ -326,6 +326,56 @@ public class C7E2eIntrospectionController {
 
   }
 
+  /**
+   * Which FEEL implementation the engine evaluates decisions with, and what it answers for a
+   * decision with a comparison and a range. Both FEEL implementations of Camunda 7 understand
+   * that decision. It is deployed here and not with the workflow module, so only the tests
+   * which ask for it carry it (resource {@code dmn-feel/loan-size.dmn}).
+   *
+   * @return <code>legacy</code> (the engine setting), <code>feelImplementation</code> (the
+   *         simple class name of the engine's FEEL factory) and <code>sizes</code> (the answers
+   *         for 999, 1000, 5000 and 5001)
+   */
+  @GET
+  @Path("/engine/dmn-feel")
+  public Map<String, Object> dmnFeel() {
+
+    final var engine = engine().getProcessEngine();
+    final var configuration = (ProcessEngineConfigurationImpl) engine.getProcessEngineConfiguration();
+    engine
+        .getRepositoryService()
+        .createDeployment()
+        .addClasspathResource("dmn-feel/loan-size.dmn")
+        .enableDuplicateFiltering(false)
+        .name("loan-size")
+        .deploy();
+    final var sizes = java.util.stream.Stream
+        .of(999, 1000, 5000, 5001)
+        .map(amount -> engine
+            .getDecisionService()
+            .evaluateDecisionTableByKey(
+                "loanSize",
+                org.camunda.bpm.engine.variable.Variables.putValue("amount", amount))
+            .getSingleResult()
+            .getSingleEntry()
+            .toString())
+        .toList();
+
+    final var reported = new LinkedHashMap<String, Object>();
+    reported.put("legacy", Boolean.valueOf(configuration.isDmnFeelEnableLegacyBehavior()));
+    reported
+        .put(
+            "feelImplementation",
+            configuration
+                .getDmnEngineConfiguration()
+                .getFeelEngineFactory()
+                .getClass()
+                .getSimpleName());
+    reported.put("sizes", sizes);
+    return reported;
+
+  }
+
   // --- starting workflows ---
 
   /**

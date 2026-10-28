@@ -116,6 +116,10 @@ vanillabp:
       # database every 900 seconds. Unset means the opposite of the key above, so an
       # engine which is allowed to wait is not woken by its own metrics.
       db-metrics-reporting: false
+      # OPTIONAL: the engine evaluates decisions with its older FEEL implementation,
+      # which needs no FEEL engine library. Needed next to the Operaton adapter.
+      # Default: false - see 'Decision tables next to the Operaton adapter' below.
+      dmn-feel-legacy-behavior: true
 ```
 
 On Spring Boot, declare the additional datasource bean with
@@ -995,6 +999,39 @@ up the prefixed id of whatever the expression yields.
 prefix. This mode cannot follow a reference to a decision which the module does not
 deploy. That one is renamed here, but not in the engine. Deploy the decision with the module,
 or keep the tenant isolation of `by-adapter`.
+
+### Decision tables next to the Operaton adapter
+
+FEEL is the expression language of decision tables. Camunda 7 has two implementations of it.
+The default one is the library `org.camunda.feel:feel-engine`. The older one is part of the
+engine and needs no library. Camunda calls it the legacy behaviour.
+
+An application which runs the Operaton adapter next to this one (the migration case) gets two
+versions of that library. Camunda 7.24 brings it with the classifier `scala-shaded`, Operaton
+brings a newer one without. Both land on the class path, and with Operaton's version first the
+Camunda 7 engine does not start. So the application does two things:
+
+1. It excludes `org.camunda.feel:feel-engine` from the dependency of this adapter.
+2. It sets `vanillabp.adapters.<adapter-id>.dmn-feel-legacy-behavior: true`. The adapter then
+   calls `setDmnFeelEnableLegacyBehavior(true)` on the engine it builds.
+
+The key exists so that no application code has to touch `ProcessEngineConfigurationImpl` for
+this (decision 50 in the repository's DECISIONS.md). There is only the adapter level, because
+the setting belongs to the engine. One engine serves every workflow module of the adapter id.
+The default is `false`, which is how version 1 behaved.
+
+The older implementation understands what simple decision tables use: comparisons, ranges and
+lists of values. Camunda also reads input expressions and output entries without an expression
+language of their own as JUEL then. A decision which needs more of FEEL has to move to the other
+engine first.
+
+When the engine fails to start because of the library, the adapter says what to do. It looks
+for a `NoSuchMethodError` or a `NoClassDefFoundError` from the package `org.camunda.feel` among
+the causes. If the key is not set, it ends the start with a message which names both steps.
+`Camunda7DmnFeelLegacyBehaviorTest` builds an engine on a class path without the library: with
+the key it evaluates a decision, without the key it fails with that message.
+`Camunda7DmnFeelLegacyBehaviorIT` (Spring Boot) and `Camunda7DmnFeelLegacyBehaviorTest`
+(Quarkus) check that the key reaches the engine.
 
 ## Keeping workflow modules apart
 

@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- A decision whose input entries use what both FEEL implementations of Camunda 7 understand:
+     a comparison and a range. -->
+<definitions xmlns="https://www.omg.org/spec/DMN/20191111/MODEL/" id="loanSizeDefinitions" name="Loan size" namespace="http://vanillabp.io/dmn-feel">
+  <decision id="loanSize" name="Loan size">
+    <decisionTable id="loanSizeTable" hitPolicy="UNIQUE">
+      <input id="loanSizeInput" label="Amount">
+        <inputExpression id="loanSizeInputExpression" typeRef="integer">
+          <text>amount</text>
+        </inputExpression>
+      </input>
+      <output id="loanSizeOutput" label="Size" name="size" typeRef="string" />
+      <rule id="loanSizeSmall">
+        <inputEntry id="loanSizeSmallInput">
+          <text>&lt; 1000</text>
+        </inputEntry>
+        <outputEntry id="loanSizeSmallOutput">
+          <text>"small"</text>
+        </outputEntry>
+      </rule>
+      <rule id="loanSizeMedium">
+        <inputEntry id="loanSizeMediumInput">
+          <text>[1000..5000]</text>
+        </inputEntry>
+        <outputEntry id="loanSizeMediumOutput">
+          <text>"medium"</text>
+        </outputEntry>
+      </rule>
+      <rule id="loanSizeLarge">
+        <inputEntry id="loanSizeLargeInput">
+          <text>&gt; 5000</text>
+        </inputEntry>
+        <outputEntry id="loanSizeLargeOutput">
+          <text>"large"</text>
+        </outputEntry>
+      </rule>
+    </decisionTable>
+  </decision>
+</definitions>

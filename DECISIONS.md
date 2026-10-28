@@ -1737,3 +1737,31 @@ The Quarkus Tools plugin for IntelliJ IDEA (by Red Hat, checked in version 2.6.1
 file. It finds the keys in the `@ConfigMapping` interfaces themselves and writes every map key as
 `{*}`. So the names help the generated documentation and everybody who reads the file. They do not
 change what this plugin offers while you type.
+
+### 50. The adapter switches FEEL to the engine's older implementation by a key, not by application code
+
+Built by story 2018 on 2026-10-28.
+
+An application which runs the Operaton adapter next to this one gets two versions of the FEEL
+engine library `org.camunda.feel:feel-engine`. With Operaton's version first on the class path,
+the Camunda 7 engine does not start. Decision 8 of the Operaton adapter has the measurement and the
+fix: the application excludes the library from this adapter, and the Camunda 7 engine evaluates
+decisions with its older FEEL implementation. Camunda calls that `dmnFeelEnableLegacyBehavior`.
+
+Until now the second step needed a `Camunda7EngineCustomizer` in the application. So application
+code touched `ProcessEngineConfigurationImpl`, and the blueprints forbid any API of a BPMS in
+application code. Now the key `vanillabp.adapters.<adapter-id>.dmn-feel-legacy-behavior` does it.
+The default is `false`, which is how version 1 behaved.
+
+**Only the adapter level exists.** The setting belongs to the engine, and one engine serves every
+workflow module of the adapter id. A value per workflow module or per workflow could not be kept.
+
+**A failed start names the fix.** When building the engine throws, `Camunda7DmnFeelLegacyBehavior`
+looks for a `LinkageError` from the package `org.camunda.feel` among the causes. That is a
+`NoSuchMethodError` when the wrong version comes first, and a `NoClassDefFoundError` when the
+library was excluded but the key was not set. If the key is not set, the start ends with a message
+which names the exclusion and the key. With the key set the engine does not use the library, so a
+failure is passed on as it is.
+
+The Operaton adapter is generated from this code, so it gets the key with its next sync. An
+application next to Camunda 7 does not set it there, because Operaton keeps the library.

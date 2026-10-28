@@ -59,6 +59,12 @@
       "name": "vanillabp.adapters.camunda7.db-metrics-reporting",
       "type": "java.lang.Boolean",
       "description": "Whether the engine writes its metrics to the database every 900 seconds. Default: the opposite of 'sleep-until-something-is-due', so a sleeping engine stops writing them."
+    },
+    {
+      "name": "vanillabp.adapters.camunda7.dmn-feel-legacy-behavior",
+      "type": "java.lang.Boolean",
+      "description": "Whether the engine evaluates decisions with its older FEEL implementation, which needs no FEEL engine library. An application which runs the Operaton adapter next to this one needs it, together with an exclusion of 'org.camunda.feel:feel-engine'. Only the adapter level exists, because the setting belongs to the engine.",
+      "defaultValue": false
     }
   ]
 }

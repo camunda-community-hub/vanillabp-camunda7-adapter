@@ -3,6 +3,7 @@ package io.vanillabp.camunda7.quarkus.runtime;
 import java.util.Map;
 import java.util.Optional;
 
+import io.quarkus.runtime.annotations.ConfigDocMapKey;
 import io.quarkus.runtime.annotations.ConfigPhase;
 import io.quarkus.runtime.annotations.ConfigRoot;
 import io.quarkus.runtime.annotations.StaticInitSafe;
@@ -37,6 +38,7 @@ public interface VanillaBpCamunda7Properties {
    *
    * @return The configured adapter sections, keyed by adapter id
    */
+  @ConfigDocMapKey("adapter-id")
   Map<String, Camunda7AdapterKeys> adapters();
 
   /**
@@ -48,6 +50,7 @@ public interface VanillaBpCamunda7Properties {
    *
    * @return The configured workflow-module sections, keyed by workflow module id
    */
+  @ConfigDocMapKey("workflow-module-id")
   Map<String, Camunda7WorkflowModuleKeys> workflowModules();
 
   /**
@@ -155,6 +158,7 @@ public interface VanillaBpCamunda7Properties {
      *
      * @return The adapter sections of this workflow module, keyed by adapter id
      */
+    @ConfigDocMapKey("adapter-id")
     Map<String, Camunda7ModuleScopedKeys> adapters();
 
     /**
@@ -162,6 +166,7 @@ public interface VanillaBpCamunda7Properties {
      *
      * @return The workflow sections of this module, keyed by BPMN process id
      */
+    @ConfigDocMapKey("bpmn-process-id")
     Map<String, Camunda7WorkflowKeys> workflows();
 
   }
@@ -176,6 +181,7 @@ public interface VanillaBpCamunda7Properties {
      *
      * @return The adapter sections of this workflow, keyed by adapter id
      */
+    @ConfigDocMapKey("adapter-id")
     Map<String, Camunda7ScopedKeys> adapters();
 
     /**
@@ -186,6 +192,7 @@ public interface VanillaBpCamunda7Properties {
      *
      * @return The task sections of this workflow, keyed by task definition
      */
+    @ConfigDocMapKey("task-definition")
     Map<String, Camunda7TaskKeys> tasks();
 
   }
@@ -201,6 +208,7 @@ public interface VanillaBpCamunda7Properties {
      *
      * @return The adapter sections of this task, keyed by adapter id
      */
+    @ConfigDocMapKey("adapter-id")
     Map<String, Camunda7ScopedKeys> adapters();
 
   }
@@ -223,6 +231,7 @@ public interface VanillaBpCamunda7Properties {
      *
      * @return The plugin's properties, empty where it has none
      */
+    @ConfigDocMapKey("property-name")
     Map<String, String> properties();
 
   }
@@ -340,6 +349,7 @@ public interface VanillaBpCamunda7Properties {
      *
      * @return The configured plugin sections, empty where there are none
      */
+    @ConfigDocMapKey("plugin-name")
     Map<String, Camunda7EnginePluginKeys> enginePlugins();
 
     /**

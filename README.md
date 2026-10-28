@@ -74,7 +74,7 @@ vanillabp:
 
 You may configure the same type under several ids, for example two Camunda 7 engines side by
 side during a migration. **Each id gets its OWN embedded engine**, named
-`vanillabp-camunda7-<id>`. Two embedded engines must never share one database schema, because
+`vanillabp-camunda7-<adapter-id>`. Two embedded engines must never share one database schema, because
 then they would share one engine state. So every additional id needs either a datasource of its
 own or a [table prefix of its own](#two-engines-on-one-database-table-prefix). Otherwise the boot
 fails with a guiding message. `Camunda7AdapterBootTest#twoAdapterIdsOfTypeCamunda7YieldPerIdEnginesAndBeans`
@@ -83,7 +83,7 @@ Boot, `Camunda7SameDataSourceValidationTest` on Quarkus. `Camunda7InstanceIdenti
 the comparison itself.
 
 Settings per adapter id. All are optional and live at the canonical location
-`vanillabp.adapters.<id>.*`:
+`vanillabp.adapters.<adapter-id>.*`:
 
 ```yaml
 vanillabp:
@@ -287,7 +287,7 @@ the application's Spring Boot 4.1 / Spring Framework 7 is used. On purpose, the
 - uses the application's `DataSource` and the application's `PlatformTransactionManager`.
   The engine tables `ACT_*` live next to the aggregates. Engine commands join
   the caller's transaction. This in-transaction guarantee is the whole point of the
-  C7 adapter. The exception: `vanillabp.adapters.<id>.data-source-name` names an
+  C7 adapter. The exception: `vanillabp.adapters.<adapter-id>.data-source-name` names an
   application-provided `DataSource` bean. Then the engine runs on that bean's datasource
   with an adapter-internal transaction manager (see the transaction caveat above). The
   adapter never builds a pool. If the bean is missing, the boot fails and lists the
@@ -353,7 +353,7 @@ BPMS shares any of these mechanisms.
 | `Camunda7EngineFacts`                             | one per configured adapter id: the tenant, the transaction answer, the registry, the version |
 
 `Camunda7EngineFacts` is a bean per configured `camunda7` adapter id on both platforms. On
-Spring Boot it is named `Camunda7_EngineFacts_<id>`. On Quarkus it is an entry of the produced
+Spring Boot it is named `Camunda7_EngineFacts_<adapter-id>`. On Quarkus it is an entry of the produced
 `List<Camunda7EngineFacts>`. `adapterId()` tells two engines apart. Through it an extension
 reaches two things. `taskRegistry().resolve(tenantId, processDefinitionKey)` leads back from what
 the engine reports to the workflow module and the plain BPMN process id.
@@ -372,7 +372,7 @@ would reach a consumer under as many identities as it has instances.
 
 `joinsTheApplicationTransaction()` gets its own paragraph, because it was answered wrongly
 once. It is true while the engine runs on the application's own data source. It is false once
-the adapter id has its own data source through `vanillabp.adapters.<id>.data-source-name`. That
+the adapter id has its own data source through `vanillabp.adapters.<adapter-id>.data-source-name`. That
 holds on Quarkus as well, where the engine is built on the container's transaction manager. A
 JTA (Jakarta Transactions) transaction around two independent data sources is still two
 commits. And everywhere else this adapter already treats such an engine as separate.
@@ -450,7 +450,7 @@ one whose listener sits inside a round that names none.
 
 ### Two engines on one database: `table-prefix`
 
-`vanillabp.adapters.<id>.table-prefix` sets Camunda's `databaseTablePrefix`. This is how
+`vanillabp.adapters.<adapter-id>.table-prefix` sets Camunda's `databaseTablePrefix`. This is how
 two adapter ids become two engines on ONE datasource. It is the side-by-side migration setup on
 a single database. Every statement the engine issues at runtime goes through MyBatis,
 which adds the prefix in front. That part works. Camunda leaves out creating the tables, and
@@ -670,7 +670,7 @@ one asks whether a subscription is waiting. If none is, it fails the caller's tr
 so "nothing matched" stays a synchronous answer. Phase two correlates after
 the commit, through the outbox. It tolerates a subscription which is gone by then. So a
 rollback leaves the instance waiting. A correlation id matches through the V1
-local-variable convention `<primary bpmnProcessId>-<messageName>` at the receiving
+local-variable convention `<primary-bpmn-process-id>-<message-name>` at the receiving
 scope. The name keeps the primary process even where the message is caught in a called
 process. This is the one place in this adapter where a value of a called process is named
 after the process at the top. It stays that way because the models set the variable. A
@@ -730,13 +730,13 @@ A `camunda:executionListener` is a place where the engine lets the application i
 a `@WorkflowTask` method serve such a listener and said nothing about it. This version
 serves it again where the application asks for it.
 
-`vanillabp.adapters.<id>.allow-listeners` is the switch, default `false`. It resolves at three
+`vanillabp.adapters.<adapter-id>.allow-listeners` is the switch, default `false`. It resolves at three
 levels, and the most specific configured value wins in both directions:
 
 ```
-vanillabp.adapters.<id>.allow-listeners
-vanillabp.workflow-modules.<m>.adapters.<id>.allow-listeners
-vanillabp.workflow-modules.<m>.workflows.<w>.adapters.<id>.allow-listeners
+vanillabp.adapters.<adapter-id>.allow-listeners
+vanillabp.workflow-modules.<workflow-module-id>.adapters.<adapter-id>.allow-listeners
+vanillabp.workflow-modules.<workflow-module-id>.workflows.<bpmn-process-id>.adapters.<adapter-id>.allow-listeners
 ```
 
 There is no TASK level. That level is keyed by the task DEFINITION. But this key decides whether
@@ -1054,7 +1054,7 @@ each of the two modules, exactly as the deployment resolves the tenant it deploy
 compares the names.
 
 The answer is about the engine, not about a property. Two things follow from that. First, a
-tenant name for the whole adapter (`vanillabp.adapters.<id>.tenant-id`) puts every module into ONE
+tenant name for the whole adapter (`vanillabp.adapters.<adapter-id>.tenant-id`) puts every module into ONE
 tenant. So two modules which share a process id really do collide, and the boot of the second one
 ends. No check could do that while the core had to judge two plain ids on its own. Second, no
 tenant is a scope like any other. A module under `use-prefix` or `none` reaches the engine without
@@ -1063,7 +1063,7 @@ with a tenant. For this reason, and for the message, the name resolves per workf
 decision 19 in the repository's DECISIONS.md.
 
 The name is resolved per workflow module. The module's own section comes first
-(`vanillabp.workflow-modules.<module>.adapters.<id>.tenant-id`), the adapter's after it. There
+(`vanillabp.workflow-modules.<workflow-module-id>.adapters.<adapter-id>.tenant-id`), the adapter's after it. There
 is no name per workflow, because a tenant id is an attribute of the deployment, and this adapter
 makes one deployment per workflow module. A name which the mode would ignore still ends the boot.
 In every case the message quotes the key which set it, not always the adapter's key.
@@ -1107,7 +1107,7 @@ The Camunda deployment NAME tells a foreign holder apart from this application's
 deployment. Every VanillaBP generation, version 1 included, deploys a workflow module under the
 module's own id. So a deployment with that name is our own history and says nothing. A definition
 deployed under another name is reported. The deployment source then says how sure the adapter is.
-A source of `camunda7:<adapter id>` means another adapter id or another workflow module. That may
+A source of `camunda7:<adapter-id>` means another adapter id or another workflow module. That may
 be this very application, and the warning says so. Any other source was written by something else,
 and the finding is certainly foreign. A second application which deploys a workflow module of the
 same id stays invisible, because no column of the engine's deployment table names an application.
@@ -1163,7 +1163,7 @@ the build drops comments written inside a mapping.
 A value for which the engine has a variable type becomes a scalar variable: a short, an integer,
 a long, a double, a boolean, a string, a date and bytes, plus a `Character`, which is
 written as a string. Everything else keeps its class in an object variable, in the format
-the application configures (`vanillabp.adapters.<id>.serialization-format`, which you can
+the application configures (`vanillabp.adapters.<adapter-id>.serialization-format`, which you can
 override per workflow module and per workflow). One case is a nested value. That keeps
 `${order.customer.name}` working, because the engine deserializes before EL navigates. The other
 case is a number this engine has no type for: a `BigDecimal`, a `BigInteger` or a `Float`. Those are
@@ -1176,7 +1176,7 @@ measured through the engine's own serializer, not taken from a list
 (`Camunda7SerializationRoundTrip`, `Camunda7LossyFormatCheckIT`).
 
 A format needs a dataformat plugin (camunda-xstream, SPIN). A plugin reaches an
-embedded engine which this adapter builds under `vanillabp.adapters.<id>.engine-plugins`. There is
+embedded engine which this adapter builds under `vanillabp.adapters.<adapter-id>.engine-plugins`. There is
 a named section per plugin with `plugin-class` and its `properties`. Camunda's
 `PropertyHelper` applies them. That is the code which reads the `<property>` elements of a
 `bpm-platform.xml`, so the plugin's types are converted as documented. This is the one place

@@ -25,7 +25,7 @@ jobs:
           distribution: temurin
           cache: maven
           gpg-private-key: ${{ secrets.MAVEN_CENTRAL_GPG_SIGNING_KEY_SEC }}
-          gpg-passphrase: MAVEN_CENTRAL_GPG_PASSPHRASE
+          gpg-passphrase-env-var: MAVEN_CENTRAL_GPG_PASSPHRASE
       # Maven 3.10 writes 'maven-metadata-local.xml' and '_remote.repositories' into the
       # staging directory of central-publishing-maven-plugin, and the Central Portal refuses
       # the bundle: "Bundle has content that does NOT have a .pom file". Measured on

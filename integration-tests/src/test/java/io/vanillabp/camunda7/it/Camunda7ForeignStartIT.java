@@ -6,7 +6,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.function.Supplier;
 
+import org.camunda.bpm.engine.ProcessEngine;
 import org.camunda.bpm.engine.RuntimeService;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -74,6 +76,9 @@ public class Camunda7ForeignStartIT {
   private RuntimeService runtimeService;
 
   @Autowired
+  private ProcessEngine processEngine;
+
+  @Autowired
   private org.springframework.transaction.support.TransactionTemplate transactionTemplate;
 
   private void awaitUntil(
@@ -88,6 +93,27 @@ public class Camunda7ForeignStartIT {
       }
       Thread.sleep(100);
     }
+
+  }
+
+  /**
+   * The timer start event of the model fires once, one second after the deployment. Its
+   * workflow aggregate is one more in the repository the tests count. A test which runs in
+   * that first second would see it come in between two of its counts. So every test starts
+   * only once the timer has fired. The job is removed in the transaction which builds the
+   * aggregate, so once the job is gone, the aggregate is there.
+   */
+  @BeforeEach
+  public void waitForTheTimerOfTheModel() throws InterruptedException {
+
+    awaitUntil(
+        () -> processEngine
+            .getManagementService()
+            .createJobQuery()
+            .processDefinitionKey("ForeignTimerProcess")
+            .timers()
+            .count() == 0,
+        "the timer start event of the model to fire");
 
   }
 

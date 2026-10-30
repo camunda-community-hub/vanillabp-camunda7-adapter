@@ -815,7 +815,9 @@ public class Camunda7ProcessService<A> implements MigratableProcessService<A> {
    * waiting for this message? Correlating itself moves the workflow on, so it happens
    * after the commit. But "nothing matched" was a synchronous failure before this adapter
    * went two-phase, and it stays one. The embedded engine answers from the same
-   * transaction, so the answer is exact.
+   * transaction, so the answer is exact for the engine as it is now. The core keeps the
+   * failure only while no earlier operation of this workflow waits in its outbox. If one
+   * waits, the core plans the correlation anyway, and phase two decides.
    */
   private void checkSubscriptionWaits(
       final PhaseOneRequest<A> request) {
@@ -852,13 +854,17 @@ public class Camunda7ProcessService<A> implements MigratableProcessService<A> {
       final PhaseTwoRequest<A> request) {
 
     final var businessKey = String.valueOf(request.workflowAggregateId());
-    // check BEFORE correlating (rollback-only pitfall, see signalTask). A waiting
-    // subscription which is gone at dispatch time is what at-least-once leaves over
+    // check BEFORE correlating (rollback-only pitfall, see signalTask). No subscription at
+    // dispatch time has two causes. A repeated delivery finds the message already taken. Or
+    // the core planned the correlation behind an earlier operation of this workflow, and
+    // the workflow did not reach the message after that operation
     if (!messageSubscriptionWaiting(request.workflowModuleId(), request.messageName(), businessKey)) {
       log
           .warn(
               "Camunda7[{}]: no waiting subscription for message '{}' of workflow aggregate '{}' - "
-                  + "skipping the redelivered phase-two correlation",
+                  + "skipping the phase-two correlation. Either it was delivered before, or it was "
+                  + "planned after an earlier operation of this workflow, and the workflow did not "
+                  + "reach the message",
               adapterId,
               request.messageName(),
               businessKey);

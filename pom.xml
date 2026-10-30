@@ -275,7 +275,7 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-surefire-plugin</artifactId>
-          <version>3.6.0</version>
+          <version>3.6.1</version>
           <configuration>
             <!-- '@{jacoco.agent}' is resolved lazily per module (late property binding),
                  forwarding coverage also into forked JVMs -->
@@ -285,7 +285,7 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-failsafe-plugin</artifactId>
-          <version>3.6.0</version>
+          <version>3.6.1</version>
           <configuration>
             <argLine>@{jacoco.agent}</argLine>
           </configuration>
@@ -434,7 +434,7 @@
       <plugin>
         <groupId>com.diffplug.spotless</groupId>
         <artifactId>spotless-maven-plugin</artifactId>
-        <version>3.10.3</version>
+        <version>3.10.4</version>
         <configuration>
           <pom>
             <includes>

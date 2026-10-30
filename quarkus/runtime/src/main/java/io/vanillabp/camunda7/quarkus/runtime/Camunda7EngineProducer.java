@@ -1,13 +1,18 @@
 package io.vanillabp.camunda7.quarkus.runtime;
 
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import org.eclipse.microprofile.config.ConfigProvider;
 
 import io.agroal.api.AgroalDataSource;
+import io.quarkus.agroal.runtime.DataSourcesJdbcBuildTimeConfig;
+import io.quarkus.agroal.runtime.TransactionIntegration;
+import io.quarkus.datasource.common.runtime.DataSourceUtil;
 import io.smallrye.config.SmallRyeConfig;
 import io.vanillabp.camunda7.Camunda7Adapter;
 import io.vanillabp.camunda7.engine.Camunda7EngineProperties;
@@ -37,6 +42,10 @@ import jakarta.transaction.TransactionManager;
  *       <code>table-prefix</code> on a shared datasource is allowed. The check is not made
  *       here but in {@code validateDistinctAdapterInstances}, which the platform's
  *       deployment pipeline calls.</li>
+ *   <li>an engine on a named datasource shares its transactions with the application's
+ *       datasource. At most one of the two may be without XA
+ *       (<code>quarkus.datasource.&lt;name&gt;.jdbc.transactions: xa</code>). Otherwise the
+ *       boot fails and names the key.</li>
  * </ul>
  * The set of adapter ids comes from the platform's core properties: the adapter ids of
  * type {@code camunda7}. The overlay map ({@link VanillaBpCamunda7Properties}) only looks
@@ -88,6 +97,24 @@ public class Camunda7EngineProducer {
         .map(Map.Entry::getKey)
         .sorted()
         .toList();
+
+    // checked for all ids before the first engine is built. So one boot names every id
+    // which needs XA, and no engine is left open when the boot stops
+    final var transactionsWithoutXa = camunda7AdapterIds
+        .stream()
+        .map(adapterId -> {
+          final var keys = overlay.adapters().get(adapterId);
+          final var dataSourceName = (keys == null)
+              ? null
+              : keys.dataSourceName().orElse(null);
+          resolveDataSource(dataSources, adapterId, dataSourceName);
+          return transactionWithoutXa(dataSources, adapterId, dataSourceName);
+        })
+        .flatMap(Optional::stream)
+        .toList();
+    if (!transactionsWithoutXa.isEmpty()) {
+      throw new IllegalStateException(String.join("\n", transactionsWithoutXa));
+    }
 
     final var engines = new LinkedHashMap<String, Camunda7QuarkusEngineHolder>();
     camunda7AdapterIds
@@ -240,6 +267,101 @@ public class Camunda7EngineProducer {
               .formatted(adapterId, dataSourceName, adapterId, dataSourceName, declaredDataSourceNames(dataSources)));
     }
     return selected.get();
+
+  }
+
+  /**
+   * Says whether the engine of an adapter id on a NAMED datasource would share a
+   * transaction with a second datasource while neither of them is an XA datasource.
+   * <p>
+   * The engine's job transaction also loads and saves the workflow aggregate, and the
+   * platform's outbox and delivery log write to the default datasource. So two
+   * datasources take part in one JTA transaction. Narayana takes in only one of them
+   * without XA. The second one fails with "Exception in association of connection to
+   * existing transaction". The task handler then runs, but the engine's job rolls back,
+   * and a start through the outbox fails the same way. The boot itself goes through
+   * without a sign of it, so this check stops it.
+   * <p>
+   * The second datasource is the default datasource, if there is one, and the datasource
+   * of Hibernate ORM (<code>quarkus.hibernate-orm.datasource</code>). An engine on the
+   * default datasource is not checked. Its transaction has one datasource only. An
+   * application whose only datasource is the engine's passes as well. It has no second
+   * datasource, and it runs without XA.
+   *
+   * @return The guiding message, or nothing if the engine's transactions are fine
+   */
+  private static Optional<String> transactionWithoutXa(
+      final Instance<AgroalDataSource> dataSources,
+      final String adapterId,
+      final String dataSourceName) {
+
+    if (io.vanillabp.camunda7.engine.Camunda7EngineProperties.isDefaultDataSourceName(dataSourceName)) {
+      return Optional.empty();
+    }
+    final var config = ConfigProvider.getConfig();
+    final var transactions = config
+        .unwrap(SmallRyeConfig.class)
+        .getConfigMapping(DataSourcesJdbcBuildTimeConfig.class)
+        .dataSources();
+    if (transactionsOf(transactions, dataSourceName) != TransactionIntegration.ENABLED) {
+      return Optional.empty();
+    }
+
+    final var otherDataSources = new LinkedHashSet<String>();
+    if (dataSources
+        .select(jakarta.enterprise.inject.Default.Literal.INSTANCE)
+        .isResolvable()) {
+      otherDataSources.add(DataSourceUtil.DEFAULT_DATASOURCE_NAME);
+    }
+    config
+        .getOptionalValue("quarkus.hibernate-orm.datasource", String.class)
+        .ifPresent(otherDataSources::add);
+    otherDataSources.remove(dataSourceName);
+
+    return otherDataSources
+        .stream()
+        .filter(other -> transactionsOf(transactions, other) == TransactionIntegration.ENABLED)
+        .findFirst()
+        .map(other -> """
+            Camunda 7 adapter '%s' runs on the datasource '%s' ('vanillabp.adapters.%s.data-source-name'). \
+            The application uses the datasource '%s' in the same transactions. Neither of them is an XA \
+            datasource, but a transaction takes in only one datasource without XA. The task handler would \
+            run, and then the engine's job would roll back. A start through the outbox would fail the \
+            same way. Make the engine's datasource an XA datasource:
+              %s: xa
+            The JDBC driver has to support XA (it provides a javax.sql.XADataSource). Making '%s' an XA \
+            datasource instead works as well:
+              %s: xa"""
+            .formatted(
+                adapterId,
+                dataSourceName,
+                adapterId,
+                other,
+                transactionsKeyOf(dataSourceName),
+                other,
+                transactionsKeyOf(other)));
+
+  }
+
+  private static TransactionIntegration transactionsOf(
+      final Map<String, DataSourcesJdbcBuildTimeConfig.DataSourceJdbcOuterNamedBuildTimeConfig> transactions,
+      final String dataSourceName) {
+
+    final var dataSource = transactions.get(dataSourceName);
+    return dataSource == null
+        ? TransactionIntegration.ENABLED
+        : dataSource
+            .jdbc()
+            .transactions();
+
+  }
+
+  private static String transactionsKeyOf(
+      final String dataSourceName) {
+
+    return DataSourceUtil.isDefault(dataSourceName)
+        ? "quarkus.datasource.jdbc.transactions"
+        : "quarkus.datasource.%s.jdbc.transactions".formatted(dataSourceName);
 
   }
 

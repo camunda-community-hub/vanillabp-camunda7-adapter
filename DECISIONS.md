@@ -1808,3 +1808,4 @@ Places which describe this, for the citation once the entry has its number:
 - `quarkus/deployment/src/test/.../Camunda7NamedDataSourceWithoutXaTest.java`,
   `Camunda7XaOnTheApplicationDataSourceTest.java`, `Camunda7OnlyANamedDataSourceTest.java`
 - the wiki page "Configuration", section "Quarkus" under "Choosing the datasource"
+

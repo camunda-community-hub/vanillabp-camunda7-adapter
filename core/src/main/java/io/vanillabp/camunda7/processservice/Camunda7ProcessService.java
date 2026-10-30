@@ -1488,7 +1488,8 @@ public class Camunda7ProcessService<A> implements MigratableProcessService<A> {
    * @param taskId The parked execution's ID
    * @param bpmnErrorCode The BPMN error code or <code>null</code> to complete
    * @param tolerateGoneTask Whether a no-longer-existing execution is tolerated
-   *        (phase two is at-least-once) instead of failing
+   *        instead of failing. Phase two is at-least-once, and the core may plan an
+   *        operation after an earlier one of the same workflow which ends the task
    * @param beforeSignal Runs after the task was found and before it is signalled. It
    *        writes the values the model reads next, which an operator also sees in Cockpit
    */
@@ -1507,10 +1508,13 @@ public class Camunda7ProcessService<A> implements MigratableProcessService<A> {
           .executionId(taskId)
           .count() > 0;
       if (!exists) {
-        // what at-least-once leaves over: the task disappeared between the probe at
-        // dispatch time and this signal (e.g. a boundary event canceled it)
+        // the task disappeared before this signal. A repeated delivery finds it done
+        // already, or a boundary event canceled it. Or the core planned this operation
+        // after an earlier operation of this workflow, and that operation ended the task
         log.warn(
-            "Camunda7[{}]: task '{}' is gone - skipping the redelivered phase-two {}",
+            "Camunda7[{}]: task '{}' is gone - skipping the phase-two {}. Either it was delivered "
+                + "before, or it was planned after an earlier operation of this workflow, and "
+                + "the task ended meanwhile",
             adapterId,
             taskId,
             bpmnErrorCode == null
@@ -1570,8 +1574,9 @@ public class Camunda7ProcessService<A> implements MigratableProcessService<A> {
    *
    * @param taskId The user task's ID (ACT_RU_TASK)
    * @param bpmnErrorCode The BPMN error code or <code>null</code> to complete
-   * @param tolerateGoneTask Whether a no-longer-existing task is tolerated (phase
-   *        two is at-least-once)
+   * @param tolerateGoneTask Whether a no-longer-existing task is tolerated. Phase two
+   *        is at-least-once, and the core may plan an operation after an earlier one of
+   *        the same workflow which ends the task
    * @param beforeExecute Runs after the user task was found and before it is completed
    *        or cancelled. It writes the values the model reads next
    */
@@ -1589,8 +1594,12 @@ public class Camunda7ProcessService<A> implements MigratableProcessService<A> {
           .taskId(taskId)
           .count() > 0;
       if (!exists) {
+        // a repeated delivery, or an operation the core planned after an earlier one of
+        // this workflow which ended the user task, see signalTask
         log.warn(
-            "Camunda7[{}]: user task '{}' is gone - skipping the redelivered phase-two {}",
+            "Camunda7[{}]: user task '{}' is gone - skipping the phase-two {}. Either it was "
+                + "delivered before, or it was planned after an earlier operation of this "
+                + "workflow, and the user task ended meanwhile",
             adapterId,
             taskId,
             bpmnErrorCode == null
@@ -1736,7 +1745,8 @@ public class Camunda7ProcessService<A> implements MigratableProcessService<A> {
   /**
    * Whether an execution of the given workflow waits for the message. Phase one asks
    * this before it schedules a correlation. Phase two asks again before it correlates,
-   * because a subscription may be gone at dispatch time (at-least-once).
+   * because a subscription may be gone at dispatch time: a repeated delivery, or a
+   * correlation the core planned after an earlier operation of the same workflow.
    * <p>
    * The subscription carries the SCOPED message name, like the correlation itself. A query
    * for the plain name would find nothing wherever a workflow module prefixes its
@@ -1901,11 +1911,12 @@ public class Camunda7ProcessService<A> implements MigratableProcessService<A> {
    * @param taskId The parked execution whose scope receives the values, or
    *        <code>null</code> for the workflow's global scope and the global scope of
    *        every called process continuing the aggregate
-   * @param tolerateGoneWorkflow Whether a workflow gone by now is tolerated (phase
-   *        two is at-least-once) instead of failing. It is judged within the scope of
-   *        the call. Otherwise a foreign workflow with the same business key would make
-   *        an ended workflow look present. And a redelivered push would write there
-   *        instead of being skipped
+   * @param tolerateGoneWorkflow Whether a workflow gone by now is tolerated instead of
+   *        failing. Phase two is at-least-once, and the core may plan a push after an
+   *        earlier operation of the same workflow which ends it. It is judged within the
+   *        scope of the call. Otherwise a foreign workflow with the same business key would
+   *        make an ended workflow look present. And a push which should be skipped would
+   *        write there
    */
   private void pushAggregate(
       final String businessKey,
@@ -1942,8 +1953,9 @@ public class Camunda7ProcessService<A> implements MigratableProcessService<A> {
                   .formatted(taskId, businessKey, adapterId));
         }
         log.warn(
-            "Camunda7[{}]: task '{}' of workflow aggregate '{}' is gone - skipping the redelivered "
-                + "phase-two push of the aggregate",
+            "Camunda7[{}]: task '{}' of workflow aggregate '{}' is gone - skipping the phase-two push "
+                + "of the aggregate. Either it was delivered before, or it was planned after an "
+                + "earlier operation of this workflow, and the task ended meanwhile",
             adapterId,
             taskId,
             businessKey);
@@ -2012,8 +2024,9 @@ public class Camunda7ProcessService<A> implements MigratableProcessService<A> {
                 .formatted(businessKey, adapterId));
       }
       log.warn(
-          "Camunda7[{}]: the workflow of aggregate '{}' is gone - skipping the redelivered phase-two "
-              + "push of the aggregate",
+          "Camunda7[{}]: the workflow of aggregate '{}' is gone - skipping the phase-two push of the "
+              + "aggregate. Either it was delivered before, or it was planned after an earlier "
+              + "operation of this workflow, and the workflow ended meanwhile",
           adapterId,
           businessKey);
       return;

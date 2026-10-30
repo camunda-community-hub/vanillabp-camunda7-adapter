@@ -102,7 +102,8 @@ vanillabp:
       # caveat below!). Setting up datasources is deliberately the application's
       # concern - VanillaBP never builds its own pool. Spring Boot: the name of a
       # DataSource bean; Quarkus: the name of a declared named Agroal datasource
-      # (quarkus.datasource.<name>.*).
+      # (quarkus.datasource.<name>.*), which in most cases has to be an XA
+      # datasource - see 'Quarkus' below.
       data-source-name: legacy
       # OPTIONAL: the engine's table prefix, which lets two ids run as two engines on
       # ONE datasource. Camunda does not create prefixed tables, so they have to exist
@@ -1699,6 +1700,8 @@ quarkus:
     ...
     legacy:              # a second, named datasource for the OLD engine
       db-kind: postgresql
+      jdbc:
+        transactions: xa # see below
       ...
 vanillabp:
   adapters:
@@ -1710,10 +1713,25 @@ vanillabp:
                                  # delivered at least once there, see the caveat above
 ```
 
+**On Quarkus, at most one of the two datasources may be without XA.** An engine on a named
+datasource shares its transactions with the application's datasource. Its job loads and saves the
+workflow aggregate there, and the outbox and the delivery log write there. Narayana, the
+transaction manager, takes in only one datasource without XA per transaction. If neither side uses
+XA, the task handler runs, but then the engine's job rolls back with `Exception in association of
+connection to existing transaction`. A start through the outbox fails the same way. So make the
+engine's datasource an XA datasource (`quarkus.datasource.<name>.jdbc.transactions: xa`), as in the
+example. Making the application's datasource an XA datasource works as well. The JDBC driver has to
+support XA. If neither is XA, the boot stops and names both keys. An application whose only
+datasource is the engine's needs no XA, because each transaction has one datasource then.
+`Camunda7NamedDataSourceWithoutXaTest` tests the message. `Camunda7XaOnTheApplicationDataSourceTest`
+and `Camunda7OnlyANamedDataSourceTest` run a workflow to its end in the two setups which need no
+change.
+
 An unknown `data-source-name` fails the boot with a guiding message, and so do two adapter ids
 which share one datasource (`Camunda7UnknownDataSourceNameTest`,
 `Camunda7SameDataSourceValidationTest`). `Camunda7TwoEnginesTest` runs the two engines
-side by side. Native mode has no test, because there is nothing to test: the extension is
+side by side. It waits until the workflow on the named datasource ended, not only until its task
+handler ran. Native mode has no test, because there is nothing to test: the extension is
 not registered for it.
 
 ## Viewing workflows

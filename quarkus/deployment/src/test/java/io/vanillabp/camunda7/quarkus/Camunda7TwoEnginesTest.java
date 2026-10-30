@@ -39,6 +39,10 @@ import jakarta.transaction.UserTransaction;
  *       the engine's own transaction runs where the application's persistence cannot
  *       join. That is why this adapter id, and only this one, says that its deliveries
  *       may repeat.</li>
+ *   <li>the named datasource is an XA datasource. The engine's job and the application's
+ *       persistence take part in one transaction, and only one of their datasources may be
+ *       without XA. The test waits for the end of the workflow, because without XA the
+ *       handler runs and the engine's job rolls back afterwards.</li>
  * </ul>
  */
 @ExtendWith(SuppressOutputExtension.class)
@@ -171,6 +175,28 @@ public class Camunda7TwoEnginesTest {
               "the handler of the own-datasource engine did not run within 20s");
       Thread.sleep(50);
     }
+
+    // the handler's commit alone proves little. The engine's job commits afterwards, on
+    // its own datasource, and only then the workflow moves on. If that commit fails, the
+    // handler ran and the workflow still waits at the task
+    final var businessKey = String.valueOf(aggregateId);
+    while (countInstances(namedEngine, businessKey) > 0) {
+      Assertions
+          .assertTrue(
+              System.currentTimeMillis() < deadline,
+              "the workflow on the own-datasource engine did not end within 20s");
+      Thread.sleep(50);
+    }
+    Assertions
+        .assertEquals(
+            1,
+            namedEngine
+                .getHistoryService()
+                .createHistoricProcessInstanceQuery()
+                .processInstanceBusinessKey(businessKey)
+                .finished()
+                .count(),
+            "the workflow on the own-datasource engine ended");
 
   }
 

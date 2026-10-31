@@ -1,5 +1,7 @@
 package io.vanillabp.camunda7.processservice;
 
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Map;
 
 import org.camunda.bpm.engine.RuntimeService;
@@ -12,6 +14,8 @@ import io.vanillabp.integration.adapter.spi.PhaseTwoRequest;
 import io.vanillabp.integration.adapter.spi.WorkflowAwareness;
 import io.vanillabp.integration.spi.AggregatePersistenceAware;
 import io.vanillabp.integration.spi.PhaseOperation;
+import io.vanillabp.integration.spi.PhaseTwoPermanentFailure;
+import io.vanillabp.integration.spi.PhaseTwoRetryLater;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -42,6 +46,10 @@ import lombok.extern.slf4j.Slf4j;
  * operation is idempotent. Starting skips an existing instance with the same business key
  * and tenant. Completing or cancelling a task checks that the task is still there.
  * Correlating checks the subscription.
+ * <p>
+ * A correlation may be given a message time-to-live, as on Camunda 8. Then phase one checks
+ * only that a deployed model waits for the message, and phase two asks the outbox to try
+ * again later while nothing waits yet. See {@link #correlateMessage(PhaseTwoRequest)}.
  * <p>
  * The workflow-aggregate ID maps onto the Camunda 7 <b>business key</b>. A Camunda <b>tenant
  * ID</b> is used only under the name-clash-avoidance mode {@code by-adapter}. It is the workflow
@@ -285,6 +293,76 @@ public class Camunda7ProcessService<A> implements MigratableProcessService<A> {
       final io.vanillabp.camunda7.wiring.Camunda7TaskRegistry taskRegistry) {
 
     this.taskRegistry = taskRegistry;
+
+  }
+
+  /**
+   * The shortest time the outbox waits before it dispatches a correlation again which
+   * found nothing waiting for its message. The engine usually reaches the event soon after
+   * the operation before it, often with the next job of its job executor. So the first
+   * attempts come quickly.
+   */
+  static final Duration SHORTEST_WAIT_FOR_A_SUBSCRIPTION = Duration.ofMillis(100);
+
+  /**
+   * The longest time between two attempts of a correlation which found nothing waiting for
+   * its message. The time between attempts grows with the time already waited. This caps
+   * it, so a workflow which reaches the event late still gets its message soon after.
+   */
+  static final Duration LONGEST_WAIT_FOR_A_SUBSCRIPTION = Duration.ofSeconds(30);
+
+  /**
+   * How long a correlation waits for a subscription, per message. <code>null</code> in
+   * tests, and then no message has a time-to-live.
+   */
+  private io.vanillabp.camunda7.wiring.Camunda7MessageTimeToLiveResolver messageTimeToLiveResolver;
+
+  /**
+   * Hands over how long a correlation waits for a subscription. The platform integration
+   * binds the configuration, so it arrives after construction.
+   *
+   * @param messageTimeToLiveResolver The resolution of the platform integration
+   */
+  public void setMessageTimeToLiveResolver(
+      final io.vanillabp.camunda7.wiring.Camunda7MessageTimeToLiveResolver messageTimeToLiveResolver) {
+
+    this.messageTimeToLiveResolver = messageTimeToLiveResolver;
+
+  }
+
+  /**
+   * The time-to-live of a message, read for the process whose model waits for it.
+   *
+   * @return The time-to-live, {@link Duration#ZERO} where none is configured
+   */
+  private Duration messageTimeToLiveFor(
+      final String workflowModuleId,
+      final String bpmnProcessId,
+      final String messageName) {
+
+    if (messageTimeToLiveResolver == null) {
+      return Duration.ZERO;
+    }
+    final var ofTheCall = messageTimeToLiveResolver.messageTimeToLiveFor(workflowModuleId, bpmnProcessId, messageName);
+    // the models are read only where the processes of the module would answer differently.
+    // Most applications configure the time-to-live per adapter or per module, or not at all
+    final var processes = taskRegistry == null
+        ? Map.<String, String>of()
+        : taskRegistry.scopedProcessIdsOf(workflowModuleId);
+    final var configured = processes
+        .keySet()
+        .stream()
+        .allMatch(process -> java.util.Objects
+            .equals(ofTheCall, messageTimeToLiveResolver.messageTimeToLiveFor(workflowModuleId, process, messageName)))
+                ? ofTheCall
+                : messageTimeToLiveResolver
+                    .messageTimeToLiveFor(
+                        workflowModuleId,
+                        processWaitingForTheMessage(workflowModuleId, bpmnProcessId, messageName),
+                        messageName);
+    return configured == null
+        ? Duration.ZERO
+        : configured;
 
   }
 
@@ -611,7 +689,7 @@ public class Camunda7ProcessService<A> implements MigratableProcessService<A> {
             Map
                 .entry(
                     PhaseOperation.CORRELATE_MESSAGE,
-                    PhaseOperationHandler.of(this::checkSubscriptionWaits, this::correlateMessage)),
+                    PhaseOperationHandler.of(this::checkCorrelation, this::correlateMessage)),
             Map
                 .entry(
                     PhaseOperation.SEND_SIGNAL,
@@ -811,13 +889,62 @@ public class Camunda7ProcessService<A> implements MigratableProcessService<A> {
   }
 
   /**
-   * The phase-one check of a correlation, which moves nothing on: is a subscription
-   * waiting for this message? Correlating itself moves the workflow on, so it happens
-   * after the commit. But "nothing matched" was a synchronous failure before this adapter
-   * went two-phase, and it stays one. The embedded engine answers from the same
-   * transaction, so the answer is exact for the engine as it is now. The core keeps the
-   * failure only while no earlier operation of this workflow waits in its outbox. If one
-   * waits, the core plans the correlation anyway, and phase two decides.
+   * The phase-one check of a correlation, which moves nothing on. Without a message
+   * time-to-live it asks whether a subscription waits for the message. With one it asks only
+   * whether a deployed model waits for it, like the Camunda 8 adapter. The subscription may
+   * come later: completing a task does not mean that the engine has reached the next wait
+   * state, because this adapter continues after every user task in a job of its own.
+   */
+  private void checkCorrelation(
+      final PhaseOneRequest<A> request) {
+
+    if (messageTimeToLiveFor(request.workflowModuleId(), request.bpmnProcessId(), request.messageName())
+        .isPositive()) {
+      checkAModelWaitsFor(request);
+      return;
+    }
+    checkSubscriptionWaits(request);
+
+  }
+
+  /**
+   * The phase-one check of a correlation with a message time-to-live: does a model of the
+   * workflow module wait for the message? A typo, or a message renamed in the model, would
+   * otherwise only show up in phase two, when the time-to-live runs out.
+   * <p>
+   * The check stays silent where it cannot read the answer: a module whose processes are not
+   * known yet, or a model which names a message by an expression. Then the name is unknown,
+   * not absent, and a refusal could be wrong.
+   */
+  private void checkAModelWaitsFor(
+      final PhaseOneRequest<A> request) {
+
+    final var models = modelsWaitingFor(request.workflowModuleId(), request.messageName());
+    if (models.namesUnknown() || !models.waiting().isEmpty()) {
+      return;
+    }
+    throw new IllegalStateException(
+        """
+            No deployed model of workflow module '%s' waits for message '%s' (correlated for \
+            workflow aggregate '%s' of BPMN process '%s')! A message time-to-live is configured \
+            for it, so the correlation would wait for a subscription which never comes. Check \
+            the message name against the models of the workflow module."""
+            .formatted(
+                request.workflowModuleId(),
+                request.messageName(),
+                request.aggregatePersistence().getAggregateId(request.workflowAggregate()),
+                request.bpmnProcessId()));
+
+  }
+
+  /**
+   * The phase-one check of a correlation without a message time-to-live, which moves nothing
+   * on: is a subscription waiting for this message? Correlating itself moves the workflow on,
+   * so it happens after the commit. But "nothing matched" was a synchronous failure before
+   * this adapter went two-phase, and it stays one. The embedded engine answers from the same
+   * transaction, so the answer is exact for the engine as it is now. Version 1 refused such a
+   * correlation where the application called it, and an application which configures no
+   * time-to-live keeps that.
    */
   private void checkSubscriptionWaits(
       final PhaseOneRequest<A> request) {
@@ -850,21 +977,59 @@ public class Camunda7ProcessService<A> implements MigratableProcessService<A> {
 
   }
 
+  /**
+   * Phase two of a correlation.
+   * <p>
+   * Without a message time-to-live, a subscription which is gone at dispatch time means that
+   * the message was delivered before: the outbox dispatches at least once. Phase one already
+   * refused a correlation which nothing waited for. So the entry is consumed with a WARN.
+   * <p>
+   * With a time-to-live, nothing waiting means "not yet". The engine continues a workflow
+   * when it wants to, so the event may be reached a moment later. Then the entry goes back
+   * to the outbox with {@link PhaseTwoRetryLater}. Nothing has reached the engine at that
+   * point. The time between two attempts grows with the time already waited, from
+   * {@link #SHORTEST_WAIT_FOR_A_SUBSCRIPTION} up to {@link #LONGEST_WAIT_FOR_A_SUBSCRIPTION}.
+   * The time-to-live counts from the moment the correlation was planned
+   * ({@link PhaseTwoRequest#plannedAt()}), so repeating an attempt does not make it longer.
+   * It is also the deadline of the entry, which replaces
+   * <code>vanillabp.outbox.wait-for-visibility-at-most</code> for it. Once it has passed, the
+   * correlation ends with a {@link PhaseTwoPermanentFailure} which names the message, the
+   * aggregate, the time-to-live and the time waited. The outbox blocks the entry and keeps
+   * that reason.
+   * <p>
+   * Other entries of the workflow are not held up while one waits. An entry which is not due
+   * yet is passed by the entries after it. So a later operation of the same workflow may
+   * reach the engine before a correlation which waits. A Camunda 8 cluster which buffers a
+   * message behaves the same way.
+   * <p>
+   * One case is worth knowing. On an engine with a datasource of its own, a crash between
+   * the correlation and the outbox marking the entry as done dispatches the entry again. With
+   * a time-to-live, that repetition finds nothing waiting, waits until the time-to-live is
+   * over, and then ends blocked, although the message was delivered. On the application's
+   * datasource the correlation and the mark commit together, so this cannot happen there.
+   */
   private void correlateMessage(
       final PhaseTwoRequest<A> request) {
 
     final var businessKey = String.valueOf(request.workflowAggregateId());
-    // check BEFORE correlating (rollback-only pitfall, see signalTask). No subscription at
-    // dispatch time has two causes. A repeated delivery finds the message already taken. Or
-    // the core planned the correlation behind an earlier operation of this workflow, and
-    // the workflow did not reach the message after that operation
-    if (!messageSubscriptionWaiting(request.workflowModuleId(), request.messageName(), businessKey)) {
+    final var timeToLive = messageTimeToLiveFor(
+        request.workflowModuleId(), request.bpmnProcessId(), request.messageName());
+    // check BEFORE correlating (rollback-only pitfall, see signalTask)
+    if (timeToLive.isPositive()) {
+      if (!subscriptionWaitingFor(
+          request.workflowModuleId(),
+          request.bpmnProcessId(),
+          request.messageName(),
+          businessKey,
+          request.correlationId())) {
+        throw waitForASubscription(request, businessKey, timeToLive);
+      }
+    } else if (!messageSubscriptionWaiting(request.workflowModuleId(), request.messageName(), businessKey)) {
       log
           .warn(
               "Camunda7[{}]: no waiting subscription for message '{}' of workflow aggregate '{}' - "
-                  + "skipping the phase-two correlation. Either it was delivered before, or it was "
-                  + "planned after an earlier operation of this workflow, and the workflow did not "
-                  + "reach the message",
+                  + "skipping the phase-two correlation. The outbox dispatches at least once, so it "
+                  + "was most probably delivered before",
               adapterId,
               request.messageName(),
               businessKey);
@@ -900,6 +1065,234 @@ public class Camunda7ProcessService<A> implements MigratableProcessService<A> {
                 request.workflowModuleId(),
                 request.bpmnProcessId()))
         .correlateWithResult();
+
+  }
+
+  /**
+   * What a correlation with a time-to-live does while nothing waits for its message: it
+   * asks the outbox to try again later, or it ends once the time-to-live is over.
+   *
+   * @param request The correlation
+   * @param businessKey The workflow aggregate's ID
+   * @param timeToLive The time-to-live of the message, longer than zero
+   * @return The failure to throw
+   */
+  private RuntimeException waitForASubscription(
+      final PhaseTwoRequest<A> request,
+      final String businessKey,
+      final Duration timeToLive) {
+
+    final var now = Instant.now();
+    // an entry planned before the moment was recorded has no start of its own. Then the
+    // outbox' own limit ends the wait
+    final var plannedAt = request.plannedAt();
+    final var waited = plannedAt == null
+        ? Duration.ZERO
+        : Duration.between(plannedAt, now);
+    final var deadline = plannedAt == null
+        ? null
+        : plannedAt.plus(timeToLive);
+    final var subject = "message '%s'%s for workflow aggregate '%s' (BPMN process '%s' of workflow module '%s')"
+        .formatted(
+            request.messageName(),
+            request.correlationId() == null
+                ? ""
+                : " with correlation id '%s'".formatted(request.correlationId()),
+            businessKey,
+            request.bpmnProcessId(),
+            request.workflowModuleId());
+    if ((deadline != null) && !now.isBefore(deadline)) {
+      return new PhaseTwoPermanentFailure(
+          """
+              Camunda7[%s]: nothing waited for %s within its message time-to-live of %s. It waited \
+              %s since it was planned at %s. Check whether the workflow still reaches the point \
+              where it waits for this message, or give the message a longer time-to-live \
+              (vanillabp.workflow-modules.%s.workflows.<bpmn-process-id>.messages.%s.adapters.%s.message-time-to-live)."""
+              .formatted(
+                  adapterId, subject, timeToLive, waited, plannedAt, request.workflowModuleId(),
+                  request.messageName(), adapterId), null);
+    }
+    return new PhaseTwoRetryLater(
+        "Camunda7[%s]: nothing waits for %s yet. It is tried again until its message time-to-live of %s is over"
+            .formatted(adapterId, subject, timeToLive), nextWaitForASubscription(
+                waited, deadline == null
+                    ? null
+                    : Duration.between(now, deadline)), deadline);
+
+  }
+
+  /**
+   * The time until the next attempt of a correlation which found nothing waiting. It is
+   * about as long as the time already waited, so the attempts come quickly at first and
+   * less often later. It is never shorter than {@link #SHORTEST_WAIT_FOR_A_SUBSCRIPTION},
+   * never longer than {@link #LONGEST_WAIT_FOR_A_SUBSCRIPTION}, and never longer than what is
+   * left of the time-to-live. So the last attempt happens when the time-to-live ends.
+   *
+   * @param waited How long the correlation has waited since it was planned
+   * @param left What is left of the time-to-live, <code>null</code> where it is not known
+   * @return The time until the next attempt
+   */
+  static Duration nextWaitForASubscription(
+      final Duration waited,
+      final Duration left) {
+
+    var wait = waited;
+    if (wait.compareTo(SHORTEST_WAIT_FOR_A_SUBSCRIPTION) < 0) {
+      wait = SHORTEST_WAIT_FOR_A_SUBSCRIPTION;
+    }
+    if (wait.compareTo(LONGEST_WAIT_FOR_A_SUBSCRIPTION) > 0) {
+      wait = LONGEST_WAIT_FOR_A_SUBSCRIPTION;
+    }
+    if ((left != null) && (left.compareTo(wait) < 0)) {
+      wait = left.isNegative()
+          ? Duration.ZERO
+          : left;
+    }
+    return wait;
+
+  }
+
+  /**
+   * The processes of a workflow module whose models wait for a message, and whether the
+   * answer can be trusted.
+   *
+   * @param waiting The plain ids of the processes whose deployed models wait for the message
+   * @param namesUnknown Whether some answer could not be read: the module's processes are
+   *        not known yet, or a model names a message by an expression
+   */
+  private record ModelsWaiting(
+                               java.util.List<String> waiting,
+                               boolean namesUnknown) {
+  }
+
+  /**
+   * Which processes of a workflow module wait for a message, by their deployed models. Every
+   * version the engine holds counts, because a workflow may still run on an older one. The
+   * engine caches the models it parsed, so asking costs no parsing after the first time.
+   *
+   * @param workflowModuleId The workflow module
+   * @param messageName The message name as the application wrote it
+   * @return The answer, see {@link ModelsWaiting}
+   */
+  private ModelsWaiting modelsWaitingFor(
+      final String workflowModuleId,
+      final String messageName) {
+
+    final var processes = taskRegistry == null
+        ? Map.<String, String>of()
+        : taskRegistry.scopedProcessIdsOf(workflowModuleId);
+    if (processes.isEmpty()) {
+      return new ModelsWaiting(java.util.List.of(), true);
+    }
+    final var scopedMessageName = scopedIdentifier(workflowModuleId, messageName);
+    final var tenantId = tenantIdOf(workflowModuleId);
+    final var waiting = new java.util.ArrayList<String>();
+    var namesUnknown = false;
+    for (final var process : processes.entrySet()) {
+      var query = repositoryService
+          .createProcessDefinitionQuery()
+          .processDefinitionKey(process.getValue())
+          .orderByProcessDefinitionVersion()
+          .desc();
+      query = tenantId != null
+          ? query.tenantIdIn(tenantId)
+          : query.withoutTenantId();
+      for (final var definition : query.list()) {
+        final var answer = waitsForTheMessage(
+            repositoryService.getBpmnModelInstance(definition.getId()), process.getValue(), scopedMessageName);
+        if (answer == null) {
+          namesUnknown = true;
+        } else if (answer) {
+          waiting.add(process.getKey());
+          break;
+        }
+      }
+    }
+    return new ModelsWaiting(waiting, namesUnknown);
+
+  }
+
+  /**
+   * Whether one process of a model waits for a message: a catch event, a boundary event, an
+   * event subprocess or a receive task of that process names it. A file may carry several
+   * processes, and only the elements of the given one count.
+   *
+   * @param model The deployed model
+   * @param scopedProcessId The process as the engine knows it
+   * @param scopedMessageName The message as the engine knows it
+   * @return Whether the process waits for it, <code>null</code> where the process names a
+   *         message by an expression, so the model cannot answer
+   */
+  private static Boolean waitsForTheMessage(
+      final org.camunda.bpm.model.bpmn.BpmnModelInstance model,
+      final String scopedProcessId,
+      final String scopedMessageName) {
+
+    final java.util.function.Predicate<org.camunda.bpm.model.xml.instance.ModelElementInstance> inTheProcess = element -> {
+      var current = element.getParentElement();
+      while (current != null) {
+        if (current instanceof org.camunda.bpm.model.bpmn.instance.Process process) {
+          return scopedProcessId.equals(process.getId());
+        }
+        current = current.getParentElement();
+      }
+      return false;
+    };
+    final var names = new java.util.ArrayList<String>();
+    model
+        .getModelElementsByType(org.camunda.bpm.model.bpmn.instance.MessageEventDefinition.class)
+        .stream()
+        .filter(inTheProcess)
+        .filter(definition -> definition.getMessage() != null)
+        .forEach(definition -> names.add(definition.getMessage().getName()));
+    model
+        .getModelElementsByType(org.camunda.bpm.model.bpmn.instance.ReceiveTask.class)
+        .stream()
+        .filter(inTheProcess)
+        .filter(task -> task.getMessage() != null)
+        .forEach(task -> names.add(task.getMessage().getName()));
+    if (names.contains(scopedMessageName)) {
+      return true;
+    }
+    // Camunda 7 allows an expression as the name of a message an execution waits for. What
+    // it evaluates to is only known while a workflow runs
+    if (names
+        .stream()
+        .anyMatch(name -> (name != null) && (name.contains("${") || name.contains("#{")))) {
+      return null;
+    }
+    return false;
+
+  }
+
+  /**
+   * The BPMN process whose model waits for a message, which is the process a time-to-live
+   * configured for that message belongs to.
+   * <p>
+   * A process service belongs to the process at the top, so the correlation names that
+   * process. But the event which waits may sit in a called process. Whoever configures the
+   * time-to-live of that message writes it under the called process
+   * (<code>workflows.&lt;called process&gt;.messages.&lt;message&gt;</code>). So the deployed
+   * models answer, the way the Camunda 8 adapter answers it. It is the process of the call,
+   * if its own model waits for the message. Otherwise it is the one other process of the
+   * workflow module whose model does. If none does, or several others do, the process of the
+   * call is the answer.
+   *
+   * @param workflowModuleId The workflow module of the correlation
+   * @param bpmnProcessId The BPMN process of the call
+   * @param messageName The message name as the application wrote it
+   * @return The plain id of the process the time-to-live is read for
+   */
+  private String processWaitingForTheMessage(
+      final String workflowModuleId,
+      final String bpmnProcessId,
+      final String messageName) {
+
+    final var waiting = modelsWaitingFor(workflowModuleId, messageName).waiting();
+    if (waiting.contains(bpmnProcessId) || (waiting.size() != 1)) {
+      return bpmnProcessId;
+    }
+    return waiting.getFirst();
 
   }
 
@@ -1745,8 +2138,7 @@ public class Camunda7ProcessService<A> implements MigratableProcessService<A> {
   /**
    * Whether an execution of the given workflow waits for the message. Phase one asks
    * this before it schedules a correlation. Phase two asks again before it correlates,
-   * because a subscription may be gone at dispatch time: a repeated delivery, or a
-   * correlation the core planned after an earlier operation of the same workflow.
+   * because a subscription may be gone at dispatch time after a repeated delivery.
    * <p>
    * The subscription carries the SCOPED message name, like the correlation itself. A query
    * for the plain name would find nothing wherever a workflow module prefixes its

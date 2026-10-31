@@ -73,6 +73,7 @@ public class Camunda7SleepingEngineTest {
           .addAsResource("c7-e2e/processes/aggregate-changed.bpmn")
           .addAsResource("c7-e2e/processes/timer-start.bpmn")
           .addAsResource("c7-e2e/processes/versioned-process.bpmn")
+          .addAsResource("c7-e2e/processes/message-time-to-live.bpmn")
           .addAsResource("workflow-module-descriptor/workflow-module", "META-INF/workflow-module"))
       // JVM args needed for tracking coverage. See this module's POM for the
       // systemPropertyVariables which feed 'jacoco.agent'

@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" id="Definitions_MessageTimeToLive" targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:message id="Msg_TtlContractSigned" name="TtlContractSigned" />
+  <bpmn:message id="Msg_TtlReminder" name="TtlReminder" />
+  <bpmn:message id="Msg_TtlUnbuffered" name="TtlUnbuffered" />
+  <bpmn:process id="TtlProcess" isExecutable="true">
+    <bpmn:startEvent id="TTL_Start">
+      <bpmn:outgoing>TTL_f1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:sequenceFlow id="TTL_f1" sourceRef="TTL_Start" targetRef="TTL_Review" />
+    <bpmn:userTask id="TTL_Review">
+      <bpmn:incoming>TTL_f1</bpmn:incoming>
+      <bpmn:outgoing>TTL_f2</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:sequenceFlow id="TTL_f2" sourceRef="TTL_Review" targetRef="TTL_WaitSigned" />
+    <bpmn:intermediateCatchEvent id="TTL_WaitSigned">
+      <bpmn:incoming>TTL_f2</bpmn:incoming>
+      <bpmn:outgoing>TTL_f3</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="TTL_SignedDef" messageRef="Msg_TtlContractSigned" />
+    </bpmn:intermediateCatchEvent>
+    <bpmn:sequenceFlow id="TTL_f3" sourceRef="TTL_WaitSigned" targetRef="TTL_PayOut" />
+    <bpmn:userTask id="TTL_PayOut">
+      <bpmn:incoming>TTL_f3</bpmn:incoming>
+      <bpmn:outgoing>TTL_f4</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:sequenceFlow id="TTL_f4" sourceRef="TTL_PayOut" targetRef="TTL_WaitReminder" />
+    <bpmn:intermediateCatchEvent id="TTL_WaitReminder">
+      <bpmn:incoming>TTL_f4</bpmn:incoming>
+      <bpmn:outgoing>TTL_f5</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="TTL_ReminderDef" messageRef="Msg_TtlReminder" />
+    </bpmn:intermediateCatchEvent>
+    <bpmn:sequenceFlow id="TTL_f5" sourceRef="TTL_WaitReminder" targetRef="TTL_WaitUnbuffered" />
+    <bpmn:intermediateCatchEvent id="TTL_WaitUnbuffered">
+      <bpmn:incoming>TTL_f5</bpmn:incoming>
+      <bpmn:outgoing>TTL_f6</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="TTL_UnbufferedDef" messageRef="Msg_TtlUnbuffered" />
+    </bpmn:intermediateCatchEvent>
+    <bpmn:sequenceFlow id="TTL_f6" sourceRef="TTL_WaitUnbuffered" targetRef="TTL_End" />
+    <bpmn:endEvent id="TTL_End">
+      <bpmn:incoming>TTL_f6</bpmn:incoming>
+    </bpmn:endEvent>
+  </bpmn:process>
+</bpmn:definitions>

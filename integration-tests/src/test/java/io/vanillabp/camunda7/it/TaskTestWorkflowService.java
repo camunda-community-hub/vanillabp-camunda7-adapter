@@ -33,7 +33,8 @@ import io.vanillabp.spi.service.WorkflowTask;
                             bpmnProcessId = "MessageProcess"), @BpmnProcess(
                                 bpmnProcessId = "MessageStartProcess"), @BpmnProcess(
                                     bpmnProcessId = "RollbackOnlyProcess"), @BpmnProcess(
-                                        bpmnProcessId = "BusinessRuleProcess")
+                                        bpmnProcessId = "BusinessRuleProcess"), @BpmnProcess(
+                                            bpmnProcessId = "TtlProcess")
     })
 public class TaskTestWorkflowService {
 

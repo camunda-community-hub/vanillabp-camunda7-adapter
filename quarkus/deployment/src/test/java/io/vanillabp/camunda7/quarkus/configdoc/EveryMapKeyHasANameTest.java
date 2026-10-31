@@ -44,6 +44,7 @@ public class EveryMapKeyHasANameTest {
       "workflow-module-id",
       "bpmn-process-id",
       "task-definition",
+      "message-name",
       "plugin-name",
       "property-name");
 

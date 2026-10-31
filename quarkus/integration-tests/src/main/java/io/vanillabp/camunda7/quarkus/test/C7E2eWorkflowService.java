@@ -36,7 +36,8 @@ import jakarta.inject.Inject;
                                 bpmnProcessId = "MessageStartProcess"), @BpmnProcess(
                                     bpmnProcessId = "RollbackOnlyProcess"), @BpmnProcess(
                                         bpmnProcessId = "SignalCatchProcess"), @BpmnProcess(
-                                            bpmnProcessId = "VersionedProcess")
+                                            bpmnProcessId = "VersionedProcess"), @BpmnProcess(
+                                                bpmnProcessId = "TtlProcess")
     })
 public class C7E2eWorkflowService {
 

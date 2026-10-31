@@ -1881,8 +1881,8 @@ public class Camunda7ProcessService<A> implements MigratableProcessService<A> {
    * @param taskId The parked execution's ID
    * @param bpmnErrorCode The BPMN error code or <code>null</code> to complete
    * @param tolerateGoneTask Whether a no-longer-existing execution is tolerated
-   *        instead of failing. Phase two is at-least-once, and the core may plan an
-   *        operation after an earlier one of the same workflow which ends the task
+   *        instead of failing. Phase two is at-least-once, so a repeated dispatch finds
+   *        the task ended by the first one
    * @param beforeSignal Runs after the task was found and before it is signalled. It
    *        writes the values the model reads next, which an operator also sees in Cockpit
    */
@@ -1901,13 +1901,11 @@ public class Camunda7ProcessService<A> implements MigratableProcessService<A> {
           .executionId(taskId)
           .count() > 0;
       if (!exists) {
-        // the task disappeared before this signal. A repeated delivery finds it done
-        // already, or a boundary event canceled it. Or the core planned this operation
-        // after an earlier operation of this workflow, and that operation ended the task
+        // the task disappeared before this signal. Phase one found it, so a repeated
+        // dispatch finds it ended by the first one
         log.warn(
-            "Camunda7[{}]: task '{}' is gone - skipping the phase-two {}. Either it was delivered "
-                + "before, or it was planned after an earlier operation of this workflow, and "
-                + "the task ended meanwhile",
+            "Camunda7[{}]: task '{}' is gone - skipping the phase-two {}. The outbox dispatches at "
+                + "least once, so it was most probably delivered before",
             adapterId,
             taskId,
             bpmnErrorCode == null
@@ -1968,8 +1966,7 @@ public class Camunda7ProcessService<A> implements MigratableProcessService<A> {
    * @param taskId The user task's ID (ACT_RU_TASK)
    * @param bpmnErrorCode The BPMN error code or <code>null</code> to complete
    * @param tolerateGoneTask Whether a no-longer-existing task is tolerated. Phase two
-   *        is at-least-once, and the core may plan an operation after an earlier one of
-   *        the same workflow which ends the task
+   *        is at-least-once, so a repeated dispatch finds the task ended by the first one
    * @param beforeExecute Runs after the user task was found and before it is completed
    *        or cancelled. It writes the values the model reads next
    */
@@ -1987,12 +1984,10 @@ public class Camunda7ProcessService<A> implements MigratableProcessService<A> {
           .taskId(taskId)
           .count() > 0;
       if (!exists) {
-        // a repeated delivery, or an operation the core planned after an earlier one of
-        // this workflow which ended the user task, see signalTask
+        // a repeated dispatch, see signalTask
         log.warn(
-            "Camunda7[{}]: user task '{}' is gone - skipping the phase-two {}. Either it was "
-                + "delivered before, or it was planned after an earlier operation of this "
-                + "workflow, and the user task ended meanwhile",
+            "Camunda7[{}]: user task '{}' is gone - skipping the phase-two {}. The outbox "
+                + "dispatches at least once, so it was most probably delivered before",
             adapterId,
             taskId,
             bpmnErrorCode == null
@@ -2304,8 +2299,8 @@ public class Camunda7ProcessService<A> implements MigratableProcessService<A> {
    *        <code>null</code> for the workflow's global scope and the global scope of
    *        every called process continuing the aggregate
    * @param tolerateGoneWorkflow Whether a workflow gone by now is tolerated instead of
-   *        failing. Phase two is at-least-once, and the core may plan a push after an
-   *        earlier operation of the same workflow which ends it. It is judged within the
+   *        failing. Phase two is at-least-once, so a repeated dispatch may find the
+   *        workflow or the task ended meanwhile. It is judged within the
    *        scope of the call. Otherwise a foreign workflow with the same business key would
    *        make an ended workflow look present. And a push which should be skipped would
    *        write there
@@ -2346,8 +2341,8 @@ public class Camunda7ProcessService<A> implements MigratableProcessService<A> {
         }
         log.warn(
             "Camunda7[{}]: task '{}' of workflow aggregate '{}' is gone - skipping the phase-two push "
-                + "of the aggregate. Either it was delivered before, or it was planned after an "
-                + "earlier operation of this workflow, and the task ended meanwhile",
+                + "of the aggregate. The outbox dispatches at least once, so it was most probably "
+                + "delivered before",
             adapterId,
             taskId,
             businessKey);
@@ -2417,8 +2412,8 @@ public class Camunda7ProcessService<A> implements MigratableProcessService<A> {
       }
       log.warn(
           "Camunda7[{}]: the workflow of aggregate '{}' is gone - skipping the phase-two push of the "
-              + "aggregate. Either it was delivered before, or it was planned after an earlier "
-              + "operation of this workflow, and the workflow ended meanwhile",
+              + "aggregate. The outbox dispatches at least once, so it was most probably delivered "
+              + "before",
           adapterId,
           businessKey);
       return;

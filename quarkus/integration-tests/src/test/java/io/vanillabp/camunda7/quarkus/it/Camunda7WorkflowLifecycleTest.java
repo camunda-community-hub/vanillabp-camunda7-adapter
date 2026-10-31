@@ -686,17 +686,19 @@ public class Camunda7WorkflowLifecycleTest {
 
   }
 
-  @SuppressWarnings("unchecked")
   private static List<Map<String, Object>> correlationsInTheOutbox(
       final String aggregateId) {
 
+    // read through the JSON path, which hands out plain Java maps whatever object mapper
+    // the test classpath brings
     return api()
         .get("introspect/outbox/correlations/"
             + aggregateId)
         .then()
         .statusCode(200)
         .extract()
-        .as(List.class);
+        .jsonPath()
+        .getList("$");
 
   }
 

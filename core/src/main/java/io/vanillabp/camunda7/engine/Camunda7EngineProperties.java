@@ -96,6 +96,17 @@ public class Camunda7EngineProperties {
   private String serializationFormat;
 
   /**
+   * How long a correlation of a message waits for a subscription while nothing waits for
+   * the message yet. It has the key and the meaning of the Camunda 8 adapter, where the
+   * cluster keeps a published message for that long. Not set, or zero, means the
+   * correlation is refused in phase one where nothing waits, as in version 1.
+   * It is also read per workflow module, per workflow and per message, and the most
+   * specific value wins
+   * ({@code vanillabp.workflow-modules.<module>.workflows.<workflow>.messages.<message>.adapters.<id>.message-time-to-live}).
+   */
+  private java.time.Duration messageTimeToLive;
+
+  /**
    * The Camunda engine plugins of this adapter id. Each one is a named section. It names a
    * class and has its own properties, and Camunda itself applies them (see
    * {@link Camunda7EnginePlugins}). This is how a serialization dataformat (camunda-xstream,
@@ -275,6 +286,25 @@ public class Camunda7EngineProperties {
   public void setSerializationFormat(
       final String serializationFormat) {
     this.serializationFormat = serializationFormat;
+  }
+
+  /**
+   * How long a correlation waits for a subscription, for the whole adapter id.
+   *
+   * @return The time-to-live, <code>null</code> where none is configured
+   */
+  public java.time.Duration getMessageTimeToLive() {
+    return messageTimeToLive;
+  }
+
+  /**
+   * How long a correlation waits for a subscription, for the whole adapter id.
+   *
+   * @param messageTimeToLive The time-to-live
+   */
+  public void setMessageTimeToLive(
+      final java.time.Duration messageTimeToLive) {
+    this.messageTimeToLive = messageTimeToLive;
   }
 
   /**

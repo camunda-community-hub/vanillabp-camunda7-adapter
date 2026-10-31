@@ -171,6 +171,32 @@ public class VanillaBpCamunda7Properties {
     private Map<String, Camunda7TaskProperties> tasks = Map.of();
 
     /**
+     * The messages of this workflow, keyed by message name. A message is the most specific
+     * level of <code>message-time-to-live</code>. It is a map of its own and not the task
+     * level, so a value meant for a message never applies to a task of the same name.
+     */
+    private Map<String, Camunda7MessageProperties> messages = Map.of();
+
+    /**
+     * The messages of this workflow, keyed by message name.
+     *
+     * @return The message sections of this workflow, empty where there are none
+     */
+    public Map<String, Camunda7MessageProperties> getMessages() {
+      return messages;
+    }
+
+    /**
+     * The messages of this workflow, keyed by message name.
+     *
+     * @param messages The message sections Spring Boot bound
+     */
+    public void setMessages(
+        final Map<String, Camunda7MessageProperties> messages) {
+      this.messages = messages;
+    }
+
+    /**
      * The per-adapter-id overrides of this workflow.
      *
      * @return The adapter sections of this workflow, empty where there are none
@@ -248,6 +274,82 @@ public class VanillaBpCamunda7Properties {
   }
 
   /**
+   * The Camunda 7 keys of one message of a workflow. Only <code>message-time-to-live</code> is
+   * read at this level.
+   */
+  public static class Camunda7MessageProperties {
+
+    /**
+     * Spring Boot builds one per section it finds and fills it through the setters.
+     */
+    public Camunda7MessageProperties() {
+
+    }
+
+    /** The per-adapter-id overrides of this message. */
+    private Map<String, Camunda7MessageScopedProperties> adapters = Map.of();
+
+    /**
+     * The per-adapter-id overrides of this message.
+     *
+     * @return The adapter sections of this message, empty where there are none
+     */
+    public Map<String, Camunda7MessageScopedProperties> getAdapters() {
+      return adapters;
+    }
+
+    /**
+     * The per-adapter-id overrides of this message.
+     *
+     * @param adapters The adapter sections Spring Boot bound
+     */
+    public void setAdapters(
+        final Map<String, Camunda7MessageScopedProperties> adapters) {
+      this.adapters = adapters;
+    }
+
+  }
+
+  /**
+   * The Camunda 7 keys of one message's adapter section. Only the time-to-live is read for
+   * a message, so it is the only key here.
+   */
+  public static class Camunda7MessageScopedProperties {
+
+    /**
+     * Spring Boot builds one per section it finds and fills it through the setters.
+     */
+    public Camunda7MessageScopedProperties() {
+
+    }
+
+    /**
+     * How long a correlation of this message waits for a subscription.
+     */
+    private java.time.Duration messageTimeToLive;
+
+    /**
+     * How long a correlation of this message waits for a subscription.
+     *
+     * @return The time-to-live, <code>null</code> where this message says nothing
+     */
+    public java.time.Duration getMessageTimeToLive() {
+      return messageTimeToLive;
+    }
+
+    /**
+     * How long a correlation of this message waits for a subscription.
+     *
+     * @param messageTimeToLive The time-to-live of this message
+     */
+    public void setMessageTimeToLive(
+        final java.time.Duration messageTimeToLive) {
+      this.messageTimeToLive = messageTimeToLive;
+    }
+
+  }
+
+  /**
    * The Camunda 7 keys which may be set per workflow module and per workflow.
    */
   public static class Camunda7ScopedProperties {
@@ -272,6 +374,31 @@ public class VanillaBpCamunda7Properties {
      * module switch OFF what the adapter switched on.
      */
     private Boolean allowListeners;
+
+    /**
+     * How long a correlation waits for a subscription, for this scope. It is read per
+     * workflow module, per workflow and per message.
+     */
+    private java.time.Duration messageTimeToLive;
+
+    /**
+     * How long a correlation waits for a subscription, for this scope.
+     *
+     * @return The time-to-live, <code>null</code> where this scope says nothing
+     */
+    public java.time.Duration getMessageTimeToLive() {
+      return messageTimeToLive;
+    }
+
+    /**
+     * How long a correlation waits for a subscription, for this scope.
+     *
+     * @param messageTimeToLive The time-to-live of this scope
+     */
+    public void setMessageTimeToLive(
+        final java.time.Duration messageTimeToLive) {
+      this.messageTimeToLive = messageTimeToLive;
+    }
 
     /**
      * The serialization format of the shared values the engine has no variable type
@@ -356,6 +483,114 @@ public class VanillaBpCamunda7Properties {
         final String tenantId) {
       this.tenantId = tenantId;
     }
+
+  }
+
+  /**
+   * How long a correlation of a message waits for a subscription, most specific first: the
+   * message, the workflow, its workflow module, the adapter. Below a workflow the message is
+   * the most specific level, not a task.
+   *
+   * @param adapterId The adapter id
+   * @param workflowModuleId The workflow module ID
+   * @param bpmnProcessId The BPMN process ID of the process whose model waits for the message
+   * @param messageName The message name as the application wrote it
+   * @return The time-to-live or <code>null</code> where none is configured
+   */
+  public java.time.Duration messageTimeToLiveFor(
+      final String adapterId,
+      final String workflowModuleId,
+      final String bpmnProcessId,
+      final String messageName) {
+
+    final var module = workflowModuleId != null
+        ? workflowModules.get(workflowModuleId)
+        : null;
+    final var workflow = (module != null) && (bpmnProcessId != null)
+        ? module
+            .getWorkflows()
+            .get(bpmnProcessId)
+        : null;
+    final var message = (workflow != null) && (messageName != null)
+        ? workflow
+            .getMessages()
+            .get(messageName)
+        : null;
+    final var perMessage = message != null
+        ? message
+            .getAdapters()
+            .get(adapterId)
+        : null;
+    if ((perMessage != null) && (perMessage.getMessageTimeToLive() != null)) {
+      return perMessage.getMessageTimeToLive();
+    }
+    for (final var scoped : java.util.Arrays
+        .asList(
+            workflow != null
+                ? workflow.getAdapters()
+                : null,
+            module != null
+                ? module.getAdapters()
+                : null)) {
+      final var section = scoped != null
+          ? scoped.get(adapterId)
+          : null;
+      if ((section != null) && (section.getMessageTimeToLive() != null)) {
+        return section.getMessageTimeToLive();
+      }
+    }
+    return enginePropertiesFor(adapterId).getMessageTimeToLive();
+
+  }
+
+  /**
+   * The keys of every <code>message-time-to-live</code> of an adapter id which is below zero.
+   * A negative time makes no sense, so the boot names them and ends.
+   *
+   * @param adapterId The adapter id
+   * @return The keys, empty where every value is zero or more
+   */
+  public java.util.List<String> negativeMessageTimeToLiveKeys(
+      final String adapterId) {
+
+    final var keys = new java.util.ArrayList<String>();
+    final java.util.function.BiConsumer<String, java.time.Duration> check = (
+        key,
+        value) -> {
+      if ((value != null) && value.isNegative()) {
+        keys.add("%s=%s".formatted(key, value));
+      }
+    };
+    check.accept("vanillabp.adapters.%s.message-time-to-live".formatted(adapterId), enginePropertiesFor(adapterId)
+        .getMessageTimeToLive());
+    workflowModules.forEach((
+        moduleId,
+        module) -> {
+      final var perModule = module.getAdapters().get(adapterId);
+      if (perModule != null) {
+        check.accept("vanillabp.workflow-modules.%s.adapters.%s.message-time-to-live".formatted(moduleId, adapterId),
+            perModule.getMessageTimeToLive());
+      }
+      module.getWorkflows().forEach((
+          workflowId,
+          workflow) -> {
+        final var perWorkflow = workflow.getAdapters().get(adapterId);
+        if (perWorkflow != null) {
+          check.accept("vanillabp.workflow-modules.%s.workflows.%s.adapters.%s.message-time-to-live"
+              .formatted(moduleId, workflowId, adapterId), perWorkflow.getMessageTimeToLive());
+        }
+        workflow.getMessages().forEach((
+            messageName,
+            message) -> {
+          final var perMessage = message.getAdapters().get(adapterId);
+          if (perMessage != null) {
+            check.accept("vanillabp.workflow-modules.%s.workflows.%s.messages.%s.adapters.%s.message-time-to-live"
+                .formatted(moduleId, workflowId, messageName, adapterId), perMessage.getMessageTimeToLive());
+          }
+        });
+      });
+    });
+    return keys;
 
   }
 

@@ -74,6 +74,7 @@ public class Camunda7WorkflowLifecycleTest {
           .addAsResource("c7-e2e/processes/aggregate-changed.bpmn")
           .addAsResource("c7-e2e/processes/timer-start.bpmn")
           .addAsResource("c7-e2e/processes/versioned-process.bpmn")
+          .addAsResource("c7-e2e/processes/message-time-to-live.bpmn")
           // the test deploys it WHILE the application runs. So it must travel with the
           // application, but must not sit in the workflow module's resources location
           .addAsResource("c7-e2e/versioned/versioned-process-v2.bpmn")
@@ -670,6 +671,127 @@ public class Camunda7WorkflowLifecycleTest {
 
     post("introspect/messages/PaymentReceived/correlate/%s/payment-42".formatted(aggregateId));
     await(() -> ended(aggregateId), "MessageProcess to end after the matching correlation");
+
+  }
+
+  // --- a message correlated before the workflow waits for it ---
+
+  private static String awaitUserTaskAt(
+      final String aggregateId,
+      final String elementId) throws InterruptedException {
+
+    final var path = "introspect/engine/user-tasks/%s/at/%s".formatted(aggregateId, elementId);
+    await(() -> !strings(path).isEmpty(), "user task '%s'".formatted(elementId));
+    return strings(path).getFirst();
+
+  }
+
+  private static List<Map<String, Object>> correlationsInTheOutbox(
+      final String aggregateId) {
+
+    // read through the JSON path, which hands out plain Java maps whatever object mapper
+    // the test classpath brings
+    return api()
+        .get("introspect/outbox/correlations/"
+            + aggregateId)
+        .then()
+        .statusCode(200)
+        .extract()
+        .jsonPath()
+        .getList("$");
+
+  }
+
+  private static boolean hasCorrelation(
+      final String aggregateId,
+      final String messageName,
+      final String status) {
+
+    return correlationsInTheOutbox(aggregateId)
+        .stream()
+        .anyMatch(row -> status.equals(row.get("status")) && String
+            .valueOf(row.get("args"))
+            .contains(messageName));
+
+  }
+
+  @Test
+  @DisplayName("A message correlated right after the user task before its catch event was completed reaches the workflow")
+  public void aCorrelationRightAfterACompletionIsNotLost() throws Exception {
+
+    final var aggregateId = startProcess("TtlProcess", true);
+    final var review = awaitUserTaskAt(aggregateId, "TTL_Review");
+
+    // no pause. The engine reaches the catch event only with the job which continues after
+    // the user task, so the correlation is dispatched before the workflow waits for it
+    post("introspect/user-tasks/%s/complete/%s".formatted(review, aggregateId));
+    post("introspect/messages/TtlContractSigned/correlate/"
+        + aggregateId);
+
+    awaitUserTaskAt(aggregateId, "TTL_PayOut");
+    await(() -> hasCorrelation(aggregateId, "TtlContractSigned", "DONE"), "the correlation to be ticked off");
+
+  }
+
+  @Test
+  @DisplayName("A correlation which waits holds up no later operation of the same workflow")
+  public void aWaitingCorrelationHoldsUpNoLaterOperation() throws Exception {
+
+    final var aggregateId = startProcess("TtlProcess", true);
+    final var review = awaitUserTaskAt(aggregateId, "TTL_Review");
+
+    post("introspect/messages/TtlContractSigned/correlate/"
+        + aggregateId);
+    await(() -> hasCorrelation(aggregateId, "TtlContractSigned", "OPEN"), "the correlation to wait in the outbox");
+
+    post("introspect/user-tasks/%s/complete/%s".formatted(review, aggregateId));
+    await(
+        () -> strings("introspect/engine/user-tasks/%s/at/TTL_Review".formatted(aggregateId)).isEmpty(),
+        "the user task to be completed while the correlation waits");
+
+    awaitUserTaskAt(aggregateId, "TTL_PayOut");
+    await(() -> hasCorrelation(aggregateId, "TtlContractSigned", "DONE"), "the correlation to be ticked off");
+
+  }
+
+  @Test
+  @DisplayName("A correlation whose time-to-live ran out is blocked, and the reason names message, aggregate, TTL and wait")
+  public void aCorrelationWhoseTimeToLiveRanOutIsBlocked() throws Exception {
+
+    final var aggregateId = startProcess("TtlProcess", true);
+    awaitUserTaskAt(aggregateId, "TTL_Review");
+
+    post("introspect/messages/TtlReminder/correlate/"
+        + aggregateId);
+
+    await(() -> hasCorrelation(aggregateId, "TtlReminder", "BLOCKED"), "the correlation to be blocked");
+    final var reason = String.valueOf(correlationsInTheOutbox(aggregateId).getFirst().get("lastFailure"));
+    assertTrue(reason.contains("message 'TtlReminder'"), reason);
+    assertTrue(reason.contains("workflow aggregate '%s'".formatted(aggregateId)), reason);
+    assertTrue(reason.contains("within its message time-to-live of PT1S"), reason);
+    assertTrue(reason.contains("It waited PT"), reason);
+    assertFalse(
+        strings("introspect/engine/user-tasks/%s/at/TTL_Review".formatted(aggregateId)).isEmpty(),
+        "the workflow is left where it was");
+
+  }
+
+  @Test
+  @DisplayName("A time-to-live of zero refuses a correlation nothing waits for where the application made the call")
+  public void aTimeToLiveOfZeroRefusesAtTheCall() throws Exception {
+
+    final var aggregateId = startProcess("TtlProcess", true);
+    awaitUserTaskAt(aggregateId, "TTL_Review");
+
+    final var refusal = post("introspect/messages/TtlUnbuffered/correlate/"
+        + aggregateId);
+    assertTrue(
+        String
+            .valueOf(refusal.get("rootMessage"))
+            .contains(
+                "No execution of workflow aggregate '%s' waits for message 'TtlUnbuffered'".formatted(aggregateId)),
+        String.valueOf(refusal.get("rootMessage")));
+    assertTrue(correlationsInTheOutbox(aggregateId).isEmpty(), "nothing was planned");
 
   }
 

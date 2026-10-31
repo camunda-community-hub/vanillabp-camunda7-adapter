@@ -30,6 +30,24 @@ vanillabp:
           tasks:
             SU_Task:
               implemented-externally: true
+        TtlProcess:
+          tasks:
+            TTL_Review:
+              implemented-externally: true
+            TTL_PayOut:
+              implemented-externally: true
+          adapters:
+            c7:
+              message-time-to-live: PT1M
+          messages:
+            TtlReminder:
+              adapters:
+                c7:
+                  message-time-to-live: PT1S
+            TtlUnbuffered:
+              adapters:
+                c7:
+                  message-time-to-live: PT0S
         AggregateChangedProcess:
           allow-full-sync-with-bpms: true
           declared-aggregate-values:

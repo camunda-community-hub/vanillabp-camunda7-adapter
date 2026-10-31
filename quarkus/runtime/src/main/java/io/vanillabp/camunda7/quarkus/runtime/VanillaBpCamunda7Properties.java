@@ -54,6 +54,118 @@ public interface VanillaBpCamunda7Properties {
   Map<String, Camunda7WorkflowModuleKeys> workflowModules();
 
   /**
+   * Resolves how long a correlation of a message waits for a subscription, most specific
+   * first: the message, the workflow, its workflow module, the adapter. Below a workflow the
+   * message is the most specific level, not a task.
+   *
+   * @param adapterId The adapter id
+   * @param workflowModuleId The workflow module ID
+   * @param bpmnProcessId The BPMN process ID of the process whose model waits for the message
+   * @param messageName The message name as the application wrote it
+   * @return The time-to-live, <code>null</code> where none is configured
+   */
+  default java.time.Duration messageTimeToLiveFor(
+      final String adapterId,
+      final String workflowModuleId,
+      final String bpmnProcessId,
+      final String messageName) {
+
+    final var module = workflowModuleId != null
+        ? workflowModules().get(workflowModuleId)
+        : null;
+    final var workflow = (module != null) && (bpmnProcessId != null)
+        ? module
+            .workflows()
+            .get(bpmnProcessId)
+        : null;
+    final var message = (workflow != null) && (messageName != null)
+        ? workflow
+            .messages()
+            .get(messageName)
+        : null;
+    final var perMessage = message != null
+        ? message
+            .adapters()
+            .get(adapterId)
+        : null;
+    if ((perMessage != null) && perMessage.messageTimeToLive().isPresent()) {
+      return perMessage.messageTimeToLive().get();
+    }
+    for (final var scoped : java.util.Arrays
+        .asList(
+            workflow != null
+                ? workflow.adapters()
+                : null,
+            module != null
+                ? module.adapters()
+                : null)) {
+      final var section = scoped != null
+          ? scoped.get(adapterId)
+          : null;
+      if ((section != null) && section.messageTimeToLive().isPresent()) {
+        return section.messageTimeToLive().get();
+      }
+    }
+    final var adapter = adapters().get(adapterId);
+    return adapter != null
+        ? adapter.messageTimeToLive().orElse(null)
+        : null;
+
+  }
+
+  /**
+   * The keys of every <code>message-time-to-live</code> of an adapter id which is below zero.
+   * A negative time makes no sense, so the boot names them and ends.
+   *
+   * @param adapterId The adapter id
+   * @return The keys, each written as <code>key=value</code>, empty where every value is
+   *         zero or more
+   */
+  default java.util.List<String> negativeMessageTimeToLiveKeys(
+      final String adapterId) {
+
+    final var keys = new java.util.ArrayList<String>();
+    final java.util.function.BiConsumer<String, Optional<java.time.Duration>> check = (
+        key,
+        value) -> value
+            .filter(java.time.Duration::isNegative)
+            .ifPresent(negative -> keys.add("%s=%s".formatted(key, negative)));
+    final var adapter = adapters().get(adapterId);
+    if (adapter != null) {
+      check.accept("vanillabp.adapters.%s.message-time-to-live".formatted(adapterId), adapter.messageTimeToLive());
+    }
+    workflowModules().forEach((
+        moduleId,
+        module) -> {
+      final var perModule = module.adapters().get(adapterId);
+      if (perModule != null) {
+        check.accept("vanillabp.workflow-modules.%s.adapters.%s.message-time-to-live".formatted(moduleId, adapterId),
+            perModule.messageTimeToLive());
+      }
+      module.workflows().forEach((
+          workflowId,
+          workflow) -> {
+        final var perWorkflow = workflow.adapters().get(adapterId);
+        if (perWorkflow != null) {
+          check.accept("vanillabp.workflow-modules.%s.workflows.%s.adapters.%s.message-time-to-live"
+              .formatted(moduleId, workflowId, adapterId), perWorkflow.messageTimeToLive());
+        }
+        workflow.messages().forEach((
+            messageName,
+            message) -> {
+          final var perMessage = message.adapters().get(adapterId);
+          if (perMessage != null) {
+            check.accept("vanillabp.workflow-modules.%s.workflows.%s.messages.%s.adapters.%s.message-time-to-live"
+                .formatted(moduleId, workflowId, messageName, adapterId), perMessage.messageTimeToLive());
+          }
+        });
+      });
+    });
+    return keys;
+
+  }
+
+  /**
    * Resolves whether the execution listeners somebody modelled are served, most specific first:
    * the workflow, its workflow module, the adapter. The most specific CONFIGURED value wins in
    * both directions.
@@ -195,6 +307,47 @@ public interface VanillaBpCamunda7Properties {
     @ConfigDocMapKey("task-definition")
     Map<String, Camunda7TaskKeys> tasks();
 
+    /**
+     * The messages of this workflow. A message is the most specific level of
+     * <code>message-time-to-live</code>. It is a map of its own and not the task level, so a
+     * value meant for a message never applies to a task of the same name.
+     *
+     * @return The message sections of this workflow, keyed by message name
+     */
+    @ConfigDocMapKey("message-name")
+    Map<String, Camunda7MessageKeys> messages();
+
+  }
+
+  /**
+   * The Camunda 7 keys of one message of a workflow. Only <code>message-time-to-live</code> is
+   * read at this level.
+   */
+  interface Camunda7MessageKeys {
+
+    /**
+     * The per-adapter-id overrides of this message.
+     *
+     * @return The adapter sections of this message, keyed by adapter id
+     */
+    @ConfigDocMapKey("adapter-id")
+    Map<String, Camunda7MessageScopedKeys> adapters();
+
+  }
+
+  /**
+   * The Camunda 7 keys of one message's adapter section. Only the time-to-live is read for
+   * a message, so it is the only key here.
+   */
+  interface Camunda7MessageScopedKeys {
+
+    /**
+     * How long a correlation of this message waits for a subscription.
+     *
+     * @return The time-to-live, empty where this message says nothing
+     */
+    Optional<java.time.Duration> messageTimeToLive();
+
   }
 
   /**
@@ -257,6 +410,14 @@ public interface VanillaBpCamunda7Properties {
      * @return The configured answer, empty where this scope says nothing
      */
     Optional<Boolean> allowListeners();
+
+    /**
+     * How long a correlation waits for a subscription, for this scope. It is read per
+     * workflow module, per workflow and per message.
+     *
+     * @return The time-to-live, empty where this scope says nothing
+     */
+    Optional<java.time.Duration> messageTimeToLive();
 
   }
 
@@ -340,6 +501,17 @@ public interface VanillaBpCamunda7Properties {
      * @return The configured format, empty where the engine's own default applies
      */
     Optional<String> serializationFormat();
+
+    /**
+     * How long a correlated message waits for the workflow to reach the point where it waits
+     * for it. It has the key and the meaning of the Camunda 8 adapter. Not set, or zero,
+     * refuses a correlation nothing waits for where the application made the call, as in
+     * version 1. It is also read per workflow module, per workflow and per message, and the
+     * most specific value wins.
+     *
+     * @return The time-to-live, empty where none is configured
+     */
+    Optional<java.time.Duration> messageTimeToLive();
 
     /**
      * OPTIONAL Camunda engine plugins of this adapter id. Each is a named section which

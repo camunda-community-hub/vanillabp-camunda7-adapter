@@ -30,6 +30,12 @@ vanillabp:
           tasks:
             SU_Task:
               implemented-externally: true
+        TtlProcess:
+          tasks:
+            TTL_Review:
+              implemented-externally: true
+            TTL_PayOut:
+              implemented-externally: true
         AggregateChangedMultiInstanceProcess:
           allow-full-sync-with-bpms: true
           declared-aggregate-values:

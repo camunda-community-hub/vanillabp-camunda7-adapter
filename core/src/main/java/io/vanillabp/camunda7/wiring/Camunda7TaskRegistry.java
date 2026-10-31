@@ -662,6 +662,30 @@ public class Camunda7TaskRegistry {
   }
 
   /**
+   * The BPMN processes this application wired for a workflow module, as process definition
+   * keys the engine knows, keyed by the plain BPMN process id. A correlation reads their
+   * models to find the process which waits for a message.
+   *
+   * @param workflowModuleId The workflow module ID
+   * @return The processes, empty where nothing of the module was wired yet
+   */
+  public Map<String, String> scopedProcessIdsOf(
+      final String workflowModuleId) {
+
+    final var processes = new java.util.TreeMap<String, String>();
+    plainProcessIdsByScopedProcessId
+        .forEach((
+            key,
+            plain) -> {
+          if (key.workflowModuleId().equals(workflowModuleId)) {
+            processes.putIfAbsent(plain, key.bpmnProcessId());
+          }
+        });
+    return processes;
+
+  }
+
+  /**
    * One BPMN process of one workflow module, named the way the application wrote it.
    *
    * @param workflowModuleId The workflow module

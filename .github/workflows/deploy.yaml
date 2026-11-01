@@ -61,12 +61,10 @@ jobs:
           maven-gpg-passphrase: ${{ secrets.MAVEN_CENTRAL_GPG_SIGNING_KEY_PASSPHRASE }}
           maven-auto-release-after-close: true
           github-token: ${{ secrets.GITHUB_TOKEN }}
+      # The release exists already, it is what started this workflow. With its tag the
+      # action adds the zip to that release instead of creating a new one.
       - name: Attach the artifacts to the GitHub Release
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: softprops/action-gh-release@v3
         with:
-          upload_url: ${{ github.event.release.upload_url }}
-          asset_path: ${{ steps.release.outputs.artifacts_archive_path }}
-          asset_name: ${{ steps.release.outputs.artifacts_archive_path }}
-          asset_content_type: application/zip
+          tag_name: ${{ github.event.release.tag_name }}
+          files: ${{ steps.release.outputs.artifacts_archive_path }}

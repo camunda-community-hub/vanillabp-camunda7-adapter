@@ -159,6 +159,36 @@ public class Camunda7WorkflowLifecycleTest {
 
   }
 
+  /**
+   * The id of one aggregate which the introspection reports as "id|processedBy|endedAs".
+   * Only the id stays the same while the workflow runs.
+   *
+   * @param reported One reported aggregate
+   * @return Its id
+   */
+  private static String idOf(
+      final String reported) {
+
+    return reported.substring(0, reported.indexOf('|'));
+
+  }
+
+  /**
+   * The ids of the reported aggregates.
+   *
+   * @param reported The aggregates as the introspection reports them
+   * @return Their ids
+   */
+  private static List<String> idsOf(
+      final List<String> reported) {
+
+    return reported
+        .stream()
+        .map(Camunda7WorkflowLifecycleTest::idOf)
+        .toList();
+
+  }
+
   private static String text(
       final String path) {
 
@@ -1042,18 +1072,21 @@ public class Camunda7WorkflowLifecycleTest {
   @DisplayName("A start which brings no name is named by the application and runs to its end")
   public void aWorkflowStartedPastVanillaBpWithoutAName() throws Exception {
 
-    final var before = strings("introspect/timer-aggregates").size();
+    // the timer start event of the model builds an aggregate of the same kind, one second
+    // after the deployment. If it has not fired yet, its aggregate can come in during this
+    // test and pass for the one started here. So the test waits for it first.
+    await(() -> !strings("introspect/timer-aggregates").isEmpty(), "the timer start event of the model to fire");
+    final var before = idsOf(strings("introspect/timer-aggregates"));
 
     post("introspect/started-past-vanillabp-unnamed");
 
-    await(
-        () -> strings("introspect/timer-aggregates").size() > before,
-        "the workflow started past VanillaBP to get its workflow aggregate");
+    // the application gives the name, so the test cannot know it. The one aggregate which
+    // was not there before is the one of this start.
     await(
         () -> strings("introspect/timer-aggregates")
             .stream()
-            .filter(reported -> reported.startsWith("timer-"))
-            .anyMatch(reported -> reported.contains("|recordStart|COMPLETED/")),
+            .filter(reported -> !before.contains(idOf(reported)))
+            .anyMatch(reported -> reported.startsWith("timer-") && reported.contains("|recordStart|COMPLETED/")),
         "the workflow the application named to run to its end, but got: "
             + strings("introspect/timer-aggregates"));
 

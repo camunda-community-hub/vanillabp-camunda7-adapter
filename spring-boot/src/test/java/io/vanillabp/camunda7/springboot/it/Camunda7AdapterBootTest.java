@@ -578,6 +578,11 @@ public class Camunda7AdapterBootTest {
         .withBean(
             io.vanillabp.integration.adapter.spi.PreCommitRegistrar.class,
             () -> org.mockito.Mockito.mock(io.vanillabp.integration.adapter.spi.PreCommitRegistrar.class))
+        // the platform resolves the message time-to-live, so the process service asks the
+        // platform's view of the configuration. Nothing is configured here
+        .withBean(
+            io.vanillabp.integration.adapter.migration.config.MigrationAdapterProperties.class,
+            io.vanillabp.integration.adapter.migration.config.MigrationAdapterProperties::new)
         .withConfiguration(
             AutoConfigurations.of(
                 org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration.class,

@@ -141,17 +141,16 @@ public class Camunda7AdapterBeanRegistrar implements BeanRegistrar {
                             workflowModuleId,
                             bpmnProcessId) -> overlay
                                 .serializationFormatFor(adapterId, workflowModuleId, bpmnProcessId));
-                // how long a correlation waits for a subscription, resolved per message with
-                // a fallback to the workflow, the module and the adapter. A negative value is
-                // refused here, at the start, and not when the first message is correlated
-                io.vanillabp.camunda7.wiring.Camunda7MessageTimeToLiveResolver
-                    .refuseNegativeValues(adapterId, overlay.negativeMessageTimeToLiveKeys(adapterId));
-                processService.setMessageTimeToLiveResolver(
-                    (
-                        workflowModuleId,
-                        bpmnProcessId,
-                        messageName) -> overlay
-                            .messageTimeToLiveFor(adapterId, workflowModuleId, bpmnProcessId, messageName));
+                // how long a correlation waits for a subscription. The platform resolves it
+                // per message with a fallback to the workflow, the module and the adapter. A
+                // negative value is refused here, at the start, and not when the first
+                // message is correlated
+                final var coreProperties = supplierContext
+                    .bean(io.vanillabp.integration.adapter.migration.config.MigrationAdapterProperties.class);
+                Camunda7ProcessService
+                    .refuseNegativeMessageTimesToLive(adapterId,
+                        coreProperties.messageTimesToLiveWrittenFor(adapterId));
+                processService.setMessageTimeToLiveResolver(coreProperties.messageTimeToLiveResolverFor(adapterId));
                 return processService;
               }));
 

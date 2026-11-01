@@ -721,9 +721,13 @@ if its own model waits, otherwise the one other process of the workflow module w
 does. The models are only read where the processes of the module would answer differently.
 There is no deduplication window, unlike on Camunda 8, because the outbox dispatches every
 entry once. See `DECISIONS.pending/2060.md`.
+The four levels and the choice of the process are resolved by the platform, for every adapter
+which knows the key (`MigrationAdapterProperties#messageTimeToLive` and
+`MessageTimeToLiveResolver` there). This adapter adds what its engine makes of a value: nothing
+configured is zero, and a value below zero ends the boot. See `DECISIONS.pending/2062.md`.
 `Camunda7MessageTimeToLiveIT` (Spring Boot) and the time-to-live tests in
 `Camunda7WorkflowLifecycleTest` (Quarkus) run it on a real engine.
-`MessageTimeToLiveResolutionTest` holds the four levels and the refusal of a negative value,
+`MessageTimeToLiveResolutionTest` holds the refusal of a negative value,
 `Camunda7WaitForASubscriptionTest` the growing wait.
 
 **A message starts only the process of its own process service.** While it wires a model,

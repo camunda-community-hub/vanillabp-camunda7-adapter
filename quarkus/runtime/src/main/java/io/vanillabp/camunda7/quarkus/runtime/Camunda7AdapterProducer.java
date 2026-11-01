@@ -118,17 +118,12 @@ public class Camunda7AdapterProducer {
           engine
               .getTaskRegistry()
               .setSerializationFormats(formats);
-          // how long a correlation waits for a subscription, resolved per message with a
-          // fallback to the workflow, the module and the adapter. A negative value is
-          // refused here, at the start, and not when the first message is correlated
-          io.vanillabp.camunda7.wiring.Camunda7MessageTimeToLiveResolver
-              .refuseNegativeValues(adapterId, overlay.negativeMessageTimeToLiveKeys(adapterId));
-          processService.setMessageTimeToLiveResolver(
-              (
-                  workflowModuleId,
-                  bpmnProcessId,
-                  messageName) -> overlay
-                      .messageTimeToLiveFor(adapterId, workflowModuleId, bpmnProcessId, messageName));
+          // how long a correlation waits for a subscription. The platform resolves it per
+          // message with a fallback to the workflow, the module and the adapter. A negative
+          // value is refused here, at the start, and not when the first message is correlated
+          Camunda7ProcessService
+              .refuseNegativeMessageTimesToLive(adapterId, properties.messageTimesToLiveWrittenFor(adapterId));
+          processService.setMessageTimeToLiveResolver(properties.messageTimeToLiveResolverFor(adapterId));
           return processService;
         })
         .toList();

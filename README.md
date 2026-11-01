@@ -121,11 +121,6 @@ vanillabp:
       # which needs no FEEL engine library. Needed next to the Operaton adapter.
       # Default: false - see 'Decision tables next to the Operaton adapter' below.
       dmn-feel-legacy-behavior: true
-      # OPTIONAL: how long a correlated message waits for the workflow to reach the
-      # event which waits for it. The key of the Camunda 8 adapter. Not set, or zero,
-      # refuses a correlation nothing waits for, as in version 1 - see 'A message which
-      # comes before the workflow waits for it' below.
-      message-time-to-live: 10m
 ```
 
 On Spring Boot, declare the additional datasource bean with
@@ -697,9 +692,26 @@ every user task in a job of its own (`Camunda7AsyncBpmnParseListener`). So compl
 task and correlating the message the workflow waits for next are two operations which the
 engine does not finish in the order they were asked for. The completion only writes the job,
 and the job executor reaches the catch event a moment later. `message-time-to-live` gives
-this adapter the meaning it has on Camunda 8, with the same key and the same four levels
-(adapter, workflow module, workflow, message). Not set, or zero, keeps the refusal in phase
-one. That is what version 1 did. A value above zero changes both phases:
+this adapter the meaning it has on Camunda 8, with the same keys and the same three levels
+(workflow module, workflow, message). The keys name no adapter:
+
+```yaml
+vanillabp:
+  workflow-modules:
+    loan-approval:
+      # OPTIONAL: how long a correlated message waits for the workflow to reach the
+      # event which waits for it. Not set, or zero, refuses a correlation nothing
+      # waits for, as in version 1.
+      message-time-to-live: 10m
+      workflows:
+        LoanApproval:
+          messages:
+            ContractSigned:
+              message-time-to-live: 1h
+```
+
+Not set, or zero, keeps the refusal in phase one. That is what version 1 did. A value above zero
+changes both phases:
 
 - Phase one checks only that a deployed model of the workflow module waits for the message: a
   catch event, a boundary event, an event subprocess or a receive task which names it, in any
@@ -721,9 +733,15 @@ if its own model waits, otherwise the one other process of the workflow module w
 does. The models are only read where the processes of the module would answer differently.
 There is no deduplication window, unlike on Camunda 8, because the outbox dispatches every
 entry once. See `DECISIONS.pending/2060.md`.
+The three levels and the choice of the process are resolved by the platform, the same for every
+adapter (`MigrationAdapterProperties#messageTimeToLive` and `MessageTimeToLiveResolver` there).
+A line for the whole application, below `adapters.<adapter-id>` or at a task ends the startup
+there, with a message naming the three keys. This adapter adds what its engine makes of a value: nothing
+configured is zero, and a value below zero ends the boot. It checks only the workflow modules it
+serves, the ones whose prioritized adapters name it. See `DECISIONS.pending/2062.md`.
 `Camunda7MessageTimeToLiveIT` (Spring Boot) and the time-to-live tests in
 `Camunda7WorkflowLifecycleTest` (Quarkus) run it on a real engine.
-`MessageTimeToLiveResolutionTest` holds the four levels and the refusal of a negative value,
+`MessageTimeToLiveResolutionTest` holds the refusal of a negative value,
 `Camunda7WaitForASubscriptionTest` the growing wait.
 
 **A message starts only the process of its own process service.** While it wires a model,

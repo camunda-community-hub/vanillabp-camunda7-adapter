@@ -211,12 +211,17 @@ public class Camunda7WorkflowTaskBehavior extends AbstractBpmnActivityBehavior {
   /**
    * Writes the values the aggregate shares with the BPMS onto the execution.
    * <p>
-   * The values are read in the CALLER's transaction, which is the engine's. On the
-   * application's datasource the handler just changed the aggregate there. A read in a new
-   * transaction would either see the state before the handler, or wait for the row this
-   * transaction holds. An engine on a datasource of its own runs the handler in a transaction
-   * of its own, which has committed by now. So the read sees what the handler saved. The read never
-   * throws. Where nothing is shared, nothing is written.
+   * Where the values are read depends on the datasource of the engine. On the application's
+   * datasource, the handler ran in the engine's transaction and changed the aggregate there.
+   * So the values are read in that transaction. A read in a new one would either see the
+   * state before the handler, or wait for the row this transaction holds.
+   * <p>
+   * An engine on a datasource of its own is different. VanillaBP ran the handler in a
+   * transaction of its own, and that transaction has committed by now. The thread has no
+   * transaction of the application left to join. So the values are read in a new
+   * transaction, and it sees what the handler saved.
+   * <p>
+   * The read never throws. Where nothing is shared, nothing is written.
    *
    * @param execution The execution of the task just processed
    */
@@ -229,11 +234,18 @@ public class Camunda7WorkflowTaskBehavior extends AbstractBpmnActivityBehavior {
       // nothing to read the values from
       return;
     }
-    final var sharedValues = workflowTaskInvoker.syncedWorkflowAggregateValuesInCurrentTransaction(
-        connectable.workflowModuleId(),
-        connectable.bpmnProcessId(),
-        businessKey,
-        io.vanillabp.camunda7.processservice.Camunda7ProcessService.SYNC_MODE);
+    final var engineRunsOnItsOwnDataSource = (taskRegistry != null) && taskRegistry.engineRunsOnItsOwnDataSource();
+    final var sharedValues = engineRunsOnItsOwnDataSource
+        ? workflowTaskInvoker.syncedWorkflowAggregateValues(
+            connectable.workflowModuleId(),
+            connectable.bpmnProcessId(),
+            businessKey,
+            io.vanillabp.camunda7.processservice.Camunda7ProcessService.SYNC_MODE)
+        : workflowTaskInvoker.syncedWorkflowAggregateValuesInCurrentTransaction(
+            connectable.workflowModuleId(),
+            connectable.bpmnProcessId(),
+            businessKey,
+            io.vanillabp.camunda7.processservice.Camunda7ProcessService.SYNC_MODE);
     if (sharedValues.isEmpty()) {
       return;
     }

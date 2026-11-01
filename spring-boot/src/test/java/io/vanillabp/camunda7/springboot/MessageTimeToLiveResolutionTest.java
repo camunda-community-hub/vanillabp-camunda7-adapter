@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.time.Duration;
+import java.util.List;
 import java.util.Map;
 
 import org.junit.jupiter.api.DisplayName;
@@ -36,6 +37,7 @@ public class MessageTimeToLiveResolutionTest {
     final var messageSection = new MessageAdapterProperties();
     messageSection.setMessageTimeToLive(message);
     final var properties = new MigrationAdapterProperties();
+    properties.setPrioritizedAdapters(List.of(ADAPTER));
     properties.setWorkflowModules(Map.of("the-module", WorkflowModuleAdapterProperties
         .builder()
         .messageTimeToLive(module)
@@ -71,7 +73,8 @@ public class MessageTimeToLiveResolutionTest {
   @DisplayName("A time-to-live below zero ends the boot, and the message names every such key")
   public void aNegativeTimeToLiveEndsTheBoot() {
 
-    final var written = properties(Duration.ofSeconds(-1), Duration.ofSeconds(-2)).messageTimesToLiveWritten();
+    final var written = properties(Duration.ofSeconds(-1), Duration.ofSeconds(-2))
+        .messageTimesToLiveWrittenFor(ADAPTER);
     final var message = assertThrows(
         IllegalStateException.class,
         () -> Camunda7ProcessService.refuseNegativeMessageTimesToLive(ADAPTER, written))
@@ -84,7 +87,24 @@ public class MessageTimeToLiveResolutionTest {
     assertTrue(message.contains("'0s'"), message);
     Camunda7ProcessService
         .refuseNegativeMessageTimesToLive(ADAPTER,
-            properties(Duration.ZERO, null).messageTimesToLiveWritten());
+            properties(Duration.ZERO, null).messageTimesToLiveWrittenFor(ADAPTER));
+
+  }
+
+
+  @Test
+  @DisplayName("A negative value in a workflow module this adapter does not serve is left to the adapter which serves it")
+  public void aModuleOfAnotherAdapterIsNotChecked() {
+
+    final var properties = properties(Duration.ofSeconds(-1), null);
+    properties.setPrioritizedAdapters(List.of("c8"));
+
+    Camunda7ProcessService.refuseNegativeMessageTimesToLive(ADAPTER, properties.messageTimesToLiveWrittenFor(ADAPTER));
+    assertThrows(
+        IllegalStateException.class,
+        () -> Camunda7ProcessService
+            .refuseNegativeMessageTimesToLive(ADAPTER, properties(Duration.ofSeconds(-1), null)
+                .messageTimesToLiveWrittenFor(ADAPTER)));
 
   }
 

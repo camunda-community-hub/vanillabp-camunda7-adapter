@@ -149,7 +149,7 @@ public class Camunda7AdapterBeanRegistrar implements BeanRegistrar {
                     .bean(io.vanillabp.integration.adapter.migration.config.MigrationAdapterProperties.class);
                 Camunda7ProcessService
                     .refuseNegativeMessageTimesToLive(adapterId,
-                        coreProperties.messageTimesToLiveWritten());
+                        coreProperties.messageTimesToLiveWrittenFor(adapterId));
                 processService.setMessageTimeToLiveResolver(coreProperties.messageTimeToLiveResolver());
                 return processService;
               }));

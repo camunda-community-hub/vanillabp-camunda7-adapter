@@ -123,7 +123,7 @@ public class Camunda7AdapterProducer {
           // adapter. A negative
           // value is refused here, at the start, and not when the first message is correlated
           Camunda7ProcessService
-              .refuseNegativeMessageTimesToLive(adapterId, properties.messageTimesToLiveWritten());
+              .refuseNegativeMessageTimesToLive(adapterId, properties.messageTimesToLiveWrittenFor(adapterId));
           processService.setMessageTimeToLiveResolver(properties.messageTimeToLiveResolver());
           return processService;
         })

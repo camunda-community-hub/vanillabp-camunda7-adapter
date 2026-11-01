@@ -737,7 +737,8 @@ The three levels and the choice of the process are resolved by the platform, the
 adapter (`MigrationAdapterProperties#messageTimeToLive` and `MessageTimeToLiveResolver` there).
 A line for the whole application, below `adapters.<adapter-id>` or at a task ends the startup
 there, with a message naming the three keys. This adapter adds what its engine makes of a value: nothing
-configured is zero, and a value below zero ends the boot. See `DECISIONS.pending/2062.md`.
+configured is zero, and a value below zero ends the boot. It checks only the workflow modules it
+serves, the ones whose prioritized adapters name it. See `DECISIONS.pending/2062.md`.
 `Camunda7MessageTimeToLiveIT` (Spring Boot) and the time-to-live tests in
 `Camunda7WorkflowLifecycleTest` (Quarkus) run it on a real engine.
 `MessageTimeToLiveResolutionTest` holds the refusal of a negative value,

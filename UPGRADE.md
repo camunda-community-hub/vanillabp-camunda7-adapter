@@ -175,6 +175,17 @@ If your application had raised `camunda.bpm.job-execution.max-pool-size`, look a
 with three threads and grows it to ten. That pool used to carry VanillaBP's starts along with the
 engine's own work. Now four dispatch threads carry them.
 
+### A task of a suspended workflow raises an exception of the SPI
+
+Version 1 completed a task inside your transaction. If its process instance was suspended, the
+engine threw its own `SuspendedEntityInteractionException` at your call. Version 2 checks the same
+thing at your call and throws `io.vanillabp.spi.process.WorkflowSuspendedException` instead. Your
+transaction still rolls back, and the task stays open. If you caught the engine's exception, catch
+the one of the SPI now. It is the same type on every BPMS which can suspend a workflow.
+
+A suspension which comes after your commit is new, because version 2 answers the task after the
+commit. That answer waits until somebody activates the instance again, and then it goes through.
+
 ### The wakeup job executor has a new key and is no longer experimental
 
 Version 1 had an experimental job executor behind `camunda.bpm.job-execution.wakeup`. That key is

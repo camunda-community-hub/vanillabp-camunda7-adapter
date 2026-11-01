@@ -128,6 +128,26 @@ public class Camunda7AwarenessTest {
   }
 
   @Test
+  @DisplayName("A suspended workflow is repeated, although the engine reports it as a rejected request")
+  public void aSuspensionIsRepeated() {
+
+    final var testee = withUnreachableEngine();
+
+    // SuspendedEntityInteractionException extends BadUserRequestException. The same answer
+    // goes through once somebody activates the instance again, so it must not block the entry
+    assertTrue(
+        testee
+            .isPhaseTwoFailureRepeatable(
+                new org.camunda.bpm.engine.SuspendedEntityInteractionException("Execution is suspended")));
+    assertTrue(
+        testee
+            .isPhaseTwoFailureRepeatable(
+                new IllegalStateException(
+                    "wrapped", new org.camunda.bpm.engine.SuspendedEntityInteractionException("Task is suspended"))));
+
+  }
+
+  @Test
   @DisplayName("An expression the engine cannot evaluate is not repeated")
   public void aBrokenExpressionStopsBeingRetried() {
 

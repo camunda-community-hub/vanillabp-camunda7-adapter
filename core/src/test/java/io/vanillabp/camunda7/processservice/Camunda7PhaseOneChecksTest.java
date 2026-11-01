@@ -95,14 +95,23 @@ public class Camunda7PhaseOneChecksTest {
     final var executionQuery = Mockito.mock(ExecutionQuery.class, Mockito.RETURNS_SELF);
     Mockito.when(executionQuery.count()).thenReturn(executions);
     Mockito.when(executionQuery.list()).thenReturn(waitingExecutions);
+    Mockito
+        .when(executionQuery.singleResult())
+        .thenReturn(waitingExecutions.isEmpty()
+            ? null
+            : waitingExecutions.getFirst());
     final var runtimeService = Mockito.mock(RuntimeService.class);
     Mockito.when(runtimeService.createExecutionQuery()).thenReturn(executionQuery);
     Mockito
         .when(runtimeService.getVariableLocal(Mockito.anyString(), Mockito.anyString()))
         .thenReturn(expectedCorrelationId);
 
+    final var userTask = userTasks > 0
+        ? Mockito.mock(org.camunda.bpm.engine.task.Task.class)
+        : null;
     final var taskQuery = Mockito.mock(TaskQuery.class, Mockito.RETURNS_SELF);
     Mockito.when(taskQuery.count()).thenReturn(userTasks);
+    Mockito.when(taskQuery.singleResult()).thenReturn(userTask);
     final var taskService = Mockito.mock(TaskService.class);
     Mockito.when(taskService.createTaskQuery()).thenReturn(taskQuery);
 

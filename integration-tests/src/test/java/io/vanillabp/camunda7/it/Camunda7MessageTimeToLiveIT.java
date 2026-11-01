@@ -38,7 +38,7 @@ import io.vanillabp.integration.test.utils.SuppressOutputExtension;
 @SpringBootTest(classes = TestApplication.class, properties = {
     // a database of its own. Otherwise the phase-two outbox of a test class which Spring
     // keeps cached would dispatch the entries of the next one
-    "spring.datasource.url=jdbc:h2:mem:c7-message-time-to-live-it;DB_CLOSE_DELAY=-1", "vanillabp.workflow-modules.c7-it.adapters.c7.message-time-to-live=PT1M", "vanillabp.workflow-modules.c7-it.workflows.TtlProcess.messages.TtlReminder.adapters.c7.message-time-to-live=PT1S", "vanillabp.workflow-modules.c7-it.workflows.TtlProcess.messages.TtlUnbuffered.adapters.c7.message-time-to-live=PT0S"
+    "spring.datasource.url=jdbc:h2:mem:c7-message-time-to-live-it;DB_CLOSE_DELAY=-1", "vanillabp.workflow-modules.c7-it.message-time-to-live=PT1M", "vanillabp.workflow-modules.c7-it.workflows.TtlProcess.messages.TtlReminder.message-time-to-live=PT1S", "vanillabp.workflow-modules.c7-it.workflows.TtlProcess.messages.TtlUnbuffered.message-time-to-live=PT0S"
 })
 @DirtiesContext
 @ExtendWith(SuppressOutputExtension.class)

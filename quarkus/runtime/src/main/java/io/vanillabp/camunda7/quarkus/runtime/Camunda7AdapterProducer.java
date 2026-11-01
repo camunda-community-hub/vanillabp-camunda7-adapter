@@ -119,11 +119,12 @@ public class Camunda7AdapterProducer {
               .getTaskRegistry()
               .setSerializationFormats(formats);
           // how long a correlation waits for a subscription. The platform resolves it per
-          // message with a fallback to the workflow, the module and the adapter. A negative
+          // message with a fallback to the workflow and the module, the same for every
+          // adapter. A negative
           // value is refused here, at the start, and not when the first message is correlated
           Camunda7ProcessService
-              .refuseNegativeMessageTimesToLive(adapterId, properties.messageTimesToLiveWrittenFor(adapterId));
-          processService.setMessageTimeToLiveResolver(properties.messageTimeToLiveResolverFor(adapterId));
+              .refuseNegativeMessageTimesToLive(adapterId, properties.messageTimesToLiveWritten());
+          processService.setMessageTimeToLiveResolver(properties.messageTimeToLiveResolver());
           return processService;
         })
         .toList();

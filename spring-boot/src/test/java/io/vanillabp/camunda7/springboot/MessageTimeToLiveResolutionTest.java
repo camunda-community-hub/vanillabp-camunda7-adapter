@@ -13,7 +13,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import io.vanillabp.camunda7.processservice.Camunda7ProcessService;
-import io.vanillabp.integration.adapter.migration.config.AdapterConfigProperties;
 import io.vanillabp.integration.adapter.migration.config.MessageAdapterProperties;
 import io.vanillabp.integration.adapter.migration.config.MigrationAdapterProperties;
 import io.vanillabp.integration.adapter.migration.config.WorkflowAdapterProperties;
@@ -21,9 +20,9 @@ import io.vanillabp.integration.adapter.migration.config.WorkflowModuleAdapterPr
 import io.vanillabp.integration.test.utils.SuppressOutputExtension;
 
 /**
- * The message time-to-live is resolved by the platform, with the key of the Camunda 8
- * adapter. What this adapter adds is its own rule about the values: zero switches the waiting
- * off, and a value below zero ends the boot.
+ * The message time-to-live is resolved by the platform, with the same keys for every adapter.
+ * What this adapter adds is its own rule about the values: zero switches the waiting off, and
+ * a value below zero ends the boot.
  */
 @ExtendWith(SuppressOutputExtension.class)
 public class MessageTimeToLiveResolutionTest {
@@ -31,19 +30,15 @@ public class MessageTimeToLiveResolutionTest {
   private static final String ADAPTER = "c7";
 
   private static MigrationAdapterProperties properties(
-      final Duration adapter,
+      final Duration module,
       final Duration message) {
 
-    final var adapterSection = AdapterConfigProperties.ofType("camunda7");
-    adapterSection.setMessageTimeToLive(adapter);
-    final var settings = new MessageAdapterProperties.MessageSettings();
-    settings.setMessageTimeToLive(message);
     final var messageSection = new MessageAdapterProperties();
-    messageSection.setAdapters(Map.of(ADAPTER, settings));
+    messageSection.setMessageTimeToLive(message);
     final var properties = new MigrationAdapterProperties();
-    properties.setAdapters(Map.of(ADAPTER, adapterSection));
     properties.setWorkflowModules(Map.of("the-module", WorkflowModuleAdapterProperties
         .builder()
+        .messageTimeToLive(module)
         .workflows(Map.of("TheWorkflow", WorkflowAdapterProperties
             .builder()
             .messages(Map.of("ContractSigned", messageSection))
@@ -60,7 +55,7 @@ public class MessageTimeToLiveResolutionTest {
     assertEquals(
         Duration.ZERO,
         properties(Duration.ofHours(1), Duration.ZERO)
-            .messageTimeToLive("the-module", "TheWorkflow", "ContractSigned", ADAPTER));
+            .messageTimeToLive("the-module", "TheWorkflow", "ContractSigned"));
 
   }
 
@@ -68,7 +63,7 @@ public class MessageTimeToLiveResolutionTest {
   @DisplayName("Nothing configured is null - a correlation nothing waits for is then refused as in version 1")
   public void nothingConfiguredIsNull() {
 
-    assertNull(properties(null, null).messageTimeToLive("the-module", "TheWorkflow", "ContractSigned", ADAPTER));
+    assertNull(properties(null, null).messageTimeToLive("the-module", "TheWorkflow", "ContractSigned"));
 
   }
 
@@ -76,21 +71,20 @@ public class MessageTimeToLiveResolutionTest {
   @DisplayName("A time-to-live below zero ends the boot, and the message names every such key")
   public void aNegativeTimeToLiveEndsTheBoot() {
 
-    final var written = properties(Duration.ofSeconds(-1), Duration.ofSeconds(-2))
-        .messageTimesToLiveWrittenFor(ADAPTER);
+    final var written = properties(Duration.ofSeconds(-1), Duration.ofSeconds(-2)).messageTimesToLiveWritten();
     final var message = assertThrows(
         IllegalStateException.class,
         () -> Camunda7ProcessService.refuseNegativeMessageTimesToLive(ADAPTER, written))
         .getMessage();
-    assertTrue(message.contains("vanillabp.adapters.c7.message-time-to-live=PT-1S"), message);
+    assertTrue(message.contains("vanillabp.workflow-modules.the-module.message-time-to-live=PT-1S"), message);
     assertTrue(
         message.contains(
-            "vanillabp.workflow-modules.the-module.workflows.TheWorkflow.messages.ContractSigned.adapters.c7.message-time-to-live=PT-2S"),
+            "vanillabp.workflow-modules.the-module.workflows.TheWorkflow.messages.ContractSigned.message-time-to-live=PT-2S"),
         message);
     assertTrue(message.contains("'0s'"), message);
     Camunda7ProcessService
         .refuseNegativeMessageTimesToLive(ADAPTER,
-            properties(Duration.ZERO, null).messageTimesToLiveWrittenFor(ADAPTER));
+            properties(Duration.ZERO, null).messageTimesToLiveWritten());
 
   }
 

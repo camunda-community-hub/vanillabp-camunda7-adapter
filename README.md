@@ -1040,6 +1040,26 @@ entry there.
 
 Everything else is repeatable. When in doubt, the platform asks an adapter to repeat.
 
+A suspended workflow is not in the table, although the engine reports it with a subclass of
+`BadUserRequestException`, `SuspendedEntityInteractionException`. The same answer goes through once
+somebody activates the instance again. So the adapter asks for the suspension before it acts:
+
+- Phase one reads the suspension state from the query it runs anyway, the execution of a parked
+  task or the user task. A suspended one throws `io.vanillabp.spi.process.WorkflowSuspendedException`
+  in the caller's transaction, so that transaction rolls back and the task stays open.
+- Phase two asks the same before it signals the execution or completes the user task. A suspended one
+  is answered with `PhaseTwoRetryLater`, 30 seconds. The entry waits without using an attempt, for as
+  long as the workflow is suspended. Each answer names a deadline just behind its own window, so
+  `vanillabp.outbox.wait-for-visibility-at-most` does not block it. An engine exception which slips
+  past the question, because somebody suspended the instance in between, is turned into the same
+  answer. `isPhaseTwoFailureRepeatable` answers `true` for it, as the net under that question.
+
+Only the instance whose own executions are suspended refuses. A called process instance has an id
+of its own and is not suspended with its caller. A process definition suspended without
+`includeProcessInstances(true)` leaves its running instances alone. `Camunda7SuspendedWorkflowIT`
+holds all three paths on a real engine, and `Camunda7AwarenessTest#aSuspensionIsRepeated` the
+classification. The reasoning is in `DECISIONS.pending/2070.md`.
+
 ## Decision tables
 
 The boot deploys the `.dmn` files of a workflow module in the SAME Camunda

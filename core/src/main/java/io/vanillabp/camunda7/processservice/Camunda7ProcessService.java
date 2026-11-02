@@ -1131,10 +1131,10 @@ public class Camunda7ProcessService<A> implements MigratableProcessService<A> {
               Camunda7[%s]: nothing waited for %s within its message time-to-live of %s. It waited \
               %s since it was planned at %s. Check whether the workflow still reaches the point \
               where it waits for this message, or give the message a longer time-to-live \
-              (vanillabp.workflow-modules.%s.workflows.<bpmn-process-id>.messages.%s.adapters.%s.message-time-to-live)."""
+              (vanillabp.workflow-modules.%s.workflows.<bpmn-process-id>.messages.%s.message-time-to-live)."""
               .formatted(
                   adapterId, subject, timeToLive, waited, plannedAt, request.workflowModuleId(),
-                  request.messageName(), adapterId), null);
+                  request.messageName()), null);
     }
     return new PhaseTwoRetryLater(
         "Camunda7[%s]: nothing waits for %s yet. It is tried again until its message time-to-live of %s is over"

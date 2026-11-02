@@ -315,18 +315,50 @@ public class Camunda7ProcessService<A> implements MigratableProcessService<A> {
    * How long a correlation waits for a subscription, per message. <code>null</code> in
    * tests, and then no message has a time-to-live.
    */
-  private io.vanillabp.camunda7.wiring.Camunda7MessageTimeToLiveResolver messageTimeToLiveResolver;
+  private io.vanillabp.integration.adapter.spi.MessageTimeToLiveResolver messageTimeToLiveResolver;
 
   /**
    * Hands over how long a correlation waits for a subscription. The platform integration
    * binds the configuration, so it arrives after construction.
    *
-   * @param messageTimeToLiveResolver The resolution of the platform integration
+   * @param messageTimeToLiveResolver The resolution of the platform
    */
   public void setMessageTimeToLiveResolver(
-      final io.vanillabp.camunda7.wiring.Camunda7MessageTimeToLiveResolver messageTimeToLiveResolver) {
+      final io.vanillabp.integration.adapter.spi.MessageTimeToLiveResolver messageTimeToLiveResolver) {
 
     this.messageTimeToLiveResolver = messageTimeToLiveResolver;
+
+  }
+
+  /**
+   * Ends the boot where a <code>message-time-to-live</code> is below zero. Zero is allowed. It
+   * switches the waiting off for a scope below one which switched it on. The platform says
+   * which values were written. What this engine can do with them is checked here.
+   *
+   * @param adapterId The adapter id the values belong to
+   * @param written Every time-to-live written for this adapter, keyed by its property key
+   * @throws IllegalStateException Naming the keys and the way out
+   */
+  public static void refuseNegativeMessageTimesToLive(
+      final String adapterId,
+      final Map<String, Duration> written) {
+
+    final var negativeKeys = written
+        .entrySet()
+        .stream()
+        .filter(entry -> entry.getValue().isNegative())
+        .map(entry -> "%s=%s".formatted(entry.getKey(), entry.getValue()))
+        .toList();
+    if (negativeKeys.isEmpty()) {
+      return;
+    }
+    throw new IllegalStateException(
+        """
+            Adapter '%s' found a message time-to-live below zero: %s! It says how long a \
+            correlated message waits for the workflow to reach the point where it waits for \
+            it. Write a duration like '10m', or '0s' to refuse a correlation nothing waits for \
+            where the application made the call."""
+            .formatted(adapterId, String.join(", ", negativeKeys)));
 
   }
 
@@ -343,23 +375,15 @@ public class Camunda7ProcessService<A> implements MigratableProcessService<A> {
     if (messageTimeToLiveResolver == null) {
       return Duration.ZERO;
     }
-    final var ofTheCall = messageTimeToLiveResolver.messageTimeToLiveFor(workflowModuleId, bpmnProcessId, messageName);
-    // the models are read only where the processes of the module would answer differently.
-    // Most applications configure the time-to-live per adapter or per module, or not at all
     final var processes = taskRegistry == null
         ? Map.<String, String>of()
         : taskRegistry.scopedProcessIdsOf(workflowModuleId);
-    final var configured = processes
-        .keySet()
-        .stream()
-        .allMatch(process -> java.util.Objects
-            .equals(ofTheCall, messageTimeToLiveResolver.messageTimeToLiveFor(workflowModuleId, process, messageName)))
-                ? ofTheCall
-                : messageTimeToLiveResolver
-                    .messageTimeToLiveFor(
-                        workflowModuleId,
-                        processWaitingForTheMessage(workflowModuleId, bpmnProcessId, messageName),
-                        messageName);
+    final var configured = messageTimeToLiveResolver.resolveFor(
+        workflowModuleId,
+        bpmnProcessId,
+        messageName,
+        processes.keySet(),
+        () -> modelsWaitingFor(workflowModuleId, messageName).waiting());
     return configured == null
         ? Duration.ZERO
         : configured;
@@ -1262,37 +1286,6 @@ public class Camunda7ProcessService<A> implements MigratableProcessService<A> {
       return null;
     }
     return false;
-
-  }
-
-  /**
-   * The BPMN process whose model waits for a message, which is the process a time-to-live
-   * configured for that message belongs to.
-   * <p>
-   * A process service belongs to the process at the top, so the correlation names that
-   * process. But the event which waits may sit in a called process. Whoever configures the
-   * time-to-live of that message writes it under the called process
-   * (<code>workflows.&lt;called process&gt;.messages.&lt;message&gt;</code>). So the deployed
-   * models answer, the way the Camunda 8 adapter answers it. It is the process of the call,
-   * if its own model waits for the message. Otherwise it is the one other process of the
-   * workflow module whose model does. If none does, or several others do, the process of the
-   * call is the answer.
-   *
-   * @param workflowModuleId The workflow module of the correlation
-   * @param bpmnProcessId The BPMN process of the call
-   * @param messageName The message name as the application wrote it
-   * @return The plain id of the process the time-to-live is read for
-   */
-  private String processWaitingForTheMessage(
-      final String workflowModuleId,
-      final String bpmnProcessId,
-      final String messageName) {
-
-    final var waiting = modelsWaitingFor(workflowModuleId, messageName).waiting();
-    if (waiting.contains(bpmnProcessId) || (waiting.size() != 1)) {
-      return bpmnProcessId;
-    }
-    return waiting.getFirst();
 
   }
 

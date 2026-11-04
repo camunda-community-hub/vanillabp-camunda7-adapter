@@ -26,7 +26,8 @@ import lombok.extern.slf4j.Slf4j;
  * {@code DECISIONS.pending/2070.md}.
  * <p>
  * Before the call is refused or the entry waits, the extensions hear about it through the core.
- * Nothing they do changes what is thrown here (see {@code DECISIONS.pending/2074.md}).
+ * Nothing they do changes what is thrown here (see decision 52 in the repository's
+ * DECISIONS.md).
  */
 @Slf4j
 final class Camunda7SuspendedWorkflow {

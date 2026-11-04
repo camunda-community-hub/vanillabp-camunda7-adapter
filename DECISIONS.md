@@ -1809,3 +1809,22 @@ Places which describe this, for the citation once the entry has its number:
   `Camunda7XaOnTheApplicationDataSourceTest.java`, `Camunda7OnlyANamedDataSourceTest.java`
 - the wiki page "Configuration", section "Quarkus" under "Choosing the datasource"
 
+### 52. A task of a suspended instance is reported to the extensions
+
+Proposed by story 2074. The rule itself is decision 134 of
+`adapter-platform-integration`: the one call to an extension while workflows
+run is synchronous, isolated and has no outbox. This entry says what this adapter does with it.
+
+- `Camunda7SuspendedWorkflow` reports through the core's `SuspendedWorkflowReporter` just before it
+  refuses the call (`Phase.CALL`) or lets the outbox entry wait (`Phase.WAITING`). That covers the two
+  phase-one checks, the two questions of phase two, and the two nets for a suspension between the
+  question and the command. The record carries the process instance id of the execution or the task,
+  as the workflow id.
+- `isPhaseTwoFailureRepeatable` does not report. It knows neither the task nor the instance.
+- A report which fails is logged, and the adapter throws what it would have thrown anyway.
+- The Operaton and CIB seven adapters get this only through `bin/sync-from-camunda7.sh`.
+
+**Tests.** `Camunda7SuspendedWorkflowIT` holds one report per refused call and the reports of a waiting
+entry, against a real embedded engine.
+
+**Where it is cited.** javadoc of `Camunda7SuspendedWorkflow`, the wiki page `A-suspended-workflow`.

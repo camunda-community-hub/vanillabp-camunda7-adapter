@@ -683,7 +683,7 @@ public class Camunda7ProcessService<A> implements MigratableProcessService<A> {
                             // would move the process on although the transaction may still roll
                             // back. And a completion which loses a concurrency conflict could
                             // not be repeated
-                            request -> checkTaskExists(request.taskId(), "completing"),
+                            request -> checkTaskExists(request, "completing"),
                             this::completeTask)),
             Map
                 .entry(
@@ -692,7 +692,7 @@ public class Camunda7ProcessService<A> implements MigratableProcessService<A> {
                         .of(
                             // the phase-one check, which moves nothing on. The cancellation and
                             // the values an operator sees with it happen after the commit
-                            request -> checkTaskExists(request.taskId(), "canceling"),
+                            request -> checkTaskExists(request, "canceling"),
                             this::cancelTask)),
             Map
                 .entry(
@@ -701,14 +701,14 @@ public class Camunda7ProcessService<A> implements MigratableProcessService<A> {
                         .of(
                             // the phase-one check, which moves nothing on. The completion
                             // happens after the commit
-                            request -> checkUserTaskExists(request.taskId(), "completing"),
+                            request -> checkUserTaskExists(request, "completing"),
                             this::completeUserTask)),
             Map
                 .entry(
                     PhaseOperation.CANCEL_USER_TASK,
                     PhaseOperationHandler
                         .of(
-                            request -> checkUserTaskExists(request.taskId(), "canceling"),
+                            request -> checkUserTaskExists(request, "canceling"),
                             this::cancelUserTask)),
             Map
                 .entry(
@@ -847,7 +847,7 @@ public class Camunda7ProcessService<A> implements MigratableProcessService<A> {
       final PhaseTwoRequest<A> request) {
 
     signalTask(
-        request.taskId(),
+        theCallOf(request),
         null,
         true,
         () -> refreshSharedValues(
@@ -867,7 +867,7 @@ public class Camunda7ProcessService<A> implements MigratableProcessService<A> {
       final PhaseTwoRequest<A> request) {
 
     signalTask(
-        request.taskId(),
+        theCallOf(request),
         scopedIdentifier(request.workflowModuleId(), request.bpmnErrorCode()),
         true,
         () -> {
@@ -884,7 +884,7 @@ public class Camunda7ProcessService<A> implements MigratableProcessService<A> {
       final PhaseTwoRequest<A> request) {
 
     executeUserTask(
-        request.taskId(),
+        theCallOf(request),
         null,
         true,
         () -> refreshSharedValuesOfUserTask(
@@ -900,7 +900,7 @@ public class Camunda7ProcessService<A> implements MigratableProcessService<A> {
       final PhaseTwoRequest<A> request) {
 
     executeUserTask(
-        request.taskId(),
+        theCallOf(request),
         scopedIdentifier(request.workflowModuleId(), request.bpmnErrorCode()),
         true,
         () -> refreshSharedValuesOfUserTask(
@@ -1879,7 +1879,7 @@ public class Camunda7ProcessService<A> implements MigratableProcessService<A> {
    * decision 2 in the repository's DECISIONS.md). An engine on a datasource of its own runs
    * the command in a transaction of its own.
    *
-   * @param taskId The parked execution's ID
+   * @param call The call of the entry. Its task is the parked execution's ID
    * @param bpmnErrorCode The BPMN error code or <code>null</code> to complete
    * @param tolerateGoneTask Whether a no-longer-existing execution is tolerated
    *        instead of failing. Phase two is at-least-once, so a repeated dispatch finds
@@ -1888,16 +1888,18 @@ public class Camunda7ProcessService<A> implements MigratableProcessService<A> {
    *        writes the values the model reads next, which an operator also sees in Cockpit
    */
   private void signalTask(
-      final String taskId,
+      final Camunda7SuspendedWorkflow.TheCall call,
       final String bpmnErrorCode,
       final boolean tolerateGoneTask,
       final Runnable beforeSignal) {
 
+    final var taskId = call.taskId();
+    org.camunda.bpm.engine.runtime.Execution execution = null;
     if (tolerateGoneTask) {
       // check BEFORE signaling. A failing engine command would mark the joined
       // transaction rollback-only, even if the exception is caught. Then the outbox
       // dispatcher's transaction could never commit the DONE entry
-      final var execution = runtimeService
+      execution = runtimeService
           .createExecutionQuery()
           .executionId(taskId)
           .singleResult();
@@ -1916,9 +1918,11 @@ public class Camunda7ProcessService<A> implements MigratableProcessService<A> {
       }
       if (execution.isSuspended()) {
         // asked before the signal for the same reason as above. The engine would refuse it
-        throw Camunda7SuspendedWorkflow.waitInTheOutbox(adapterId, "task", taskId, bpmnErrorCode == null
-            ? "completion"
-            : "cancellation");
+        throw Camunda7SuspendedWorkflow.waitInTheOutbox(
+            adapterId, suspendedWorkflowReporter(), "task", call, execution.getProcessInstanceId(),
+            bpmnErrorCode == null
+                ? "completion"
+                : "cancellation");
       }
     }
     try {
@@ -1937,9 +1941,11 @@ public class Camunda7ProcessService<A> implements MigratableProcessService<A> {
     } catch (final RuntimeException e) {
       // somebody suspended the workflow between the query and the signal
       if (tolerateGoneTask && Camunda7SuspendedWorkflow.isASuspension(e)) {
-        throw Camunda7SuspendedWorkflow.waitInTheOutbox(adapterId, "task", taskId, bpmnErrorCode == null
-            ? "completion"
-            : "cancellation");
+        throw Camunda7SuspendedWorkflow.waitInTheOutbox(
+            adapterId, suspendedWorkflowReporter(), "task", call, execution.getProcessInstanceId(),
+            bpmnErrorCode == null
+                ? "completion"
+                : "cancellation");
       }
       throw e;
     }
@@ -1980,7 +1986,7 @@ public class Camunda7ProcessService<A> implements MigratableProcessService<A> {
    * decision 2 in the repository's DECISIONS.md). An engine on a datasource of its own runs
    * the command in a transaction of its own.
    *
-   * @param taskId The user task's ID (ACT_RU_TASK)
+   * @param call The call of the entry. Its task is the user task's ID (ACT_RU_TASK)
    * @param bpmnErrorCode The BPMN error code or <code>null</code> to complete
    * @param tolerateGoneTask Whether a no-longer-existing task is tolerated. Phase two
    *        is at-least-once, so a repeated dispatch finds the task ended by the first one
@@ -1988,15 +1994,17 @@ public class Camunda7ProcessService<A> implements MigratableProcessService<A> {
    *        or cancelled. It writes the values the model reads next
    */
   private void executeUserTask(
-      final String taskId,
+      final Camunda7SuspendedWorkflow.TheCall call,
       final String bpmnErrorCode,
       final boolean tolerateGoneTask,
       final Runnable beforeExecute) {
 
+    final var taskId = call.taskId();
+    org.camunda.bpm.engine.task.Task task = null;
     if (tolerateGoneTask) {
       // check BEFORE executing, see signalTask. A failing engine command would
       // mark the joined transaction rollback-only, even if the exception is caught
-      final var task = taskService
+      task = taskService
           .createTaskQuery()
           .taskId(taskId)
           .singleResult();
@@ -2013,9 +2021,11 @@ public class Camunda7ProcessService<A> implements MigratableProcessService<A> {
         return;
       }
       if (task.isSuspended()) {
-        throw Camunda7SuspendedWorkflow.waitInTheOutbox(adapterId, "user task", taskId, bpmnErrorCode == null
-            ? "completion"
-            : "cancellation");
+        throw Camunda7SuspendedWorkflow.waitInTheOutbox(
+            adapterId, suspendedWorkflowReporter(), "user task", call, task.getProcessInstanceId(),
+            bpmnErrorCode == null
+                ? "completion"
+                : "cancellation");
       }
     }
     try {
@@ -2031,9 +2041,11 @@ public class Camunda7ProcessService<A> implements MigratableProcessService<A> {
     } catch (final RuntimeException e) {
       // somebody suspended the workflow between the query and the command, see signalTask
       if (tolerateGoneTask && Camunda7SuspendedWorkflow.isASuspension(e)) {
-        throw Camunda7SuspendedWorkflow.waitInTheOutbox(adapterId, "user task", taskId, bpmnErrorCode == null
-            ? "completion"
-            : "cancellation");
+        throw Camunda7SuspendedWorkflow.waitInTheOutbox(
+            adapterId, suspendedWorkflowReporter(), "user task", call, task.getProcessInstanceId(),
+            bpmnErrorCode == null
+                ? "completion"
+                : "cancellation");
       }
       throw e;
     }
@@ -2114,13 +2126,14 @@ public class Camunda7ProcessService<A> implements MigratableProcessService<A> {
    * So it must not decide what an application is able to catch. The query is exact and
    * answers a count. So there is nothing to classify, and nothing to log about a rejection.
    *
-   * @param taskId The task (the parked execution's id)
+   * @param request The call. Its task is the parked execution's id
    * @param operationDescription What was attempted, for the message
    */
   private void checkTaskExists(
-      final String taskId,
+      final PhaseOneRequest<A> request,
       final String operationDescription) {
 
+    final var taskId = request.taskId();
     final var execution = runtimeService
         .createExecutionQuery()
         .executionId(taskId)
@@ -2134,8 +2147,63 @@ public class Camunda7ProcessService<A> implements MigratableProcessService<A> {
               .formatted(taskId, operationDescription));
     }
     if (execution.isSuspended()) {
-      throw Camunda7SuspendedWorkflow.refuseTheCall(adapterId, "task", taskId, operationDescription);
+      throw Camunda7SuspendedWorkflow.refuseTheCall(
+          adapterId, suspendedWorkflowReporter(), "task", theCallOf(request), execution.getProcessInstanceId(),
+          operationDescription);
     }
+
+  }
+
+  /**
+   * Where a suspended workflow is reported. Tests may build the adapter without collaborators.
+   */
+  private io.vanillabp.integration.adapter.spi.SuspendedWorkflowReporter suspendedWorkflowReporter() {
+
+    return collaborators == null
+        ? io.vanillabp.integration.adapter.spi.SuspendedWorkflowReporter.NOBODY_LISTENS
+        : collaborators.suspendedWorkflowReporter();
+
+  }
+
+  /**
+   * What the extensions hear about a phase-one call whose workflow is suspended. The aggregate
+   * id is asked of the persistence only here. It is left out where the persistence cannot say
+   * it, because the caller's exception must not change.
+   */
+  private Camunda7SuspendedWorkflow.TheCall theCallOf(
+      final PhaseOneRequest<A> request) {
+
+    String workflowAggregateId = null;
+    try {
+      if (request.aggregatePersistence() != null) {
+        final var id = request
+            .aggregatePersistence()
+            .getAggregateId(request.workflowAggregate());
+        workflowAggregateId = id == null
+            ? null
+            : id.toString();
+      }
+    } catch (final RuntimeException e) {
+      log.debug("Camunda7[{}]: could not read the aggregate id of the call on task '{}'", adapterId, request.taskId(),
+          e);
+    }
+    return new Camunda7SuspendedWorkflow.TheCall(
+        request.workflowModuleId(), request.bpmnProcessId(), workflowAggregateId, request.taskId());
+
+  }
+
+  /**
+   * What the extensions hear about a phase-two entry whose workflow is suspended.
+   */
+  private Camunda7SuspendedWorkflow.TheCall theCallOf(
+      final PhaseTwoRequest<A> request) {
+
+    return new Camunda7SuspendedWorkflow.TheCall(
+        request.workflowModuleId(), request.bpmnProcessId(), request.workflowAggregateId() == null
+            ? null
+            : request
+                .workflowAggregateId()
+                .toString(), request.taskId());
 
   }
 
@@ -2143,13 +2211,14 @@ public class Camunda7ProcessService<A> implements MigratableProcessService<A> {
    * The same check for a USER task. A user task lives in the task service, not as a
    * parked execution. The check raises the same exception for the same reason.
    *
-   * @param taskId The user task's id
+   * @param request The call. Its task is the user task's id
    * @param operationDescription What was attempted, for the message
    */
   private void checkUserTaskExists(
-      final String taskId,
+      final PhaseOneRequest<A> request,
       final String operationDescription) {
 
+    final var taskId = request.taskId();
     final var task = taskService
         .createTaskQuery()
         .taskId(taskId)
@@ -2163,7 +2232,9 @@ public class Camunda7ProcessService<A> implements MigratableProcessService<A> {
               .formatted(taskId, operationDescription));
     }
     if (task.isSuspended()) {
-      throw Camunda7SuspendedWorkflow.refuseTheCall(adapterId, "user task", taskId, operationDescription);
+      throw Camunda7SuspendedWorkflow.refuseTheCall(
+          adapterId, suspendedWorkflowReporter(), "user task", theCallOf(request), task.getProcessInstanceId(),
+          operationDescription);
     }
 
   }

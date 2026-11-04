@@ -3,8 +3,11 @@ package io.vanillabp.camunda7.processservice;
 import java.time.Duration;
 import java.time.Instant;
 
+import io.vanillabp.integration.adapter.spi.SuspendedWorkflowReporter;
+import io.vanillabp.integration.extension.spi.runtime.SuspendedWorkflowFound;
 import io.vanillabp.integration.spi.PhaseTwoRetryLater;
 import io.vanillabp.spi.process.WorkflowSuspendedException;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * What follows when a task belongs to a suspended workflow.
@@ -21,10 +24,30 @@ import io.vanillabp.spi.process.WorkflowSuspendedException;
  * outbox to wait. An exception of the engine which slips past the question, because somebody
  * suspended the workflow in between, is turned into the same wait. See
  * {@code DECISIONS.pending/2070.md}.
+ * <p>
+ * Before the call is refused or the entry waits, the extensions hear about it through the core.
+ * Nothing they do changes what is thrown here (see {@code DECISIONS.pending/2074.md}).
  */
+@Slf4j
 final class Camunda7SuspendedWorkflow {
 
   private Camunda7SuspendedWorkflow() {
+  }
+
+  /**
+   * The call whose task met a suspended workflow, as far as the extensions hear about it.
+   *
+   * @param workflowModuleId The workflow module of the call
+   * @param bpmnProcessId The BPMN process of the call, as the application wrote it
+   * @param workflowAggregateId The aggregate id of the call, or <code>null</code> where it is not
+   *          known
+   * @param taskId The task of the call
+   */
+  record TheCall(
+                 String workflowModuleId,
+                 String bpmnProcessId,
+                 String workflowAggregateId,
+                 String taskId) {
   }
 
   /**
@@ -62,17 +85,27 @@ final class Camunda7SuspendedWorkflow {
    * What phase one throws for a task of a suspended workflow. The caller's transaction rolls
    * back, and the task stays open.
    *
+   * <p>
+   * The extensions hear about it first.
+   *
    * @param adapterId The adapter which holds the task
+   * @param reporter Where the suspended workflow is reported
    * @param kindOfTask <code>task</code> or <code>user task</code>, for the message
-   * @param taskId The task the caller named
+   * @param call The call the caller made
+   * @param processInstanceId The suspended process instance of the task
    * @param operationDescription What was attempted, for the message
    * @return The exception to throw
    */
   static WorkflowSuspendedException refuseTheCall(
       final String adapterId,
+      final SuspendedWorkflowReporter reporter,
       final String kindOfTask,
-      final String taskId,
+      final TheCall call,
+      final String processInstanceId,
       final String operationDescription) {
+
+    final var taskId = call.taskId();
+    tellTheExtensions(adapterId, reporter, call, processInstanceId, SuspendedWorkflowFound.Phase.CALL);
 
     return new WorkflowSuspendedException(
         """
@@ -94,17 +127,27 @@ final class Camunda7SuspendedWorkflow {
    * workflow which is deleted while it is suspended ends the wait as well: the next attempt finds
    * the task gone.
    *
+   * <p>
+   * The extensions hear about it on every attempt. They filter out the repetitions themselves.
+   *
    * @param adapterId The adapter which holds the task
+   * @param reporter Where the suspended workflow is reported
    * @param kindOfTask <code>task</code> or <code>user task</code>, for the message
-   * @param taskId The task of the entry
+   * @param call The call the entry carries
+   * @param processInstanceId The suspended process instance of the task
    * @param operationDescription What waits, for the message
    * @return The failure to throw
    */
   static PhaseTwoRetryLater waitInTheOutbox(
       final String adapterId,
+      final SuspendedWorkflowReporter reporter,
       final String kindOfTask,
-      final String taskId,
+      final TheCall call,
+      final String processInstanceId,
       final String operationDescription) {
+
+    final var taskId = call.taskId();
+    tellTheExtensions(adapterId, reporter, call, processInstanceId, SuspendedWorkflowFound.Phase.WAITING);
 
     return new PhaseTwoRetryLater(
         """
@@ -121,6 +164,36 @@ final class Camunda7SuspendedWorkflow {
                 operationDescription), WAIT_WHILE_SUSPENDED, Instant
                     .now()
                     .plus(WAIT_WHILE_SUSPENDED.multipliedBy(2)));
+
+  }
+
+  /**
+   * Tells the extensions through the core. Nothing of it may come out: the caller throws what
+   * it would have thrown anyway. The core already catches what an extension throws, so this
+   * catch is only the net for a value the record refuses.
+   */
+  private static void tellTheExtensions(
+      final String adapterId,
+      final SuspendedWorkflowReporter reporter,
+      final TheCall call,
+      final String processInstanceId,
+      final SuspendedWorkflowFound.Phase phase) {
+
+    if (reporter == null) {
+      return;
+    }
+    try {
+      reporter
+          .found(new SuspendedWorkflowFound(
+              adapterId, call.workflowModuleId(), call.bpmnProcessId(), call
+                  .workflowAggregateId(), processInstanceId, call.taskId(), Instant.now(), phase));
+    } catch (final RuntimeException e) {
+      log.warn(
+          "Camunda7[{}]: could not tell the extensions that the workflow of task '{}' is suspended",
+          adapterId,
+          call.taskId(),
+          e);
+    }
 
   }
 

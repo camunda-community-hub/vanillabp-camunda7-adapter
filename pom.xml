@@ -10,7 +10,7 @@
   <parent>
     <groupId>org.camunda.community</groupId>
     <artifactId>community-hub-release-parent</artifactId>
-    <version>2.1.0</version>
+    <version>2.1.1</version>
     <relativePath/>
   </parent>
 
@@ -89,7 +89,7 @@
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
     <maven.compiler.release>21</maven.compiler.release>
     <version.java>21</version.java>
-    <jacoco.version>0.8.15</jacoco.version>
+    <jacoco.version>0.8.16</jacoco.version>
     <!-- where the build breaks, in PERCENT of covered instructions per platform,
          enforced by test-coverage-report/coverage-gate. The rule stays 90 per platform, which is
          the number the coverage badges of the README are read against. The gate stands at
@@ -105,8 +105,8 @@
     <spi-for-java.version>2.0.0-SNAPSHOT</spi-for-java.version>
     <adapter-platform.version>2.0.0-SNAPSHOT</adapter-platform.version>
     <camunda.version>7.24.0</camunda.version>
-    <spring-boot.version>4.1.1</spring-boot.version>
-    <quarkus.version>3.40.1</quarkus.version>
+    <spring-boot.version>4.1.2</spring-boot.version>
+    <quarkus.version>3.40.1.1</quarkus.version>
     <lombok.version>1.18.48</lombok.version>
   </properties>
 
@@ -275,7 +275,7 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-surefire-plugin</artifactId>
-          <version>3.6.0</version>
+          <version>3.6.1</version>
           <configuration>
             <!-- '@{jacoco.agent}' is resolved lazily per module (late property binding),
                  forwarding coverage also into forked JVMs -->
@@ -285,7 +285,7 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-failsafe-plugin</artifactId>
-          <version>3.6.0</version>
+          <version>3.6.1</version>
           <configuration>
             <argLine>@{jacoco.agent}</argLine>
           </configuration>
@@ -434,7 +434,7 @@
       <plugin>
         <groupId>com.diffplug.spotless</groupId>
         <artifactId>spotless-maven-plugin</artifactId>
-        <version>3.10.3</version>
+        <version>3.10.4</version>
         <configuration>
           <pom>
             <includes>

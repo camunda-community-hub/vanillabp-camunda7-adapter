@@ -89,7 +89,7 @@
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
     <maven.compiler.release>21</maven.compiler.release>
     <version.java>21</version.java>
-    <jacoco.version>0.8.15</jacoco.version>
+    <jacoco.version>0.8.16</jacoco.version>
     <!-- where the build breaks, in PERCENT of covered instructions per platform,
          enforced by test-coverage-report/coverage-gate. The rule stays 90 per platform, which is
          the number the coverage badges of the README are read against. The gate stands at

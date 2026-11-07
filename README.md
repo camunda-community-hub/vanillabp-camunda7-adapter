@@ -1,3 +1,8 @@
+> [!IMPORTANT]
+> **Version 2 of this adapter has moved to [vanillabp/camunda7-adapter](https://github.com/vanillabp/camunda7-adapter).**
+> It is developed and released there, under the Maven groupId `io.vanillabp`. This repository
+> only keeps version 1 (`org.camunda.community.vanillabp`, up to 1.6.0) and will be archived.
+
 ![Header](./readme/vanillabp-headline.png)
 
 # VanillaBP adapter for Camunda 7

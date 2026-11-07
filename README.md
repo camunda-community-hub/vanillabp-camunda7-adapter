@@ -1,3 +1,8 @@
+> [!IMPORTANT]
+> **Version 2 of this adapter has moved to [vanillabp/camunda7-adapter](https://github.com/vanillabp/camunda7-adapter).**
+> It is developed and released there, under the Maven groupId `io.vanillabp`. This repository
+> only keeps version 1 (`org.camunda.community.vanillabp`, up to 1.6.0) and will be archived.
+
 [![](https://img.shields.io/badge/Community%20Extension-An%20open%20source%20community%20maintained%20project-FF4700)](https://github.com/camunda-community-hub/community)
 ![Compatible with: Camunda Platform 7](https://img.shields.io/badge/Compatible%20with-Camunda%20Platform%207-26d07c)
 
